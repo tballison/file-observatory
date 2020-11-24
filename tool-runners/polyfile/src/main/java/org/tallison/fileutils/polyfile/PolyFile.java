@@ -1,19 +1,15 @@
-package org.tallison.fileutils.mutool;
-
+package org.tallison.fileutils.polyfile;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tallison.batchlite.AbstractDirectoryProcessor;
 import org.tallison.batchlite.AbstractFileProcessor;
 import org.tallison.batchlite.FileProcessResult;
-import org.tallison.batchlite.FileProcessor;
 import org.tallison.batchlite.FileToFileProcessor;
 import org.tallison.batchlite.MetadataWriter;
 import org.tallison.batchlite.ProcessExecutor;
 import org.tallison.batchlite.writer.MetadataWriterFactory;
 
 import java.io.IOException;
-import java.io.Writer;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -21,17 +17,16 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 
+public class PolyFile extends AbstractDirectoryProcessor {
+    private static final Logger LOG = LoggerFactory.getLogger(PolyFile.class);
 
-public class MutoolToTextRunner extends AbstractDirectoryProcessor {
-    private static final Logger LOG = LoggerFactory.getLogger(MutoolToTextRunner.class);
-    private final int maxBufferLength = 100000;
-
-    private final Path targRoot;
-    private final MetadataWriter metadataWriter;
+    private final int maxErrBufferLength = 100;
     private final int numThreads;
     private final long timeoutMillis = 120000;
-
-    public MutoolToTextRunner(Path srcRoot, Path targRoot, MetadataWriter metadataWriter, int numThreads) {
+    private final Path targRoot;
+    private final MetadataWriter metadataWriter;
+    public PolyFile(Path srcRoot, Path targRoot, MetadataWriter metadataWriter,
+                    int numThreads) {
         super(srcRoot);
         this.targRoot = targRoot;
         this.metadataWriter = metadataWriter;
@@ -43,42 +38,43 @@ public class MutoolToTextRunner extends AbstractDirectoryProcessor {
     public List<AbstractFileProcessor> getProcessors(ArrayBlockingQueue<Path> queue) {
         List<AbstractFileProcessor> processors = new ArrayList<>();
         for (int i = 0; i < numThreads; i++) {
-            processors.add(new MutoolToTextProcessor(queue, rootDir, targRoot, metadataWriter));
+            processors.add(new PolyfileProcessor(queue, rootDir, targRoot, metadataWriter));
         }
         return processors;
     }
 
-    private class MutoolToTextProcessor extends FileToFileProcessor {
+    private class PolyfileProcessor extends FileToFileProcessor {
 
-        public MutoolToTextProcessor(ArrayBlockingQueue<Path> queue, Path srcRoot,
-                                     Path targRoot, MetadataWriter metadataWriter) {
+        public PolyfileProcessor(ArrayBlockingQueue<Path> queue,
+                                 Path srcRoot, Path targRoot, MetadataWriter metadataWriter) {
             super(queue, srcRoot, targRoot, metadataWriter);
         }
 
         @Override
         public String getExtension() {
-            return ".txt";
+            return ".json";
         }
 
         @Override
-        public void process(String relPath, Path srcPath, Path outputPath, MetadataWriter metadataWriter) throws IOException {
+        public void process(String relPath, Path srcPath, Path outputPath,
+                            MetadataWriter metadataWriter) throws IOException {
             if (Files.isRegularFile(outputPath)) {
                 LOG.trace("skipping "+relPath);
                 return;
             }
-            List<String> commandLine = new ArrayList<>();
-            commandLine.add("mutool");
-            commandLine.add("convert");
-            commandLine.add("-o");
-            commandLine.add(outputPath.toAbsolutePath().toString());
-            commandLine.add(srcPath.toAbsolutePath().toString());
+
             if (! Files.isDirectory(outputPath.getParent())) {
                 Files.createDirectories(outputPath.getParent());
             }
 
-            FileProcessResult r = ProcessExecutor.execute(
-                    new ProcessBuilder(commandLine.toArray(new String[commandLine.size()])),
-                    timeoutMillis, maxBufferLength);
+            List<String> commandLine = new ArrayList<>();
+            commandLine.add("polyfile");
+            commandLine.add(srcPath.toAbsolutePath().toString());
+
+            ProcessBuilder pb = new ProcessBuilder(commandLine.toArray(new String[commandLine.size()]));
+
+            FileProcessResult r = ProcessExecutor.execute(pb,
+                        timeoutMillis, outputPath, maxErrBufferLength);
             metadataWriter.write(relPath, r);
         }
     }
@@ -92,7 +88,7 @@ public class MutoolToTextRunner extends AbstractDirectoryProcessor {
             numThreads = Integer.parseInt(args[3]);
         }
         try (MetadataWriter metadataWriter = MetadataWriterFactory.build(metadataWriterString)) {
-            MutoolToTextRunner runner = new MutoolToTextRunner(srcRoot, targRoot, metadataWriter, numThreads);
+            PolyFile runner = new PolyFile(srcRoot, targRoot, metadataWriter, numThreads);
             //runner.setMaxFiles(100);
             runner.execute();
         }

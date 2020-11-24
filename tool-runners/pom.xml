@@ -12,12 +12,32 @@
     </parent>
 
     <artifactId>tool-runners</artifactId>
-    <version>1.0.0-SNAPSHOT</version>
 
     <packaging>pom</packaging>
 
     <modules>
         <module>mutoolclean</module>
         <module>mutooltotext</module>
+        <module>qpdf</module>
+        <module>polyfile</module>
+        <module>pdfinfo</module>
+        <module>tika</module>
     </modules>
+
+    <properties>
+        <batchlite.version>0.2.1-SNAPSHOT</batchlite.version>
+    </properties>
+    <dependencies>
+
+        <dependency>
+            <groupId>org.tallison</groupId>
+            <artifactId>batchlite</artifactId>
+            <version>${batchlite.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+            <version>3.10</version>
+        </dependency>
+    </dependencies>
 </project>
