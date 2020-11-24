@@ -1,19 +1,12 @@
 package org.tallison.fileutils.pdfinfo;
 import org.apache.tika.utils.ProcessUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.tallison.batchlite.AbstractDirectoryProcessor;
 import org.tallison.batchlite.AbstractFileProcessor;
 import org.tallison.batchlite.CommandlineFileProcessor;
-import org.tallison.batchlite.FileProcessResult;
 import org.tallison.batchlite.MetadataWriter;
-import org.tallison.batchlite.ProcessExecutor;
 import org.tallison.batchlite.writer.MetadataWriterFactory;
 
 import java.io.IOException;
-import java.io.Writer;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -34,15 +27,15 @@ public class PDFInfo extends AbstractDirectoryProcessor {
     public List<AbstractFileProcessor> getProcessors(ArrayBlockingQueue<Path> queue) {
         List<AbstractFileProcessor> processors = new ArrayList<>();
         for (int i = 0; i < numThreads; i++) {
-            processors.add(new PDFToTextProcessor(queue, rootDir, metadataWriter));
+            processors.add(new PDFInfoProcessor(queue, rootDir, metadataWriter));
         }
         return processors;
     }
 
-    private class PDFToTextProcessor extends CommandlineFileProcessor {
+    private class PDFInfoProcessor extends CommandlineFileProcessor {
 
-        public PDFToTextProcessor(ArrayBlockingQueue<Path> queue,
-                                  Path srcRoot, MetadataWriter metadataWriter) {
+        public PDFInfoProcessor(ArrayBlockingQueue<Path> queue,
+                                Path srcRoot, MetadataWriter metadataWriter) {
             super(queue, srcRoot, metadataWriter);
         }
 

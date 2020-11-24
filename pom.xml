@@ -54,7 +54,6 @@
     <modules>
         <module>ingest</module>
         <module>tool-runners</module>
-        <module>pdfinfo</module>
     </modules>
 
   <dependencies>

@@ -1,0 +1,3 @@
+org.tallison.ingest.mappers.TikaFeatureMapper
+org.tallison.ingest.mappers.QPDFFeatureMapper
+org.tallison.ingest.mappers.PDFInfoFeatureMapper

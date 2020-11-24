@@ -30,7 +30,7 @@ FROM adoptopenjdk/openjdk11:alpine-slim
 COPY --from=MUPDF_BUILDER /usr/local/bin /usr/local/bin
 COPY --from=MUPDF_BUILDER /lib /lib
 
-COPY target/mutooltotext-1.0.0-SNAPSHOT.jar /mutooltotext-1.0.0-SNAPSHOT.jar
+COPY target/mutooltext-1.0.0-SNAPSHOT.jar /mutooltext-1.0.0-SNAPSHOT.jar
 #ENTRYPOINT ["java","-jar","/mutooltotext-1.0-SNAPSHOT.jar", "/input", "/output"]
 #RUN apk update && apk add bash
 # e.g.

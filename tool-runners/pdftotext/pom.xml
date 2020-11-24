@@ -12,7 +12,7 @@
         <relativePath>../pom.xml</relativePath>
     </parent>
 
-    <artifactId>mutooltotext</artifactId>
+    <artifactId>pdftotext</artifactId>
     <build>
         <plugins>
             <plugin>
@@ -35,7 +35,7 @@
                             </filters>
                             <transformers>
                                 <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                                    <mainClass>org.tallison.fileutils.mutool.MutoolToTextRunner</mainClass>
+                                    <mainClass>org.tallison.fileutils.pdftotext.PDFToTextRunner</mainClass>
                                 </transformer>
 
                             </transformers>

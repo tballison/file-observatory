@@ -26,7 +26,7 @@ public class MutoolClean extends AbstractDirectoryProcessor {
 
     private final MetadataWriter metadataWriter;
     private final int numThreads;
-    private final long timeoutMillis = 120000;
+    private final long timeoutMillis = 60000;
 
     public MutoolClean(Path srcRoot, MetadataWriter metadataWriter, int numThreads) {
         super(srcRoot);
@@ -52,7 +52,7 @@ public class MutoolClean extends AbstractDirectoryProcessor {
 
         @Override
         protected void process(String relPath, Path srcPath, MetadataWriter metadataWriter) throws IOException {
-
+            LOG.debug("processing {}", relPath);
             Path tmp = Files.createTempFile("mutool-clean-", ".pdf");
             try {
                 List<String> commandLine = new ArrayList<>();

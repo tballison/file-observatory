@@ -5,15 +5,12 @@ import org.slf4j.LoggerFactory;
 import org.tallison.batchlite.AbstractDirectoryProcessor;
 import org.tallison.batchlite.AbstractFileProcessor;
 import org.tallison.batchlite.FileProcessResult;
-import org.tallison.batchlite.FileProcessor;
 import org.tallison.batchlite.FileToFileProcessor;
 import org.tallison.batchlite.MetadataWriter;
 import org.tallison.batchlite.ProcessExecutor;
 import org.tallison.batchlite.writer.MetadataWriterFactory;
 
 import java.io.IOException;
-import java.io.Writer;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -22,8 +19,8 @@ import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 
 
-public class MutoolToTextRunner extends AbstractDirectoryProcessor {
-    private static final Logger LOG = LoggerFactory.getLogger(MutoolToTextRunner.class);
+public class MutoolTextRunner extends AbstractDirectoryProcessor {
+    private static final Logger LOG = LoggerFactory.getLogger(MutoolTextRunner.class);
     private final int maxBufferLength = 100000;
 
     private final Path targRoot;
@@ -31,7 +28,7 @@ public class MutoolToTextRunner extends AbstractDirectoryProcessor {
     private final int numThreads;
     private final long timeoutMillis = 120000;
 
-    public MutoolToTextRunner(Path srcRoot, Path targRoot, MetadataWriter metadataWriter, int numThreads) {
+    public MutoolTextRunner(Path srcRoot, Path targRoot, MetadataWriter metadataWriter, int numThreads) {
         super(srcRoot);
         this.targRoot = targRoot;
         this.metadataWriter = metadataWriter;
@@ -43,15 +40,15 @@ public class MutoolToTextRunner extends AbstractDirectoryProcessor {
     public List<AbstractFileProcessor> getProcessors(ArrayBlockingQueue<Path> queue) {
         List<AbstractFileProcessor> processors = new ArrayList<>();
         for (int i = 0; i < numThreads; i++) {
-            processors.add(new MutoolToTextProcessor(queue, rootDir, targRoot, metadataWriter));
+            processors.add(new MutoolTextProcessor(queue, rootDir, targRoot, metadataWriter));
         }
         return processors;
     }
 
-    private class MutoolToTextProcessor extends FileToFileProcessor {
+    private class MutoolTextProcessor extends FileToFileProcessor {
 
-        public MutoolToTextProcessor(ArrayBlockingQueue<Path> queue, Path srcRoot,
-                                     Path targRoot, MetadataWriter metadataWriter) {
+        public MutoolTextProcessor(ArrayBlockingQueue<Path> queue, Path srcRoot,
+                                   Path targRoot, MetadataWriter metadataWriter) {
             super(queue, srcRoot, targRoot, metadataWriter);
         }
 
@@ -92,7 +89,7 @@ public class MutoolToTextRunner extends AbstractDirectoryProcessor {
             numThreads = Integer.parseInt(args[3]);
         }
         try (MetadataWriter metadataWriter = MetadataWriterFactory.build(metadataWriterString)) {
-            MutoolToTextRunner runner = new MutoolToTextRunner(srcRoot, targRoot, metadataWriter, numThreads);
+            MutoolTextRunner runner = new MutoolTextRunner(srcRoot, targRoot, metadataWriter, numThreads);
             //runner.setMaxFiles(100);
             runner.execute();
         }

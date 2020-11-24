@@ -72,7 +72,9 @@ public class TikaBatch extends AbstractDirectoryProcessor {
         }
 
         @Override
-        public void process(String relPath, Path srcPath, Path outputPath, MetadataWriter metadataWriter) throws IOException {
+        public void process(String relPath, Path srcPath,
+                            Path outputPath, MetadataWriter metadataWriter)
+                throws IOException {
             if (Files.isRegularFile(outputPath)) {
                 LOG.trace("skipping " + relPath);
                 return;
@@ -82,7 +84,7 @@ public class TikaBatch extends AbstractDirectoryProcessor {
             List<Metadata> metadataList = null;
             try (TikaInputStream tis = TikaInputStream.get(srcPath)) {
                 metadataList = tikaClient.parse(relPath, tis);
-            } catch (TikaClientException e) {
+            } catch (IOException|TikaClientException e) {
                 LOG.error("error on {}", relPath, e);
                 exitValue = 1;
             }

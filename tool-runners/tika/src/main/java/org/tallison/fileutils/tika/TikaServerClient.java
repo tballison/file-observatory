@@ -32,6 +32,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.net.SocketException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
@@ -104,6 +105,7 @@ public class TikaServerClient {
         int tries = 1;
         long retryStart = System.currentTimeMillis();
         long retryElapsed = 0;
+        //TODO: clean up this logic
         while (response.state !=
                 STATE.RESPONSE_PARSE_EXCEPTION &&
                 response.state != STATE.RESPONSE_SUCCESS
@@ -137,7 +139,7 @@ public class TikaServerClient {
                         response.state.toString()));
     }
 
-    private TikaServerResponse tryParse(String fileKey, TikaInputStream is) throws IOException {
+    private TikaServerResponse tryParse(String fileKey, TikaInputStream is) {
         int index = ThreadLocalRandom.current().nextInt(clients.size());
         WebClient client = clients.get(index);
         Response response = null;
@@ -154,7 +156,7 @@ public class TikaServerClient {
             }
             elapsed = System.currentTimeMillis()-start;
             LOG.info("took "+(System.currentTimeMillis()-start) +" to get response");
-        } catch (IOException e) {
+        } catch (javax.ws.rs.ProcessingException|IOException e) {
             elapsed = System.currentTimeMillis()-start;
             LOG.warn("couldn't connect to tika-server", e);
             //server could be offline or a bad url
