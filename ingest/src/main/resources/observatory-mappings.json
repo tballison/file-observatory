@@ -1,0 +1,225 @@
+{
+  "index_patterns": [
+    "file-observatory-202012"
+  ],
+  "mappings": {
+    "_meta": {
+      "version": "7.6.0"
+    },
+    "dynamic": "false",
+    "properties": {
+      "fname": {
+        "type": "keyword"
+      },
+      "original_fname": {
+        "type": "keyword"
+      },
+      "collection": {
+        "type": "keyword"
+      },
+      "size": {
+        "type": "integer",
+        "store": true
+      },
+      "tk_shasum_256": {
+        "type": "keyword"
+      },
+      "tk_status": {
+        "type": "keyword"
+      },
+      "tk_warn": {
+        "analyzer": "text_basic",
+        "type": "text",
+        "store": "true"
+      },
+      "tk_exit": {
+        "type": "integer",
+        "store": true
+      },
+      "tk_mime": {
+        "type": "keyword"
+      },
+      "tk_mime_detailed": {
+        "type": "keyword"
+      },
+      "tk_format": {
+        "type": "keyword"
+      },
+      "tk_pdf_version": {
+        "type": "keyword"
+      },
+      "tk_pdfa_version": {
+        "type": "keyword"
+      },
+      "tk_pdf_extension_version": {
+        "type": "keyword"
+      },
+      "tk_creator_tool": {
+        "analyzer": "text_basic",
+        "type": "text",
+        "store": "true",
+        "fields" : {
+          "keyword": {
+            "type": "keyword",
+            "normalizer": "lc_normalizer"
+          }
+        }
+      },
+      "tk_producer": {
+        "analyzer": "text_basic",
+        "type": "text",
+        "store": "true",
+        "fields" : {
+          "keyword": {
+            "type": "keyword",
+            "normalizer": "lc_normalizer"
+          }
+        }
+      },
+      "tk_created": {
+        "type": "date",
+        "store": true
+      },
+      "tk_modified": {
+        "type": "date",
+        "store": true
+      },
+      "tk_num_macros": {
+        "type": "integer",
+        "store": true
+      },
+      "tk_num_inline": {
+        "type": "integer",
+        "store": true
+      },
+      "tk_num_attachments": {
+        "type": "integer",
+        "store": true
+      },
+      "tk_signature": {
+        "type": "boolean",
+        "store": true
+      },
+      "tk_encrypted": {
+        "type": "boolean",
+        "store": true
+      },
+      "tk_lang_detected": {
+        "type": "keyword"
+      },
+      "tk_num_tokens": {
+        "type": "integer",
+        "store": true
+      },
+      "tk_oov": {
+        "type": "float",
+        "store": true
+      },
+      "tk_title": {
+        "type": "text"
+      },
+      "tk_subject": {
+        "type": "text"
+      },
+      "q_status": {
+        "type": "keyword"
+      },
+      "q_warn": {
+        "analyzer": "text_basic",
+        "type": "text",
+        "store": "true",
+        "copy_to": "tools_warn"
+      },
+      "q_keys": {
+        "analyzer": "ws_lc",
+        "type": "text",
+        "store": "true",
+        "fields" : {
+          "case": {
+            "type": "text",
+            "analyzer": "whitespace"
+          }
+        }
+      },
+      "q_keys_oos": {
+        "analyzer": "ws_lc",
+        "type": "text",
+        "store": "true",
+        "fields" : {
+          "case": {
+            "type": "text",
+            "analyzer": "whitespace"
+          }
+        }
+      },
+      "q_keys_oos_multi": {
+        "type": "keyword",
+        "store": "true"
+      },
+      "pi_creator": {
+        "analyzer": "text_basic",
+        "type": "text",
+        "store": "true",
+        "fields" : {
+          "keyword": {
+            "type": "keyword",
+            "normalizer": "lc_normalizer"
+          }
+        }
+      },
+      "pi_producer": {
+        "analyzer": "text_basic",
+        "type": "text",
+        "store": "true",
+        "fields" : {
+          "keyword": {
+            "type": "keyword",
+            "normalizer": "lc_normalizer"
+          }
+        }
+      },
+      "pi_version": {
+        "type": "keyword"
+      },
+      "pi_javascript": {
+        "type": "boolean"
+      }
+    }
+  },
+  "settings": {
+    "index": {
+      "analysis": {
+        "analyzer": {
+          "text_basic": {
+            "filter": [
+              "lowercase",
+              "asciifolding"
+            ],
+            "tokenizer": "standard",
+            "type": "custom"
+          },
+          "ws_lc": {
+            "filter": [
+              "lowercase",
+              "asciifolding"
+            ],
+            "tokenizer": "whitespace",
+            "type": "custom"
+          }
+        },
+        "normalizer": {
+          "lc_normalizer": {
+            "char_filter": [],
+            "filter": [
+              "lowercase",
+              "asciifolding"
+            ],
+            "type": "custom"
+          }
+        }
+      },
+      "number_of_replicas": "2",
+      "number_of_shards": "2"
+    }
+  }
+}

@@ -26,7 +26,9 @@ public class PDFInfoFeatureMapper implements FeatureMapper {
             } else if (version.reset(line).find()) {
                 storedDocument.addNonBlankField("pi_version", version.group(1).trim());
             } else if (js.reset(line).find()) {
-                storedDocument.addNonBlankField("pi_javascript", js.group(1).trim());
+                String val = js.group(1).trim();
+                String bool = (val.equals("yes")) ? "true" : "false";
+                storedDocument.addNonBlankField("pi_javascript", bool);
             }
         }
 

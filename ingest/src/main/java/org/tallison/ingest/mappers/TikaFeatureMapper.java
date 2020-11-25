@@ -1,6 +1,7 @@
 package org.tallison.ingest.mappers;
 
 import org.apache.tika.exception.TikaException;
+import org.apache.tika.metadata.DublinCore;
 import org.apache.tika.metadata.Metadata;
 import org.apache.tika.metadata.PDF;
 import org.apache.tika.metadata.TikaCoreProperties;
@@ -66,6 +67,26 @@ public class TikaFeatureMapper implements FeatureMapper {
         storedDocument.addNonBlankField("tk_producer", root.get(PDF.DOC_INFO_PRODUCER));//fix
         storedDocument.addNonBlankField("tk_oov", root.get("tika-eval:oov"));
         storedDocument.addNonBlankField("tk_num_tokens", root.get("tika-eval:numTokens"));
-        storedDocument.addNonBlankField("sha256", root.get("X-TIKA:digest:SHA256"));
+        storedDocument.addNonBlankField("tk_shasum_256", root.get("X-TIKA:digest:SHA256"));
+        String mimeDetailed = root.get(Metadata.CONTENT_TYPE);
+        String mime = mimeDetailed;
+        if (mimeDetailed != null) {
+            int i = mimeDetailed.indexOf(";");
+            if (i > -1) {
+                mime = mimeDetailed.substring(0, i);
+                storedDocument.addNonBlankField("tk_mime", mime);
+            } else {
+                storedDocument.addNonBlankField("tk_mime", mimeDetailed);
+            }
+        }
+        storedDocument.addNonBlankField("tk_mime_detailed", root.get(Metadata.CONTENT_TYPE));
+        storedDocument.addNonBlankField("tk_format", root.get(TikaCoreProperties.FORMAT));
+        storedDocument.addNonBlankField("tk_title", root.get(TikaCoreProperties.TITLE));
+        storedDocument.addNonBlankField("tk_subject", root.get(DublinCore.SUBJECT));
+
+        storedDocument.addNonBlankField("tk_pdf_version", root.get(PDF.PDF_VERSION));
+        storedDocument.addNonBlankField("tk_pdfa_version", root.get(PDF.PDFA_VERSION));
+        storedDocument.addNonBlankField("tk_pdf_extension_version", root.get(PDF.PDF_EXTENSION_VERSION));
+        storedDocument.addNonBlankField("tk_action_trigger", root.get(PDF.ACTION_TRIGGER));
     }
 }
