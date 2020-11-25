@@ -19,7 +19,7 @@
         <dependency>
             <groupId>org.tallison.quaerite</groupId>
             <artifactId>quaerite-connectors</artifactId>
-            <version>1.0.0-SNAPSHOT</version>
+            <version>1.0.0-ALPHA2</version>
         </dependency>
         <dependency>
             <groupId>org.apache.tika</groupId>
@@ -34,7 +34,7 @@
         <dependency>
             <groupId>org.tallison</groupId>
             <artifactId>batchlite</artifactId>
-            <version>0.2.1-SNAPSHOT</version>
+            <version>0.3.0-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>org.postgresql</groupId>

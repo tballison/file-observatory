@@ -26,7 +26,7 @@
     </modules>
 
     <properties>
-        <batchlite.version>0.2.1-SNAPSHOT</batchlite.version>
+        <batchlite.version>0.3.0-SNAPSHOT</batchlite.version>
     </properties>
     <dependencies>
 
@@ -41,9 +41,9 @@
             <version>3.10</version>
         </dependency>
         <dependency>
-            <groupId>org.postgresql</groupId>
-            <artifactId>postgresql</artifactId>
-            <version>42.2.18</version>
+            <groupId>org.apache.tika</groupId>
+            <artifactId>tika-core</artifactId>
+            <version>1.24.1</version>
         </dependency>
     </dependencies>
 </project>

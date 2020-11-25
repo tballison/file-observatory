@@ -13,13 +13,11 @@
     </parent>
 
     <artifactId>mutoolclean</artifactId>
-
     <build>
         <plugins>
             <plugin>
                 <artifactId>maven-shade-plugin</artifactId>
                 <version>${maven.shade.version}</version>
-
                 <executions>
                     <execution>
                         <phase>package</phase>

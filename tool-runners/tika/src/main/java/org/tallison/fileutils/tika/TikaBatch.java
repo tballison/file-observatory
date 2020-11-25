@@ -1,3 +1,19 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.tallison.fileutils.tika;
 
 import org.apache.tika.exception.TikaException;
@@ -32,16 +48,14 @@ public class TikaBatch extends AbstractDirectoryProcessor {
     private final int maxBufferLength = 100000;
 
     private final Path targRoot;
-    private final MetadataWriter metadataWriter;
     private final int numThreads;
     private final String[] tikaServerUrls;
 
     public TikaBatch(Path srcRoot, Path targRoot, MetadataWriter metadataWriter,
                      String[] tikaServerUrls,
-                      int numThreads) {
-        super(srcRoot);
+                     int numThreads) {
+        super(srcRoot, metadataWriter);
         this.targRoot = targRoot;
-        this.metadataWriter = metadataWriter;
         this.tikaServerUrls = tikaServerUrls;
         this.numThreads = numThreads;
     }
@@ -58,6 +72,7 @@ public class TikaBatch extends AbstractDirectoryProcessor {
     private class TikaProcessor extends FileToFileProcessor {
 
         private final TikaServerClient tikaClient;
+
         public TikaProcessor(ArrayBlockingQueue<Path> queue, Path srcRoot,
                              Path targRoot, MetadataWriter metadataWriter,
                              String[] tikaServerUrls) {
@@ -84,7 +99,7 @@ public class TikaBatch extends AbstractDirectoryProcessor {
             List<Metadata> metadataList = null;
             try (TikaInputStream tis = TikaInputStream.get(srcPath)) {
                 metadataList = tikaClient.parse(relPath, tis);
-            } catch (IOException|TikaClientException e) {
+            } catch (IOException | TikaClientException e) {
                 LOG.error("error on {}", relPath, e);
                 exitValue = 1;
             }
@@ -95,13 +110,13 @@ public class TikaBatch extends AbstractDirectoryProcessor {
                 }
                 try (Writer writer = Files.newBufferedWriter(outputPath, StandardCharsets.UTF_8)) {
                     JsonMetadataList.toJson(metadataList, writer);
-                } catch (IOException|TikaException e) {
+                } catch (IOException | TikaException e) {
                     LOG.warn("problem writing json", e);
                 }
             }
 
 
-            long elapsed = System.currentTimeMillis()-start;
+            long elapsed = System.currentTimeMillis() - start;
             String stackTrace = getStackTrace(metadataList);
             FileProcessResult r = new FileProcessResult();
             r.setExitValue(exitValue);
@@ -135,13 +150,13 @@ public class TikaBatch extends AbstractDirectoryProcessor {
         if (args.length > 4) {
             numThreads = Integer.parseInt(args[4]);
         }
-        try (MetadataWriter metadataWriter = MetadataWriterFactory.build(metadataWriterString)) {
-            TikaBatch runner = new TikaBatch(srcRoot, targRoot,
-                    metadataWriter,
-                    tikaServerUrlString.split(","), numThreads);
-            //runner.setMaxFiles(100);
-            runner.execute();
-        }
+        MetadataWriter metadataWriter = MetadataWriterFactory.build(metadataWriterString);
+        TikaBatch runner = new TikaBatch(srcRoot, targRoot,
+                metadataWriter,
+                tikaServerUrlString.split(","), numThreads);
+        //runner.setMaxFiles(100);
+        runner.execute();
+
     }
 }
 
