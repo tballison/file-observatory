@@ -54,6 +54,7 @@
     <modules>
         <module>ingest</module>
         <module>tool-runners</module>
+        <module>runners-commons</module>
     </modules>
 
   <dependencies>

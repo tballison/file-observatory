@@ -19,6 +19,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tallison.batchlite.AbstractDirectoryProcessor;
 import org.tallison.batchlite.AbstractFileProcessor;
+import org.tallison.batchlite.ConfigSrcTarg;
 import org.tallison.batchlite.FileProcessResult;
 import org.tallison.batchlite.FileToFileProcessor;
 import org.tallison.batchlite.MetadataWriter;
@@ -40,11 +41,11 @@ public class PolyFile extends AbstractDirectoryProcessor {
     private final int numThreads;
     private final long timeoutMillis = 120000;
     private final Path targRoot;
-    public PolyFile(Path srcRoot, Path targRoot, MetadataWriter metadataWriter,
-                    int numThreads) {
-        super(srcRoot, metadataWriter);
-        this.targRoot = targRoot;
-        this.numThreads = numThreads;
+
+    public PolyFile(ConfigSrcTarg config) {
+        super(config.getSrcRoot(), config.getMetadataWriter());
+        this.targRoot = config.getTargRoot();
+        this.numThreads = config.getNumThreads();
 
     }
 
@@ -52,7 +53,9 @@ public class PolyFile extends AbstractDirectoryProcessor {
     public List<AbstractFileProcessor> getProcessors(ArrayBlockingQueue<Path> queue) {
         List<AbstractFileProcessor> processors = new ArrayList<>();
         for (int i = 0; i < numThreads; i++) {
-            processors.add(new PolyfileProcessor(queue, rootDir, targRoot, metadataWriter));
+            PolyfileProcessor p = new PolyfileProcessor(queue, rootDir, targRoot, metadataWriter);
+            p.setFileTimeoutMillis(timeoutMillis);
+            processors.add(p);
         }
         return processors;
     }
@@ -94,15 +97,8 @@ public class PolyFile extends AbstractDirectoryProcessor {
     }
 
     public static void main(String[] args) throws Exception {
-        Path srcRoot = Paths.get(args[0]);
-        Path targRoot = Paths.get(args[1]);
-        String metadataWriterString = args[2];
-        int numThreads = 10;
-        if (args.length > 3) {
-            numThreads = Integer.parseInt(args[3]);
-        }
-        MetadataWriter metadataWriter = MetadataWriterFactory.build(metadataWriterString);
-        PolyFile runner = new PolyFile(srcRoot, targRoot, metadataWriter, numThreads);
+
+        PolyFile runner = new PolyFile(ConfigSrcTarg.build(args, 10, 1000));
         //runner.setMaxFiles(100);
         runner.execute();
     }

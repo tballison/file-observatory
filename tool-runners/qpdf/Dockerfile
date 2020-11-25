@@ -15,9 +15,10 @@ RUN apk add --no-cache \
 
 COPY target/qpdf-1.0.0-SNAPSHOT.jar /qpdf-1.0.0-SNAPSHOT.jar
 
-#ENTRYPOINT ["java","-jar","/qpdf-runner-1.0-SNAPSHOT.jar", "/input", "/output"]
+ENTRYPOINT ["java","-jar","/qpdf-1.0.0-SNAPSHOT.jar"]
 
 
 # e.g.
 # docker build -t qpdf-image .
-# docker run --name qpdf-container -v ~/data/safedocs/evalTwo/tim-staging2/docs:/input:ro -v ~/Desktop/qpdf:/output q-runner
+
+# docker run --name qpdf-container --network host --env-file env.properties -v /data/docs:/input -v /data/meta/qpdf/json:/output

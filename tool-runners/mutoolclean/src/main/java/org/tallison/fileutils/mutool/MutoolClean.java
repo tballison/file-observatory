@@ -20,6 +20,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tallison.batchlite.AbstractDirectoryProcessor;
 import org.tallison.batchlite.AbstractFileProcessor;
+import org.tallison.batchlite.ConfigSrc;
 import org.tallison.batchlite.FileProcessResult;
 import org.tallison.batchlite.FileProcessor;
 import org.tallison.batchlite.MetadataWriter;
@@ -38,23 +39,24 @@ import java.util.concurrent.ArrayBlockingQueue;
 
 public class MutoolClean extends AbstractDirectoryProcessor {
     private static final Logger LOG = LoggerFactory.getLogger(MutoolClean.class);
-    private final int maxBufferLength = 100000;
+    private static final int MAX_STDOUT = 100;
+    private static final int MAX_STDERR = 20000;
 
-    private final MetadataWriter metadataWriter;
     private final int numThreads;
     private final long timeoutMillis = 60000;
 
-    public MutoolClean(Path srcRoot, MetadataWriter metadataWriter, int numThreads) {
-        super(srcRoot);
-        this.metadataWriter = metadataWriter;
-        this.numThreads = numThreads;
+    public MutoolClean(ConfigSrc config) {
+        super(config.getSrcRoot(), config.getMetadataWriter());
+        this.numThreads = config.getNumThreads();
     }
 
     @Override
     public List<AbstractFileProcessor> getProcessors(ArrayBlockingQueue<Path> queue) {
         List<AbstractFileProcessor> processors = new ArrayList<>();
         for (int i = 0; i < numThreads; i++) {
-            processors.add(new MutoolCleanProcessor(queue, rootDir, metadataWriter));
+            MutoolCleanProcessor p = new MutoolCleanProcessor(queue, rootDir, metadataWriter);
+            p.setFileTimeoutMillis(timeoutMillis);
+            processors.add(p);
         }
         return processors;
     }
@@ -81,7 +83,8 @@ public class MutoolClean extends AbstractDirectoryProcessor {
 
                 FileProcessResult r = ProcessExecutor.execute(
                         new ProcessBuilder(commandLine.toArray(new String[commandLine.size()])),
-                        timeoutMillis, maxBufferLength);
+                        timeoutMillis, metadataWriter.getMaxStdoutBuffer(),
+                        metadataWriter.getMaxStderrBuffer());
                 metadataWriter.write(relPath, r);
             } finally {
                 Files.delete(tmp);
@@ -90,25 +93,9 @@ public class MutoolClean extends AbstractDirectoryProcessor {
     }
 
     public static void main(String[] args) throws Exception {
-        Path srcRoot = Paths.get(args[0]);
-        String metadataWriterString = args[1];
-        int numThreads = 10;
-        if (args.length > 2) {
-            numThreads = Integer.parseInt(args[2]);
-        }
-        long start = System.currentTimeMillis();
-        MetadataWriter metadataWriter = MetadataWriterFactory.build(metadataWriterString);
-        try {
-
-            MutoolClean runner = new MutoolClean(srcRoot, metadataWriter, numThreads);
-            //runner.setMaxFiles(100);
+            MutoolClean runner = new MutoolClean(
+                    ConfigSrc.build(args, MAX_STDOUT, MAX_STDERR)
+            );
             runner.execute();
-        } finally {
-            metadataWriter.close();
-            long elapsed = System.currentTimeMillis()-start;
-            System.out.println("Processed "+ metadataWriter.getRecordsWritten() + " files in "+
-                    elapsed + " ms.");
-        }
-
     }
 }

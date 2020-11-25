@@ -31,7 +31,7 @@ COPY --from=MUPDF_BUILDER /usr/local/bin /usr/local/bin
 COPY --from=MUPDF_BUILDER /lib /lib
 
 COPY target/mutooltext-1.0.0-SNAPSHOT.jar /mutooltext-1.0.0-SNAPSHOT.jar
-#ENTRYPOINT ["java","-jar","/mutooltotext-1.0-SNAPSHOT.jar", "/input", "/output"]
+ENTRYPOINT ["java","-jar","/mutooltext-1.0.0-SNAPSHOT.jar"]
 #RUN apk update && apk add bash
 # e.g.
 # docker build -t mutool-text-image .

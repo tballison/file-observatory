@@ -19,6 +19,7 @@ import org.apache.tika.utils.ProcessUtils;
 import org.tallison.batchlite.AbstractDirectoryProcessor;
 import org.tallison.batchlite.AbstractFileProcessor;
 import org.tallison.batchlite.CommandlineFileProcessor;
+import org.tallison.batchlite.ConfigSrc;
 import org.tallison.batchlite.MetadataWriter;
 import org.tallison.batchlite.writer.MetadataWriterFactory;
 
@@ -31,17 +32,22 @@ import java.util.concurrent.ArrayBlockingQueue;
 
 public class PDFInfo extends AbstractDirectoryProcessor {
 
+    private static final int MAX_STDOUT = 20000;
+    private static final int MAX_STDERR = 20000;
+    private static final long TIMEOUT_MILLIS = 60000;
     private final int numThreads;
-    public PDFInfo(Path srcRoot, MetadataWriter metadataWriter, int numThreads) {
-        super(srcRoot, metadataWriter);
-        this.numThreads = numThreads;
+    public PDFInfo(ConfigSrc config) {
+        super(config.getSrcRoot(), config.getMetadataWriter());
+        this.numThreads = config.getNumThreads();
     }
 
     @Override
     public List<AbstractFileProcessor> getProcessors(ArrayBlockingQueue<Path> queue) {
         List<AbstractFileProcessor> processors = new ArrayList<>();
         for (int i = 0; i < numThreads; i++) {
-            processors.add(new PDFInfoProcessor(queue, rootDir, metadataWriter));
+            PDFInfoProcessor p = new PDFInfoProcessor(queue, rootDir, metadataWriter);
+            p.setFileTimeoutMillis(TIMEOUT_MILLIS);
+            processors.add(p);
         }
         return processors;
     }
@@ -63,16 +69,7 @@ public class PDFInfo extends AbstractDirectoryProcessor {
     }
 
     public static void main(String[] args) throws Exception {
-        Path srcRoot = Paths.get(args[0]);
-        String metadataWriterString = args[1];
-        int numThreads = 10;
-        if (args.length > 2) {
-            numThreads = Integer.parseInt(args[2]);
-        }
-        MetadataWriter metadataWriter = MetadataWriterFactory.build(metadataWriterString);
-        PDFInfo runner = new PDFInfo(srcRoot, metadataWriter, numThreads);
-        //runner.setMaxFiles(100);
+        PDFInfo runner = new PDFInfo(ConfigSrc.build(args, MAX_STDOUT, MAX_STDERR));
         runner.execute();
-
     }
 }

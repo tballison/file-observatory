@@ -40,7 +40,7 @@ RUN apt-get update && apt-get install bash ca-certificates \
 COPY target/pdfinfo-1.0.0-SNAPSHOT.jar /pdfinfo-1.0.0-SNAPSHOT.jar
 
 
-#ENTRYPOINT ["java","-jar","/pdfinfo-1.0-SNAPSHOT.jar", "/input", "/output"]
+ENTRYPOINT ["java","-jar","/pdfinfo-1.0.0-SNAPSHOT.jar"]
 #WORKDIR /work
 
 #e.g.

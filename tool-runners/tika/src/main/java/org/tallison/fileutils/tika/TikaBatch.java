@@ -25,6 +25,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tallison.batchlite.AbstractDirectoryProcessor;
 import org.tallison.batchlite.AbstractFileProcessor;
+import org.tallison.batchlite.ConfigSrcTarg;
 import org.tallison.batchlite.FileProcessResult;
 import org.tallison.batchlite.FileToFileProcessor;
 import org.tallison.batchlite.MetadataWriter;
@@ -45,19 +46,19 @@ public class TikaBatch extends AbstractDirectoryProcessor {
 
 
     private static final Logger LOG = LoggerFactory.getLogger(TikaBatch.class);
-    private final int maxBufferLength = 100000;
+    private static int MAX_STDOUT = 10000;
+    private static int MAX_STDERR = 10000;
 
     private final Path targRoot;
     private final int numThreads;
     private final String[] tikaServerUrls;
 
-    public TikaBatch(Path srcRoot, Path targRoot, MetadataWriter metadataWriter,
-                     String[] tikaServerUrls,
-                     int numThreads) {
-        super(srcRoot, metadataWriter);
-        this.targRoot = targRoot;
+    public TikaBatch(ConfigSrcTarg config,
+                     String[] tikaServerUrls) {
+        super(config.getSrcRoot(), config.getMetadataWriter());
+        this.targRoot = config.getTargRoot();
+        this.numThreads = config.getNumThreads();
         this.tikaServerUrls = tikaServerUrls;
-        this.numThreads = numThreads;
     }
 
     @Override
@@ -142,18 +143,9 @@ public class TikaBatch extends AbstractDirectoryProcessor {
     }
 
     public static void main(String[] args) throws Exception {
-        Path srcRoot = Paths.get(args[0]);
-        Path targRoot = Paths.get(args[1]);
-        String metadataWriterString = args[2];
-        String tikaServerUrlString = args[3];
-        int numThreads = 10;
-        if (args.length > 4) {
-            numThreads = Integer.parseInt(args[4]);
-        }
-        MetadataWriter metadataWriter = MetadataWriterFactory.build(metadataWriterString);
-        TikaBatch runner = new TikaBatch(srcRoot, targRoot,
-                metadataWriter,
-                tikaServerUrlString.split(","), numThreads);
+        String tikaServerUrlString = args[4];
+        TikaBatch runner = new TikaBatch(ConfigSrcTarg.build(args, MAX_STDOUT, MAX_STDERR),
+                tikaServerUrlString.split(","));
         //runner.setMaxFiles(100);
         runner.execute();
 

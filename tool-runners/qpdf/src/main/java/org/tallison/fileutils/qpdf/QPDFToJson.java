@@ -20,6 +20,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tallison.batchlite.AbstractDirectoryProcessor;
 import org.tallison.batchlite.AbstractFileProcessor;
+import org.tallison.batchlite.ConfigSrcTarg;
 import org.tallison.batchlite.FileProcessResult;
 import org.tallison.batchlite.FileToFileProcessor;
 import org.tallison.batchlite.MetadataWriter;
@@ -39,16 +40,16 @@ import java.util.concurrent.ArrayBlockingQueue;
 public class QPDFToJson extends AbstractDirectoryProcessor {
     private static final Logger LOG = LoggerFactory.getLogger(QPDFToJson.class);
 
-    private final int maxErrBufferLength = 100;
-    private final int maxOutBufferLength = 100_000_000;
+    private static final int MAX_STDERR = 10000;
+    private static final long TIMEOUT_MILLIS = 30000;
+
     private final int numThreads;
-    private final long timeoutMillis = 20000;
     private final Path targRoot;
 
-    public QPDFToJson(Path srcRoot, Path targRoot, MetadataWriter metadataWriter, int numThreads) {
-        super(srcRoot, metadataWriter);
-        this.targRoot = targRoot;
-        this.numThreads = numThreads;
+    public QPDFToJson(ConfigSrcTarg config) {
+        super(config.getSrcRoot(), config.getMetadataWriter());
+        this.targRoot = config.getTargRoot();
+        this.numThreads = config.getNumThreads();
 
     }
 
@@ -56,7 +57,9 @@ public class QPDFToJson extends AbstractDirectoryProcessor {
     public List<AbstractFileProcessor> getProcessors(ArrayBlockingQueue<Path> queue) {
         List<AbstractFileProcessor> processors = new ArrayList<>();
         for (int i = 0; i < numThreads; i++) {
-            processors.add(new QPDFJsonProcessor(queue, rootDir, targRoot, metadataWriter));
+            QPDFJsonProcessor processor = new QPDFJsonProcessor(queue, rootDir, targRoot, metadataWriter);
+            processor.setFileTimeoutMillis(TIMEOUT_MILLIS);
+            processors.add(processor);
         }
         return processors;
     }
@@ -87,22 +90,13 @@ public class QPDFToJson extends AbstractDirectoryProcessor {
             ProcessBuilder pb = new ProcessBuilder(commandLine.toArray(new String[commandLine.size()]));
 
             FileProcessResult r = ProcessExecutor.execute(pb,
-                    timeoutMillis, outputPath, maxErrBufferLength);
+                    getFileTimeoutMillis(), outputPath, metadataWriter.getMaxStderrBuffer());
             metadataWriter.write(relPath, r);
         }
     }
 
     public static void main(String[] args) throws Exception {
-        Path srcRoot = Paths.get(args[0]);
-        Path targRoot = Paths.get(args[1]);
-        String metadataWriterString = args[2];
-        int numThreads = 10;
-        if (args.length > 3) {
-            numThreads = Integer.parseInt(args[3]);
-        }
-        MetadataWriter metadataWriter = MetadataWriterFactory.build(metadataWriterString);
-        QPDFToJson runner = new QPDFToJson(srcRoot, targRoot, metadataWriter, numThreads);
-        //runner.setMaxFiles(100);
+        QPDFToJson runner = new QPDFToJson(ConfigSrcTarg.build(args, 1, MAX_STDERR));
         runner.execute();
     }
 }

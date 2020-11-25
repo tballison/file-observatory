@@ -31,6 +31,7 @@ COPY --from=MUTOOL_BUILDER /usr/local/bin /usr/local/bin
 COPY --from=MUTOOL_BUILDER /lib /lib
 
 COPY target/mutoolclean-1.0.0-SNAPSHOT.jar /mutoolclean-1.0.0-SNAPSHOT.jar
+ENTRYPOINT ["java","-jar","/mutoolclean-1.0.0-SNAPSHOT.jar"]
 
 #e.g.
 #debug: docker run -it --entrypoint /bin/bash mutooltotext-container

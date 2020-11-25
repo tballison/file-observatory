@@ -21,4 +21,4 @@ RUN cd polyfile && pip3 install -e .
 
 COPY target/polyfile-1.0.0-SNAPSHOT.jar /polyfile-1.0.0-SNAPSHOT.jar
 
-#ENTRYPOINT ["java","-jar","/polyfile-runner-1.0-SNAPSHOT.jar", "/input", "/output"]
+ENTRYPOINT ["java","-jar","/polyfile-1.0.0-SNAPSHOT.jar"]

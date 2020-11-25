@@ -39,7 +39,7 @@ RUN apt-get update && apt-get install bash ca-certificates \
 COPY target/pdftotext-1.0.0-SNAPSHOT.jar /pdftotext-1.0.0-SNAPSHOT.jar
 
 
-#ENTRYPOINT ["java","-jar","/pdftotext-1.0-SNAPSHOT.jar", "/input", "/output"]
+ENTRYPOINT ["java","-jar","/pdftotext-1.0.0-SNAPSHOT.jar"]
 #WORKDIR /work
 
 #e.g.

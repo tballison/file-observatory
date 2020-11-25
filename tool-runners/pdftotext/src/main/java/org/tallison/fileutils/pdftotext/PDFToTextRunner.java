@@ -20,6 +20,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tallison.batchlite.AbstractDirectoryProcessor;
 import org.tallison.batchlite.AbstractFileProcessor;
+import org.tallison.batchlite.ConfigSrcTarg;
 import org.tallison.batchlite.FileProcessResult;
 import org.tallison.batchlite.FileToFileProcessor;
 import org.tallison.batchlite.MetadataWriter;
@@ -39,23 +40,24 @@ import java.util.concurrent.ArrayBlockingQueue;
 public class PDFToTextRunner extends AbstractDirectoryProcessor {
     private static final Logger LOG = LoggerFactory.getLogger(PDFToTextRunner.class);
 
-    private final int maxBufferLength = 100000;
+    private static final int MAX_BUFFER = 20000;
     private final int numThreads;
-    private final long timeoutMillis = 20000;
+    private final long timeoutMillis = 60000;
     private final Path targRoot;
-    public PDFToTextRunner(Path srcRoot, Path targRoot, MetadataWriter metadataWriter,
-                           int numThreads) {
-        super(srcRoot, metadataWriter);
-        this.targRoot = targRoot;
-        this.numThreads = numThreads;
 
+    public PDFToTextRunner(ConfigSrcTarg config) {
+        super(config.getSrcRoot(), config.getMetadataWriter());
+        this.targRoot = config.getTargRoot();
+        this.numThreads = config.getNumThreads();
     }
 
     @Override
     public List<AbstractFileProcessor> getProcessors(ArrayBlockingQueue<Path> queue) {
         List<AbstractFileProcessor> processors = new ArrayList<>();
         for (int i = 0; i < numThreads; i++) {
-            processors.add(new PDFToTextProcessor(queue, rootDir, targRoot, metadataWriter));
+            PDFToTextProcessor p = new PDFToTextProcessor(queue, rootDir, targRoot, metadataWriter);
+            p.setFileTimeoutMillis(timeoutMillis);
+            processors.add(p);
         }
         return processors;
     }
@@ -88,21 +90,14 @@ public class PDFToTextRunner extends AbstractDirectoryProcessor {
             }
             FileProcessResult r = ProcessExecutor.execute(
                         new ProcessBuilder(commandLine.toArray(new String[commandLine.size()])),
-                        timeoutMillis, maxBufferLength);
+                        timeoutMillis, 0, metadataWriter.getMaxStderrBuffer());
             metadataWriter.write(relPath, r);
         }
     }
 
     public static void main(String[] args) throws Exception {
-        Path srcRoot = Paths.get(args[0]);
-        Path targRoot = Paths.get(args[1]);
-        String metadataWriterString = args[2];
-        int numThreads = 10;
-        if (args.length > 3) {
-            numThreads = Integer.parseInt(args[3]);
-        }
-        MetadataWriter metadataWriter = MetadataWriterFactory.build(metadataWriterString);
-        PDFToTextRunner runner = new PDFToTextRunner(srcRoot, targRoot, metadataWriter, numThreads);
+
+        PDFToTextRunner runner = new PDFToTextRunner(ConfigSrcTarg.build(args, MAX_BUFFER, MAX_BUFFER));
         //runner.setMaxFiles(100);
         runner.execute();
     }
