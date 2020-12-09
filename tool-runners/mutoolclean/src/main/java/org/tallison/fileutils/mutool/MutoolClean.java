@@ -25,14 +25,10 @@ import org.tallison.batchlite.FileProcessResult;
 import org.tallison.batchlite.FileProcessor;
 import org.tallison.batchlite.MetadataWriter;
 import org.tallison.batchlite.ProcessExecutor;
-import org.tallison.batchlite.writer.MetadataWriterFactory;
 
 import java.io.IOException;
-import java.io.Writer;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;

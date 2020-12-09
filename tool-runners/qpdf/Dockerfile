@@ -9,7 +9,8 @@
   #
   ##RUN make install
 
-FROM adoptopenjdk/openjdk11:alpine-slim
+
+
 RUN apk add --no-cache \
     qpdf=10.0.1-r0
 

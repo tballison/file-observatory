@@ -11,10 +11,14 @@ import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.concurrent.ExecutorCompletionService;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 public class CSVsToPostgres {
 
-    public static void main (String[] args) throws Exception {
+    public static void main(String[] args) throws Exception {
         Path dirs = Paths.get(args[0]);
         String jdbc = args[1];
 
@@ -26,33 +30,39 @@ public class CSVsToPostgres {
     }
 
     private static void processProject(Path dirs, String project, String jdbc) throws Exception {
-        try (MetadataWriter writer = MetadataWriterFactory.build(jdbc+":"+project)) {
-            Path csv = dirs.resolve(project+"/"+project+".csv");
+        MetadataWriter writer = MetadataWriterFactory.build(jdbc + ":" + project, -1, -1);
+        ExecutorService executorService = Executors.newFixedThreadPool(1);
+        ExecutorCompletionService completionService = new ExecutorCompletionService(executorService);
+        completionService.submit(writer);
 
-            int rows = 0;
-            for (CSVRecord record : CSVParser.parse(csv,
-                    StandardCharsets.UTF_8, CSVFormat.EXCEL)) {
-                if (rows++ == 0) {
-                    continue;
-                }
-                int i = 0;
-                String relPath = record.get(i++);
+        Path csv = dirs.resolve(project + "/" + project + ".csv");
 
-                FileProcessResult r = new FileProcessResult();
-                r.setExitValue(Integer.parseInt(record.get(i++)));
-                r.setTimeout(Boolean.parseBoolean(record.get(i++)));
-                r.setProcessTimeMillis(Long.parseLong(record.get(i++)));
-                r.setStderr(cleanString(record.get(i++)));
-                r.setStderrLength(Integer.parseInt(record.get(i++)));
-                r.setStderrTruncated(Boolean.parseBoolean(record.get(i++)));
-                r.setStdout(cleanString(record.get(i++)));
-                r.setStdoutLength(Integer.parseInt(record.get(i++)));
-                r.setStdoutTruncated(Boolean.parseBoolean(record.get(i++)));
-                System.out.println("about to : " + project + " "+ rows);
-                writer.write(relPath, r);
+        int rows = 0;
+        for (CSVRecord record : CSVParser.parse(csv,
+                StandardCharsets.UTF_8, CSVFormat.EXCEL)) {
+            if (rows++ == 0) {
+                continue;
             }
+            int i = 0;
+            String relPath = record.get(i++);
 
+            FileProcessResult r = new FileProcessResult();
+            r.setExitValue(Integer.parseInt(record.get(i++)));
+            r.setTimeout(Boolean.parseBoolean(record.get(i++)));
+            r.setProcessTimeMillis(Long.parseLong(record.get(i++)));
+            r.setStderr(cleanString(record.get(i++)));
+            r.setStderrLength(Integer.parseInt(record.get(i++)));
+            r.setStderrTruncated(Boolean.parseBoolean(record.get(i++)));
+            r.setStdout(cleanString(record.get(i++)));
+            r.setStdoutLength(Integer.parseInt(record.get(i++)));
+            r.setStdoutTruncated(Boolean.parseBoolean(record.get(i++)));
+            System.out.println("about to : " + project + " " + rows);
+            writer.write(relPath, r);
         }
+
+        Future future = completionService.take();
+        future.get();
+        executorService.shutdownNow();
     }
 
     private static String cleanString(String s) {

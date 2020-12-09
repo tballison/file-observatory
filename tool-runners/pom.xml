@@ -25,15 +25,12 @@
         <module>pdftotext</module>
     </modules>
 
-    <properties>
-        <batchlite.version>0.3.0-SNAPSHOT</batchlite.version>
-    </properties>
     <dependencies>
 
         <dependency>
             <groupId>org.tallison</groupId>
             <artifactId>batchlite</artifactId>
-            <version>${batchlite.version}</version>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.commons</groupId>

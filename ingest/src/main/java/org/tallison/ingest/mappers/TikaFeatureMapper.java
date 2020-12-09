@@ -68,6 +68,7 @@ public class TikaFeatureMapper implements FeatureMapper {
         storedDocument.addNonBlankField("tk_oov", root.get("tika-eval:oov"));
         storedDocument.addNonBlankField("tk_num_tokens", root.get("tika-eval:numTokens"));
         storedDocument.addNonBlankField("tk_shasum_256", root.get("X-TIKA:digest:SHA256"));
+        storedDocument.addNonBlankField("tk_lang_detected", root.get("tika-eval:lang"));
         String mimeDetailed = root.get(Metadata.CONTENT_TYPE);
         String mime = mimeDetailed;
         if (mimeDetailed != null) {

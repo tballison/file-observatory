@@ -115,6 +115,10 @@
         "type": "float",
         "store": true
       },
+      "tk_lang_detected" : {
+        "type": "keyword",
+        "store": true
+      },
       "tk_title": {
         "type": "text"
       },
@@ -155,6 +159,55 @@
       "q_keys_oos_multi": {
         "type": "keyword",
         "store": "true"
+      },
+      "q_parent_and_keys": {
+        "analyzer": "ws_lc",
+        "type": "text",
+        "store": "true",
+        "fields" : {
+          "case": {
+            "type": "text",
+            "analyzer": "whitespace"
+          }
+        }
+      },
+      "q_parent_and_keys_multi": {
+        "type": "keyword",
+        "store": "true"
+      },
+      "q_filters": {
+        "analyzer": "ws_lc",
+        "type": "text",
+        "store": "true",
+        "fields" : {
+          "case": {
+            "type": "text",
+            "analyzer": "whitespace"
+          }
+        }
+      },
+      "q_filters_multi": {
+        "type": "keyword",
+        "store": "true"
+      },
+      "q_keys_and_values": {
+        "analyzer": "ws_lc",
+        "type": "text",
+        "store": "true",
+        "fields" : {
+          "case": {
+            "type": "text",
+            "analyzer": "whitespace"
+          }
+        }
+      },
+      "q_keys_and_values_multi": {
+        "type": "keyword",
+        "store": "true"
+      },
+      "q_max_filter_count": {
+        "type": "integer",
+        "store": true
       },
       "pi_creator": {
         "analyzer": "text_basic",
