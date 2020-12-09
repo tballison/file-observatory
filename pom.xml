@@ -55,6 +55,7 @@
         <module>batchlite</module>
         <module>tool-runners</module>
         <module>ingest</module>
+        <module>commoncrawl-fetcher</module>
     </modules>
 
   <dependencies>

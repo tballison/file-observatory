@@ -1,0 +1,19 @@
+{
+  "exact" : {
+    "mimes": [
+      "application/pdf"
+    ],
+    "detected_mimes": [
+      "application/pdf"
+    ],
+    "case_sensitive" : false
+  },
+  "regex" : {
+    "mimes": [
+      "(?i)pdf\\Z"
+    ],
+    "detected_mimes": [
+      "(?i)pdf\\Z"
+    ]
+  }
+}

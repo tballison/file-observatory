@@ -1,0 +1,11 @@
+{
+  "exact" : {
+    "mimes": [
+      "application/pdf"
+    ],
+    "detected_mimes": [
+      "application/pdf"
+    ],
+    "case_sensitive" : false
+  }
+}
