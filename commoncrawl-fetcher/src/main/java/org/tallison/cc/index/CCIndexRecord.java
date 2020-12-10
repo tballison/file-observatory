@@ -237,4 +237,20 @@ public class CCIndexRecord {
     public void setDetectedMime(String detectedMime) {
         this.mimeDetected = detectedMime;
     }
-}
+
+    public void setDigest(String digest) {
+        this.digest = digest;
+    }
+
+    public void setFilename(String warcFilename) {
+        this.filename = warcFilename;
+    }
+
+    public void setOffset(int offset) {
+        this.offset = offset;
+    }
+
+    public void setLength(int length) {
+        this.length = length;
+    }
+ }

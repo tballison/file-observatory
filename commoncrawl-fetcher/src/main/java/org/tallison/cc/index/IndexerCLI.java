@@ -154,11 +154,12 @@ public class IndexerCLI {
                         continue;
                     }
                     records.offer(line, 3, TimeUnit.MINUTES);
-                    if (max > 0 && totalProcessed.incrementAndGet() >= max) {
+                    int processed = totalProcessed.incrementAndGet();
+                    if (max > 0 && processed >= max) {
                         return;
                     }
                     if (++lines % 100000 == 0) {
-                        LOGGER.info("added "+totalProcessed.get() + " records to consider");
+                        LOGGER.info("added "+processed + " records to consider");
                     }
                     line = reader.readLine();
                 }
@@ -188,6 +189,7 @@ public class IndexerCLI {
                 }
 
                 if (json == POISON) {
+                    recordProcessor.close();
                     return 1;
                 }
                 LOGGER.trace(json);

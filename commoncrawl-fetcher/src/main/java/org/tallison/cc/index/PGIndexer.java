@@ -72,9 +72,12 @@ public class PGIndexer extends AbstractRecordProcessor {
 
     private static void initTables(Connection connection, StringCache ... caches) throws SQLException {
             connection.createStatement().execute("drop table if exists cc_urls");
-            connection.createStatement().execute("create table cc_urls " +
+            connection.createStatement().execute(
+
+                    "create table cc_urls " +
                     "(" +
-                    "url varchar("+MAX_URL_LENGTH+")," +
+                            "id serial primary key,"+
+                    " url varchar("+MAX_URL_LENGTH+")," +
                     " digest varchar(64)," +
                     " mime integer," +
                     " detected_mime integer," +
@@ -135,7 +138,7 @@ public class PGIndexer extends AbstractRecordProcessor {
 
             try {
                 long total= ADDED.getAndIncrement();
-                if (++added % 100000 == 0) {
+                if (++added % 10000 == 0) {
                     insert.executeBatch();
                     connection.commit();
                     long elapsed = System.currentTimeMillis()-STARTED;
@@ -158,7 +161,6 @@ public class PGIndexer extends AbstractRecordProcessor {
                 }
                 insert.setInt(++i, LANGUAGE_CACHE.getInt(getPrimaryLanguage(r.getLanguages())));
                 insert.setInt(++i, r.getStatus());
-//                    insert.setInt(++i, r.getLength());
                 insert.setInt(++i, TRUNCATED_CACHE.getInt(r.getTruncated()));
                 insert.setInt(++i, WARC_FILENAME_CACHE.getInt(r.getFilename()));
                 insert.setInt(++i, r.getOffset());
@@ -192,6 +194,7 @@ public class PGIndexer extends AbstractRecordProcessor {
     @Override
     public void close() throws IOException {
         try {
+            LOGGER.debug("in close about to execute batch");
             insert.executeBatch();
             insert.close();
 
