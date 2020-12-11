@@ -54,6 +54,8 @@
     <modules>
         <module>batchlite</module>
         <module>tool-runners</module>
+        <module>runners-commons</module>
+        <module>tika-wrappers</module>
         <module>ingest</module>
         <module>commoncrawl-fetcher</module>
     </modules>
