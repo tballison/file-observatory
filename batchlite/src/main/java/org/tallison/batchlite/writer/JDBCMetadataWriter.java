@@ -99,11 +99,12 @@ public class JDBCMetadataWriter extends MetadataWriter {
             insert.setBoolean(++i, result.isStderrTruncated());
             insert.addBatch();
 
-            if (getRecordsWritten() % 1000 == 0) {
+            if (getRecordsWritten() % 10 == 0) {
                 insert.executeBatch();
                 connection.commit();
             }
         } catch (SQLException e) {
+            e.printStackTrace();
             throw new IOException(e);
         }
     }

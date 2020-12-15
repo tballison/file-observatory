@@ -23,6 +23,13 @@
         <module>pdfinfo</module>
         <module>tika</module>
         <module>pdftotext</module>
+        <module>pdftoppm</module>
+        <module>pdftops</module>
+        <module>pdfimages</module>
+        <module>pdfminerdump</module>
+        <module>pdfminertext</module>
+        <module>pdfid</module>
+        <module>pdfcpu</module>
     </modules>
 
     <dependencies>

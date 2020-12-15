@@ -54,10 +54,10 @@
     <modules>
         <module>batchlite</module>
         <module>tool-runners</module>
-        <module>runners-commons</module>
         <module>tika-wrappers</module>
         <module>ingest</module>
         <module>commoncrawl-fetcher</module>
+        <module>tika-containers</module>
     </modules>
 
   <dependencies>
@@ -65,6 +65,11 @@
           <groupId>org.postgresql</groupId>
           <artifactId>postgresql</artifactId>
           <version>${postgresql.version}</version>
+      </dependency>
+      <dependency>
+          <groupId>org.xerial</groupId>
+          <artifactId>sqlite-jdbc</artifactId>
+          <version>3.32.3.2</version>
       </dependency>
     <dependency>
       <groupId>org.slf4j</groupId>

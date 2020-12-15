@@ -99,4 +99,19 @@ public class FileProcessResult {
     public void setStdoutTruncated(boolean stdoutTruncated) {
         this.stdoutTruncated = stdoutTruncated;
     }
+
+    @Override
+    public String toString() {
+        return "FileProcessResult{" +
+                "stderr='" + stderr + '\'' +
+                ", stdout='" + stdout + '\'' +
+                ", exitValue=" + exitValue +
+                ", processTimeMillis=" + processTimeMillis +
+                ", isTimeout=" + isTimeout +
+                ", stdoutLength=" + stdoutLength +
+                ", stderrLength=" + stderrLength +
+                ", stderrTruncated=" + stderrTruncated +
+                ", stdoutTruncated=" + stdoutTruncated +
+                '}';
+    }
 }

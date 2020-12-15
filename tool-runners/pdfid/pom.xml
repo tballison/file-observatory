@@ -12,7 +12,7 @@
         <relativePath>../pom.xml</relativePath>
     </parent>
 
-    <artifactId>mutoolclean</artifactId>
+    <artifactId>pdfid</artifactId>
     <build>
         <plugins>
             <plugin>
@@ -35,7 +35,7 @@
                             </filters>
                             <transformers>
                                 <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                                    <mainClass>org.tallison.fileutils.mutool.PDFCpuRunner</mainClass>
+                                    <mainClass>org.tallison.fileutils.pdfid.PDFIdRunner</mainClass>
                                 </transformer>
 
                             </transformers>
