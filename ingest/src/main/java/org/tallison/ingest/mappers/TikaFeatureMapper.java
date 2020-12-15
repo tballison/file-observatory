@@ -63,6 +63,8 @@ public class TikaFeatureMapper implements FeatureMapper {
                 Long.toString(macros));
 
         Metadata root = metadataList.get(0);
+        //TODO -- add this in a better spot.
+        storedDocument.addNonBlankField("collection", "bug-trackers");
         storedDocument.addNonBlankField("tk_creator_tool", root.get(TikaCoreProperties.CREATOR_TOOL));
         storedDocument.addNonBlankField("tk_producer", root.get(PDF.DOC_INFO_PRODUCER));//fix
         storedDocument.addNonBlankField("tk_oov", root.get("tika-eval:oov"));

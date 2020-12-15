@@ -28,11 +28,13 @@ public class QPDFJsonExtractor {
 
     private Matcher refMatcher = Pattern.compile("^\\d+ \\d+ R$").matcher("");
     private Matcher dateMatcher = Pattern.compile("^D:\\d{14,}").matcher("");
+
     public QPDFJsonExtractor() {
         ignoreValues.add("/CharSet");
         ignoreValues.add("/Title");
         ignoreValues.add("/DA");
     }
+
     private JsonObject objects;
     private String fileId;
 
@@ -58,9 +60,9 @@ public class QPDFJsonExtractor {
 
     private void parseObject(String parent, JsonObject obj, QPDFResults results) {
         results.keys.addAll(obj.keySet());
-
+        boolean isParentRef = refMatcher.reset(parent).find();
         for (String k : obj.keySet()) {
-            if (! refMatcher.reset(parent).find()) {
+            if (!isParentRef) {
                 results.parentAndKeys.add(parent + "->" + k);
             }
             JsonElement el = obj.get(k);
@@ -71,7 +73,7 @@ public class QPDFJsonExtractor {
             } else if (el.isJsonPrimitive()) {
                 JsonPrimitive primitive = el.getAsJsonPrimitive();
                 if (primitive.isBoolean()) {
-                    results.keyValues.add(k+"->"+
+                    results.keyValues.add(k + "->" +
                             Boolean.toString(primitive.getAsBoolean()).toUpperCase(Locale.US));
                 } else if (primitive.isNumber()) {
                     results.keyValues.add(k + "->NUMBER");
@@ -108,8 +110,8 @@ public class QPDFJsonExtractor {
             results.filters.add(QPDFFeatureMapper.joinWith("->", filters));
             return;
         }
-        if (! el.isJsonPrimitive()) {
-            LOGGER.warn("non primitive filter: ("+fileId+"):"+el.toString());
+        if (!el.isJsonPrimitive()) {
+            LOGGER.warn("non primitive filter: (" + fileId + "):" + el.toString());
             return;
         }
         results.filters.add(el.getAsString());
@@ -119,7 +121,13 @@ public class QPDFJsonExtractor {
     }
 
     private void parseArr(String parent, JsonArray arr, QPDFResults results) {
-        results.parentAndKeys.add(parent+"->ARRAY");
+        boolean isParentRef = refMatcher.reset(parent).find();
+
+        if (!isParentRef) {
+            results.parentAndKeys.add(parent + "->ARRAY");
+        }
+
+
         for (JsonElement el : arr) {
             if (el.isJsonObject()) {
                 parseObject(parent, el.getAsJsonObject(), results);
@@ -145,12 +153,12 @@ public class QPDFJsonExtractor {
     }
 
     JsonElement dereference(JsonElement el, int depth) {
-        if (! el.isJsonPrimitive()) {
+        if (!el.isJsonPrimitive()) {
             return el;
         }
 
         JsonPrimitive elPrim = el.getAsJsonPrimitive();
-        if (! elPrim.isString()) {
+        if (!elPrim.isString()) {
             return el;
         }
 
@@ -162,6 +170,6 @@ public class QPDFJsonExtractor {
             return null;
         }
         JsonElement refVal = objects.get(key);
-        return dereference(refVal, depth+1);
+        return dereference(refVal, depth + 1);
     }
 }

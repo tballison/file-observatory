@@ -59,22 +59,25 @@ public class QPDFFeatureMapper implements FeatureMapper {
         Path p = rootDir.resolve("qpdf/json/"+relPath+".json");
         try (Reader r = Files.newBufferedReader(p, StandardCharsets.UTF_8)) {
             QPDFResults results = new QPDFJsonExtractor().extract(relPath, r);
-            storedDocument.addNonBlankField("q_keys", sort(results.keys));
+            results = normalize(results);
+            //storedDocument.addNonBlankField("q_keys", sort(results.keys));
+            storedDocument.addNonBlankField("q_keys", toList(results.keys));
             List<String> filtered = filter(results.keys);
-            storedDocument.addNonBlankField("q_keys_oos",
-                    joinWith(" ", filtered));
 
-            storedDocument.addNonBlankField("q_keys_oos_multi",
+            //storedDocument.addNonBlankField("q_keys_oos",
+              //      joinWith(" ", filtered));
+
+            storedDocument.addNonBlankField("q_keys_oos",
                     filtered);
+            //storedDocument.addNonBlankField("q_parent_and_keys",
+              //      sort(results.parentAndKeys));
             storedDocument.addNonBlankField("q_parent_and_keys",
-                    sort(results.parentAndKeys));
-            storedDocument.addNonBlankField("q_parent_and_keys_multi",
                     toList(results.parentAndKeys));
 
-            storedDocument.addNonBlankField("q_filters", sort(results.filters));
-            storedDocument.addNonBlankField("q_filters_multi", toList(results.filters));
-            storedDocument.addNonBlankField("q_keys_and_values", sort(results.keyValues));
-            storedDocument.addNonBlankField("q_keys_and_values_multi", toList(results.keyValues));
+            //storedDocument.addNonBlankField("q_filters", sort(results.filters));
+            storedDocument.addNonBlankField("q_filters", toList(results.filters));
+            //storedDocument.addNonBlankField("q_keys_and_values", sort(results.keyValues));
+            storedDocument.addNonBlankField("q_keys_and_values", toList(results.keyValues));
             storedDocument.addNonBlankField("q_max_filter_count",
                     Integer.toString(results.maxFilterCount));
 
@@ -83,21 +86,40 @@ public class QPDFFeatureMapper implements FeatureMapper {
         }
     }
 
+    private QPDFResults normalize(QPDFResults results) {
+        QPDFResults ret = new QPDFResults();
+        ret.maxFilterCount = results.maxFilterCount;
+        ret.filters = normalize(results.filters);
+        ret.keyValues = normalize(results.keyValues);
+        ret.parentAndKeys = normalize(results.parentAndKeys);
+        ret.keys = normalize(results.keys);
+        return ret;
+    }
+
+    private Set<String> normalize(Set<String> strings) {
+        Set<String> ret = new HashSet<>();
+        for (String s : strings) {
+            ret.add(truncate(stripIllegalUnicode(s)));
+        }
+        return ret;
+    }
+
     private List<String> toList(Set<String> keys) {
         List<String> list = new ArrayList<>();
         for (String val : keys) {
-            list.add(truncate(val));
+            list.add(val);
         }
         Collections.sort(list);
         return list;
     }
+
     private List<String> filter(Set<String> keys) {
         List<String> list = new ArrayList<>();
         Matcher m = IN_SPEC.matcher("");
         for (String k : keys) {
             if (! commonKeys.contains(k)) {
                 if (! m.reset(k).find()) {
-                    list.add(truncate(k));
+                    list.add(k);
                 }
             }
         }
@@ -112,12 +134,22 @@ public class QPDFFeatureMapper implements FeatureMapper {
             return s;
         }
     }
+
+    private String stripIllegalUnicode(String s) {
+        if (s == null) {
+            return "";
+        }
+        return s.replaceAll("\u0000", "u0000")
+                .replaceAll("\u001f", "u001f")
+                .replaceAll("\u001e", "u001e")
+                ;
+    }
+
     private String sort(Set<String> keySet) {
         List<String> list = new ArrayList<>();
         list.addAll(keySet);
         Collections.sort(list);
         return joinWith(" ", list);
-
     }
 
     public static String joinWith(String delimiter, Collection<String> collection) {
@@ -127,11 +159,7 @@ public class QPDFFeatureMapper implements FeatureMapper {
             if (i++ > 0) {
                 sb.append(delimiter);
             }
-            if (s.length() > MAX_STRING_LENGTH) {
-                sb.append(s.substring(0, MAX_STRING_LENGTH)+"...");
-            } else {
-                sb.append(s);
-            }
+            sb.append(s);
         }
         return sb.toString();
     }
