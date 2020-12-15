@@ -1,0 +1,12 @@
+{
+  "exact" : {
+    "mimes": [
+      {"pattern": "application/pdf", "probability": 0.1}
+    ],
+    "detected_mimes": [
+      {"pattern": "application/pdf", "probability": 0.1}
+    ],
+    "case_sensitive" : false
+  },
+  "status": 200
+}

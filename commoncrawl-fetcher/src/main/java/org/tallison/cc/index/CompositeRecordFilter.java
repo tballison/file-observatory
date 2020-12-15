@@ -9,22 +9,30 @@ import java.io.Reader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 import java.util.regex.Pattern;
 
 /**
- * Only implements "include lists" filter on mime and detected mime for now
+ * Only implements "include lists" filter on mime and detected mime
+ * and status for now.
  */
 public class CompositeRecordFilter implements RecordFilter {
 
     private static final boolean DEFAULT_CASE_SENSITIVE = false;
+    private static final float UNSPECIFIED_PROBABILITY = -1.0f;
+    private IntFilter statusInclude;
     private StringFilter mimesInclude;
     private StringFilter detectedMimesInclude;
 
     private StringFilter regexMimesInclude;
     private StringFilter regexDetectedMimesInclude;
+
+    private boolean defaultInclude = false;
 
     public static RecordFilter load(Path jsonFile) throws IOException {
         if (jsonFile == null) {
@@ -47,16 +55,17 @@ public class CompositeRecordFilter implements RecordFilter {
         filter.detectedMimesInclude = new ExactFilter(caseSensitive);
         filter.regexMimesInclude = new RegexFilter();
         filter.regexDetectedMimesInclude = new RegexFilter();
+
         if (root.has("exact")) {
             JsonObject exact = root.getAsJsonObject("exact");
             if (exact.has("mimes")) {
                 for (JsonElement el : exact.getAsJsonArray("mimes")) {
-                    filter.mimesInclude.addPattern(el.getAsString());
+                    addPattern(el, filter.mimesInclude);
                 }
             }
             if (exact.has("detected_mimes")) {
                 for (JsonElement el : exact.getAsJsonArray("detected_mimes")) {
-                    filter.detectedMimesInclude.addPattern(el.getAsString());
+                    addPattern(el, filter.detectedMimesInclude);
                 }
             }
         }
@@ -64,32 +73,77 @@ public class CompositeRecordFilter implements RecordFilter {
             JsonObject regex = root.getAsJsonObject("regex");
             if (regex.has("mimes")) {
                 for (JsonElement el : regex.getAsJsonArray("mimes")) {
-                    filter.regexMimesInclude.addPattern(el.getAsString());
+                    addPattern(el, filter.regexMimesInclude);
                 }
             }
             if (regex.has("detected_mimes")) {
                 for (JsonElement el : regex.getAsJsonArray("detected_mimes")) {
-                    filter.regexDetectedMimesInclude.addPattern(el.getAsString());
+                    addPattern(el, filter.regexDetectedMimesInclude);
                 }
             }
+        }
+        filter.statusInclude = new IntFilter();
+        if (root.has("status")) {
+            JsonElement statusEl = root.get("status");
+            if (statusEl.isJsonArray()) {
+                for (JsonElement statusIntEl : statusEl.getAsJsonArray()) {
+                    filter.statusInclude.addInt(statusIntEl.getAsInt());
+                }
+            } else {
+                filter.statusInclude.addInt(root.get("status").getAsInt());
+            }
+        }
+        if (root.has("defaultInclude")) {
+            filter.defaultInclude = root.get("defaultInclude").getAsBoolean();
         }
         return filter;
     }
 
+    private static void addPattern(JsonElement el, StringFilter filter) {
+        if (el.isJsonObject()) {
+            String pattern = el.getAsJsonObject().get("pattern").getAsString();
+            float probability = el.getAsJsonObject().get("probability").getAsFloat();
+            filter.addPattern(pattern, probability);
+        } else {
+            filter.addPattern(el.getAsString(), UNSPECIFIED_PROBABILITY);
+        }
+    }
+
     @Override
     public boolean accept(CCIndexRecord record) {
-        if (mimesInclude.accept(record.getNormalizedMime())) {
-            return true;
-        } else if (detectedMimesInclude.accept(record.getNormalizedDetectedMime())) {
-            return true;
-        } else {
-            if (regexMimesInclude.accept(record.getNormalizedMime())) {
-                return true;
-            } else if (regexDetectedMimesInclude.accept(record.getNormalizedDetectedMime())) {
-                return true;
-            }
+
+        if (!statusInclude.accept(record.getStatus())) {
+            return false;
         }
-        return false;
+
+        RESULT r = mimesInclude.accept(record.getNormalizedMime());
+        if (r == RESULT.MATCH_SELECT) {
+            return true;
+        } else if (r == RESULT.MATCH_DONT_SELECT) {
+            return false;
+        }
+
+        r = detectedMimesInclude.accept(record.getNormalizedDetectedMime());
+        if (r == RESULT.MATCH_SELECT) {
+            return true;
+        } else if (r == RESULT.MATCH_DONT_SELECT) {
+            return false;
+        }
+
+        r = regexMimesInclude.accept(record.getNormalizedMime());
+        if (r == RESULT.MATCH_SELECT) {
+            return true;
+        } else if (r == RESULT.MATCH_DONT_SELECT) {
+            return false;
+        }
+        r = regexDetectedMimesInclude.accept(record.getNormalizedDetectedMime());
+        if (r == RESULT.MATCH_SELECT) {
+            return true;
+        } else if (r == RESULT.MATCH_DONT_SELECT) {
+            return false;
+        }
+
+        return defaultInclude;
     }
 
     private static class AcceptAll implements RecordFilter {
@@ -100,59 +154,111 @@ public class CompositeRecordFilter implements RecordFilter {
         }
     }
 
-    private interface StringFilter {
-        boolean accept(String s);
-        void addPattern(String s);
+    //returns accept if it is empty or if
+    //the int has been added via addInt
+    private static class IntFilter {
+        Set<Integer> ints = new HashSet<>();
+        boolean accept(int i) {
+            return ints.isEmpty() || ints.contains(i);
+        }
+        void addInt(int i) {
+            ints.add(i);
+        }
     }
 
+    private interface StringFilter {
+        RESULT accept(String s);
+        void addPattern(String s, float probability);
+    }
     private static class ExactFilter implements StringFilter {
 
+        private final Random random = new Random();
         private final boolean caseSensitive;
-        private Set<String> include = new HashSet<>();
+        private Map<String, Float> include = new HashMap<>();
         ExactFilter(boolean caseSensitive) {
             this.caseSensitive = caseSensitive;
         }
 
         @Override
-        public void addPattern(String pattern) {
+        public void addPattern(String pattern, float probability) {
             if (caseSensitive) {
-                include.add(pattern);
+                include.put(pattern, probability);
             } else {
-                include.add(pattern.toLowerCase(Locale.US));
+                include.put(pattern.toLowerCase(Locale.US), probability);
             }
         }
+
         @Override
-        public boolean accept(String s) {
+        public RESULT accept(String s) {
             if (s == null) {
-                return false;
+                return RESULT.DONT_SELECT;
             }
             if (caseSensitive) {
-                return include.contains(s);
+                if (include.containsKey(s)) {
+                    Float prob = include.get(s);
+                    if (prob > 0.0f) {
+                        if (random.nextFloat() < prob) {
+                            return RESULT.MATCH_SELECT;
+                        } else {
+                            return RESULT.MATCH_DONT_SELECT;
+                        }
+                    } else {
+                        return RESULT.MATCH_SELECT;
+                    }
+                }
             } else {
-                return include.contains(s.toLowerCase(Locale.US));
+                String lc = s.toLowerCase(Locale.US);
+                if (include.containsKey(lc)) {
+                    Float prob = include.get(lc);
+                    if (prob > 0.0f) {
+                        if (random.nextFloat() < prob) {
+                            return RESULT.MATCH_SELECT;
+                        } else {
+                            return RESULT.MATCH_DONT_SELECT;
+                        }
+                    }
+                    return RESULT.MATCH_SELECT;
+                }
             }
+            return RESULT.DONT_SELECT;
         }
     }
 
     private static class RegexFilter implements StringFilter {
 
-        Set<Pattern> patterns = new HashSet<>();
+        Map<Pattern, Float> patterns = new HashMap<>();
+        private final Random random = new Random();
+
         @Override
-        public boolean accept(String s) {
+        public RESULT accept(String s) {
             if (s == null) {
-                return false;
+                return RESULT.DONT_SELECT;
             }
-            for (Pattern p : patterns) {
-                if (p.matcher(s).find()) {
-                    return true;
+            for (Map.Entry<Pattern, Float> e : patterns.entrySet()) {
+                if (e.getKey().matcher(s).find()) {
+                    if (e.getValue() > 0.0f) {
+                        if (random.nextFloat() < e.getValue()) {
+                            return RESULT.MATCH_SELECT;
+                        } else {
+                            return RESULT.MATCH_DONT_SELECT;
+                        }
+                    } else {
+                        return RESULT.MATCH_SELECT;
+                    }
                 }
             }
-            return false;
+            return RESULT.DONT_SELECT;
         }
 
         @Override
-        public void addPattern(String s) {
-            patterns.add(Pattern.compile(s));
+        public void addPattern(String s, float probability) {
+            patterns.put(Pattern.compile(s), probability);
         }
+    }
+
+    private enum RESULT {
+        MATCH_SELECT,
+        MATCH_DONT_SELECT,
+        DONT_SELECT
     }
 }

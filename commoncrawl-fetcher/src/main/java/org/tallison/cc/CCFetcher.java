@@ -17,14 +17,13 @@
 
 package org.tallison.cc;
 
-import it.unimi.dsi.fastutil.io.FastBufferedInputStream;
+
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.Options;
 import org.apache.commons.codec.binary.Base32;
 import org.apache.commons.codec.digest.DigestUtils;
-import org.apache.commons.httpclient.Header;
 import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpHost;
 import org.apache.http.HttpResponse;
@@ -35,9 +34,12 @@ import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.client.RedirectLocations;
 import org.apache.http.protocol.HttpCoreContext;
 import org.apache.log4j.Logger;
-import org.archive.io.ArchiveRecordHeader;
-import org.archive.io.warc.WARCRecord;
-import org.archive.util.LaxHttpParser;
+import org.netpreserve.jwarc.HttpParser;
+import org.netpreserve.jwarc.MediaType;
+import org.netpreserve.jwarc.WarcPayload;
+import org.netpreserve.jwarc.WarcReader;
+import org.netpreserve.jwarc.WarcRecord;
+import org.netpreserve.jwarc.WarcResponse;
 import org.tallison.cc.index.CCIndexRecord;
 
 
@@ -58,6 +60,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Types;
 import java.util.List;
+import java.util.Optional;
 import java.util.zip.GZIPInputStream;
 
 /**
@@ -260,28 +263,36 @@ public class CCFetcher {
             return;
         }
         Path tmp = null;
-        Header[] headers = null;
         boolean isTruncated = false;
         try {
             //this among other parts is plagiarized from centic9's CommonCrawlDocumentDownload
             //probably saved me hours.  Thank you, Dominik!
             tmp = Files.createTempFile("cc-getter", "");
             try (InputStream is = new GZIPInputStream(httpResponse.getEntity().getContent())) {
-                WARCRecord warcRecord = new WARCRecord(new FastBufferedInputStream(is), "", 0);
-                ArchiveRecordHeader archiveRecordHeader = warcRecord.getHeader();
-                /*if (archiveRecordHeader.getHeaderFields()
-                        .containsKey(WARCConstants.HEADER_KEY_TRUNCATED)) {
-                    isTruncated = true;
-                }*/
+                WarcReader warcreader = new WarcReader(is);
+                int i = 0;
+                //should be a single warc per file
+                for (WarcRecord record : warcreader) {
+                    if (i++ == 0) {
+                        if (record instanceof WarcResponse && record.contentType().base().equals(MediaType.HTTP)) {
+                            Optional<WarcPayload> payload = ((WarcResponse) record).payload();
+                            if (payload.isPresent()) {
+                                Files.copy(payload.get().body().stream(),
+                                        tmp,
+                                        StandardCopyOption.REPLACE_EXISTING);
+                            } else {
+                                LOGGER.warn("payload not present ?! id=" + id);
+                            }
+                        } else {
+                            LOGGER.warn("not a warc response ?! id=" + id);
+                        }
+                    } else {
+                        LOGGER.warn("more than one record ?! id=" + id);
+                    }
 
-                //need to parseheaders to pull off the right number of
-                //bytes from the stream, otherwise, you'll be copying
-                //the full warc file
-                headers = LaxHttpParser.parseHeaders(warcRecord, "UTF-8");
+                }
 
-                Files.copy(warcRecord,
-                        tmp,
-                        StandardCopyOption.REPLACE_EXISTING);
+
             }
         } catch (IOException e) {
             LOGGER.warn("problem parsing warc file", e);
@@ -330,18 +341,6 @@ public class CCFetcher {
         insert.addBatch();
     }
 
-
-    private String getHeader(String headerNameLC, Header[] headers) {
-        if (headers == null) {
-            return "";
-        }
-        for (Header header : headers) {
-            if (header.getName().equalsIgnoreCase(headerNameLC)) {
-                return clean(header.getValue());
-            }
-        }
-        return "";
-    }
 
     static String clean(String s) {
         //make sure that the string doesn't contain \t or new line

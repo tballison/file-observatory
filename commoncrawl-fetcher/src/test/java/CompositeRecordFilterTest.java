@@ -25,12 +25,13 @@ public class CompositeRecordFilterTest {
         CCIndexRecord r = new CCIndexRecord();
         r.setMime(mime);
         r.setDetectedMime(detectedMime);
+        r.setStatus(200);
         return filter.accept(r);
     }
 
     private RecordFilter loadFilter(String filterName) throws Exception {
         Path p = Paths.get(
-                this.getClass().getResource("/test-documents/"+filterName).toURI());
+                this.getClass().getResource("test-documents/"+filterName).toURI());
         return CompositeRecordFilter.load(p);
     }
 }

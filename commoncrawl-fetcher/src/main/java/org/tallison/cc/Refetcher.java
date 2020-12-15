@@ -242,7 +242,16 @@ public class Refetcher {
         WGetter(ArrayBlockingQueue<IdUrlPair> q,
                 Connection connection, Path rootDir) throws SQLException {
             this.queue = q;
-            String sql = "insert into cc_refetch values (?,?,?,?, now() at time zone 'utc')";
+            System.out.println(connection.getMetaData().getURL());
+            String sql;
+            String connectionUrl = connection.getMetaData().getURL();
+            if (connectionUrl.startsWith("jdbc:postgresql")) {
+                sql = "insert into cc_refetch values (?,?,?,?, now() at time zone 'utc')";
+            } else if (connectionUrl.startsWith("jdbc:sqlite")) {
+                sql = "insert into cc_refetch values (?,?,?,?, DATETIME('now', 'utc'))";
+            } else {
+                throw new IllegalArgumentException("currently only supports postgresql and sqlite");
+            }
             insert = connection.prepareStatement(sql);
             this.rootDir = rootDir;
         }

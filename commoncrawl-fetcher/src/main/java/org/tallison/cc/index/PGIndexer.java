@@ -134,7 +134,6 @@ public class PGIndexer extends AbstractRecordProcessor {
                 continue;
             }
             CONSIDERED.incrementAndGet();
-            String url = r.getUrl();
 
             try {
                 long total= ADDED.getAndIncrement();
@@ -173,7 +172,7 @@ public class PGIndexer extends AbstractRecordProcessor {
                                 r.getNormalizedMime(), r.getNormalizedDetectedMime())
                 );
             } catch (SQLException e) {
-                e.printStackTrace();
+                throw new RuntimeException(e);
             }
         }
         //}
@@ -194,11 +193,14 @@ public class PGIndexer extends AbstractRecordProcessor {
     @Override
     public void close() throws IOException {
         try {
-            LOGGER.debug("in close about to execute batch");
-            insert.executeBatch();
-            insert.close();
+            if (added > 0) {
+                LOGGER.debug("in close about to execute batch");
 
-            connection.commit();
+                insert.executeBatch();
+                insert.close();
+
+                connection.commit();
+            }
         } catch (SQLException e) {
             throw new IOException(e);
         }

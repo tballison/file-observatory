@@ -253,4 +253,8 @@ public class CCIndexRecord {
     public void setLength(int length) {
         this.length = length;
     }
- }
+
+    public void setStatus(int status) {
+        this.status = status;
+    }
+}
