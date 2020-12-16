@@ -1,8 +1,7 @@
 package org.tallison.ingest;
 
-import org.apache.tika.io.IOUtils;
+import org.apache.commons.io.IOUtils;
 import org.tallison.quaerite.connectors.ESClient;
-import org.tallison.quaerite.connectors.SearchClientException;
 import org.tallison.quaerite.connectors.SearchClientFactory;
 import org.tallison.quaerite.core.StoredDocument;
 

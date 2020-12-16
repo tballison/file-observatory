@@ -1,6 +1,6 @@
 package org.tallison.ingest.mappers;
 
-import org.apache.tika.io.IOUtils;
+import org.apache.commons.io.IOUtils;
 import org.tallison.ingest.FeatureMapper;
 import org.tallison.ingest.qpdf.QPDFJsonExtractor;
 import org.tallison.ingest.qpdf.QPDFResults;

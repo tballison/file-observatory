@@ -13,12 +13,18 @@
         <dependency>
             <groupId>org.apache.tika</groupId>
             <artifactId>tika-serialization</artifactId>
-            <version>1.24.1</version>
+            <version>${tika.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.cxf</groupId>
             <artifactId>cxf-rt-rs-client</artifactId>
             <version>3.4.1</version>
+        </dependency>
+        <dependency>
+            <groupId>commons-io</groupId>
+            <artifactId>commons-io</artifactId>
+            <version>2.8.0</version>
+            <scope>compile</scope>
         </dependency>
     </dependencies>
     <artifactId>tika</artifactId>

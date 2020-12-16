@@ -14,11 +14,11 @@ public class QPDFJsonExtractorTest {
 
     @Test
     public void testBasic() throws Exception {
-        try (Reader reader = getReader("GHOSTSCRIPT-690371-0.pdf.json")) {
+        try (Reader reader = getReader("GHOSTSCRIPT-702993-0.pdf.json")) {
             QPDFJsonExtractor ex = new QPDFJsonExtractor();
             QPDFResults results = ex.extract("id", reader);
-            System.out.println(results);
-
+            //System.out.println(results);
+            //TODO: turn this into an actual test
         }
     }
 
