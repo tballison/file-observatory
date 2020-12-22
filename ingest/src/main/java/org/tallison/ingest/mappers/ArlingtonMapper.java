@@ -33,6 +33,7 @@ public class ArlingtonMapper implements FeatureMapper {
             return;
         } else if (exit != 0) {
             storedDocument.addNonBlankField("a_status", "crash");
+            return;
         }
         String relPath = resultSet.getString(1);
         try {
