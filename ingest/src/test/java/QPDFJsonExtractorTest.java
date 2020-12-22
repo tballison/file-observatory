@@ -22,6 +22,16 @@ public class QPDFJsonExtractorTest {
         }
     }
 
+    //bugtrackers/GHOSTSCRIPT/
+    @Test
+    public void testDebugging() throws Exception {
+        try (Reader reader = getReader("GHOSTSCRIPT-687771-0.pdf.json")) {
+            QPDFJsonExtractor ex = new QPDFJsonExtractor();
+            QPDFResults results = ex.extract("id", reader);
+            System.out.println(results);
+            //TODO: turn this into an actual test
+        }
+    }
     private Reader getReader(String file) throws IOException {
         return Files.newBufferedReader(getPath(file), StandardCharsets.UTF_8);
     }

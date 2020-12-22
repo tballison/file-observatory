@@ -1,0 +1,9 @@
+BEGIN - TestGrammar v0.4 built Dec 17 2020 22:39:13 - "/input/bugtrackers/GHOSTSCRIPT/GHOSTSCRIPT-687647-0.pdf" - PDFix v6.1.0
+Trailer
+  Trailer->Root
+  Trailer->Info
+    Trailer->Root->Pages
+    Trailer->Root->Outlines
+      Trailer->Root->Pages->Kids
+Error: Can't select any link from [fn:SinceVersion(1.0,PageTreeNode),fn:SinceVersion(1.0,PageObject)] to validate provided object: [0] for object 4
+END

@@ -17,6 +17,9 @@
       "collection": {
         "type": "keyword"
       },
+      "shasum_256": {
+        "type": "keyword"
+      },
       "size": {
         "type": "integer",
         "store": true
@@ -193,7 +196,7 @@
         "type": "integer",
         "store": true
       },
-      "pi_creator": {
+      "pinfo_creator": {
         "analyzer": "text_basic",
         "type": "text",
         "store": "true",
@@ -204,7 +207,7 @@
           }
         }
       },
-      "pi_producer": {
+      "pinfo_producer": {
         "analyzer": "text_basic",
         "type": "text",
         "store": "true",
@@ -215,11 +218,60 @@
           }
         }
       },
-      "pi_version": {
+      "pc_summary_info": {
+        "analyzer": "text_basic",
+        "type": "text",
+        "store": "true"
+      },
+      "pinfo_version": {
         "type": "keyword"
       },
-      "pi_javascript": {
+      "pinfo_javascript": {
         "type": "boolean"
+      },
+      "a_status": {
+        "type": "keyword"
+      },
+      "a_warn": {
+        "analyzer": "text_basic",
+        "type": "text",
+        "store": "true"
+      },
+      "tools_status": {
+        "type": "text",
+        "analyzer": "ws_lc",
+        "fields": {
+          "keyword": {
+            "type": "keyword"
+          }
+        }
+      },
+      "tools_status_warn": {
+        "type": "text",
+        "analyzer": "ws_lc",
+        "fields": {
+          "keyword": {
+            "type": "keyword"
+          }
+        }
+      },
+      "tools_status_fail": {
+        "type": "text",
+        "analyzer": "ws_lc",
+        "fields": {
+          "keyword": {
+            "type": "keyword"
+          }
+        }
+      },
+      "tools_status_timeout": {
+        "type": "text",
+        "analyzer": "ws_lc",
+        "fields": {
+          "keyword": {
+            "type": "keyword"
+          }
+        }
       }
     }
   },

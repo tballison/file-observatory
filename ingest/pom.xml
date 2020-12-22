@@ -51,6 +51,12 @@
             <groupId>org.apache.tika</groupId>
             <artifactId>tika-serialization</artifactId>
             <version>${tika.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-api</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.apache.commons</groupId>

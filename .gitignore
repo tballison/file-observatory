@@ -1,3 +1,6 @@
 .idea/
 target/
 *.iml
+/tool-runners/pdfchecker/pdf-checker.tgz
+/tool-runners/arlington
+/tool-runners/arlington/grammar/

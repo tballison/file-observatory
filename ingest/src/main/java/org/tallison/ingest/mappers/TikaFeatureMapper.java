@@ -32,7 +32,7 @@ public class TikaFeatureMapper implements FeatureMapper {
     }
 
     private void addFromMetadataList(String relPath, Path rootDir, StoredDocument storedDocument) {
-        Path p = rootDir.resolve("tika/json/"+relPath+".json");
+        Path p = rootDir.resolve("tika/json/output/"+relPath+".json");
         if (! Files.isRegularFile(p)) {
             //log
             return;
@@ -41,6 +41,7 @@ public class TikaFeatureMapper implements FeatureMapper {
         try (BufferedReader reader = Files.newBufferedReader(p, StandardCharsets.UTF_8)) {
             metadataList = JsonMetadataList.fromJson(reader);
         } catch (IOException| TikaException e) {
+            e.printStackTrace();
             //log
             return;
         }
@@ -64,12 +65,10 @@ public class TikaFeatureMapper implements FeatureMapper {
 
         Metadata root = metadataList.get(0);
         //TODO -- add this in a better spot.
-        storedDocument.addNonBlankField("collection", "bug-trackers");
         storedDocument.addNonBlankField("tk_creator_tool", root.get(TikaCoreProperties.CREATOR_TOOL));
         storedDocument.addNonBlankField("tk_producer", root.get(PDF.DOC_INFO_PRODUCER));//fix
         storedDocument.addNonBlankField("tk_oov", root.get("tika-eval:oov"));
         storedDocument.addNonBlankField("tk_num_tokens", root.get("tika-eval:numTokens"));
-        storedDocument.addNonBlankField("tk_shasum_256", root.get("X-TIKA:digest:SHA256"));
         storedDocument.addNonBlankField("tk_lang_detected", root.get("tika-eval:lang"));
         String mimeDetailed = root.get(Metadata.CONTENT_TYPE);
         String mime = mimeDetailed;

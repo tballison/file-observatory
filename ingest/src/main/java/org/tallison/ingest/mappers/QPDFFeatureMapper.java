@@ -50,36 +50,37 @@ public class QPDFFeatureMapper implements FeatureMapper {
         try {
             processJson(resultSet.getString(1), rootDir, storedDocument);
         } catch (IOException e) {
+            e.printStackTrace();
             //log
         }
     }
 
     private void processJson(String relPath, Path rootDir,
                              StoredDocument storedDocument) throws IOException {
-        Path p = rootDir.resolve("qpdf/json/"+relPath+".json");
+        Path p = rootDir.resolve("qpdf/output/"+relPath+".json");
         try (Reader r = Files.newBufferedReader(p, StandardCharsets.UTF_8)) {
             QPDFResults results = new QPDFJsonExtractor().extract(relPath, r);
             results = normalize(results);
-            //storedDocument.addNonBlankField("q_keys", sort(results.keys));
             storedDocument.addNonBlankField("q_keys", toList(results.keys));
             List<String> filtered = filter(results.keys);
 
-            //storedDocument.addNonBlankField("q_keys_oos",
-              //      joinWith(" ", filtered));
-
             storedDocument.addNonBlankField("q_keys_oos",
                     filtered);
-            //storedDocument.addNonBlankField("q_parent_and_keys",
-              //      sort(results.parentAndKeys));
             storedDocument.addNonBlankField("q_parent_and_keys",
                     toList(results.parentAndKeys));
 
-            //storedDocument.addNonBlankField("q_filters", sort(results.filters));
             storedDocument.addNonBlankField("q_filters", toList(results.filters));
-            //storedDocument.addNonBlankField("q_keys_and_values", sort(results.keyValues));
             storedDocument.addNonBlankField("q_keys_and_values", toList(results.keyValues));
             storedDocument.addNonBlankField("q_max_filter_count",
                     Integer.toString(results.maxFilterCount));
+            //storedDocument.addNonBlankField("q_keys", sort(results.keys));
+            //storedDocument.addNonBlankField("q_filters", sort(results.filters));
+            //storedDocument.addNonBlankField("q_keys_and_values", sort(results.keyValues));
+            //storedDocument.addNonBlankField("q_parent_and_keys",
+            //      sort(results.parentAndKeys));
+            //storedDocument.addNonBlankField("q_keys_oos",
+            //      joinWith(" ", filtered));
+
 
         } catch (IllegalStateException e) {
             //log
@@ -99,7 +100,7 @@ public class QPDFFeatureMapper implements FeatureMapper {
     private Set<String> normalize(Set<String> strings) {
         Set<String> ret = new HashSet<>();
         for (String s : strings) {
-            ret.add(truncate(stripIllegalUnicode(s)));
+            ret.add(truncate(ESUtil.stripIllegalUnicode(s)));
         }
         return ret;
     }
@@ -135,15 +136,6 @@ public class QPDFFeatureMapper implements FeatureMapper {
         }
     }
 
-    private String stripIllegalUnicode(String s) {
-        if (s == null) {
-            return "";
-        }
-        return s.replaceAll("\u0000", "u0000")
-                .replaceAll("\u001f", "u001f")
-                .replaceAll("\u001e", "u001e")
-                ;
-    }
 
     private String sort(Set<String> keySet) {
         List<String> list = new ArrayList<>();

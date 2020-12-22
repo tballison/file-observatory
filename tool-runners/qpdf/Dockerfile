@@ -10,9 +10,11 @@
   ##RUN make install
 
 
-
+FROM alpine:3
 RUN apk add --no-cache \
-    qpdf=10.0.1-r0
+    qpdf=10.0.1-r0 \
+    openjdk11-jre
+
 
 COPY target/qpdf-1.0.0-SNAPSHOT.jar /qpdf-1.0.0-SNAPSHOT.jar
 

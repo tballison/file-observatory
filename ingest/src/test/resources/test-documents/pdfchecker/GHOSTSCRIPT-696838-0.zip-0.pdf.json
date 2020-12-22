@@ -1,0 +1,324 @@
+{
+    "analysis-summary": {
+        "can-be-optimized": true,
+        "date": "Thu Dec 17 21:53:47 2020",
+        "errors": [],
+        "information": [
+            "born-digital",
+            "claims-pdfa-conformance",
+            "contains-annots",
+            "contains-embedded-files",
+            "contains-metadata",
+            "contains-thumbnails",
+            "resolution-too-low",
+            "suboptimal-compression",
+            "uses-fonts-fully-embedded"
+        ],
+        "input": "/input/bugtrackers/GHOSTSCRIPT/GHOSTSCRIPT-696838-0.zip-0.pdf",
+        "pdf-checker-version": "2.0.1",
+        "profile": "/pdfchecker-bin/PDF_Checker/CheckerProfiles/everything.json",
+        "size-in-bytes": 11313517,
+        "triggered-abort": ""
+    },
+    "cleanup-results": {
+        "checks-aborted": [],
+        "checks-completed": [
+            "suboptimal-compression"
+        ],
+        "errors": {},
+        "how-to-optimize": {},
+        "information": {
+            "suboptimal-compression": [
+                "Uncompressed: (1 instance)"
+            ]
+        }
+    },
+    "color-images": {
+        "checks-aborted": [],
+        "checks-completed": [
+            "image-depth",
+            "resolution-too-high",
+            "resolution-too-low",
+            "uses-jpeg2000-compression"
+        ],
+        "errors": {},
+        "how-to-optimize": {},
+        "information": {}
+    },
+    "fonts-results": {
+        "checks-aborted": [],
+        "checks-completed": [
+            "fontdescriptor-missing-capheight",
+            "fontdescriptor-missing-fields",
+            "uses-base14fonts-not-embedded",
+            "uses-fonts-fully-embedded",
+            "uses-fonts-not-embedded"
+        ],
+        "errors": {},
+        "how-to-optimize": {
+            "uses-fonts-fully-embedded": [
+                "Fully embedded fonts can be subset using PDF Optimizer to save space. (134 instances)"
+            ]
+        },
+        "information": {
+            "uses-fonts-fully-embedded": [
+                "BdxshrMxtkjjUtopiaStd-Regular (1 instance)",
+                "BgkvkkRmjrjyTheSansMonoConNormal (1 instance)",
+                "BxrtnbYvxnxlUtopiaStd-Italic (1 instance)",
+                "BxvkcfWpvrxyHelveticaNeue-Condensed (1 instance)",
+                "CcdcpfJnrntdUtopiaStd-Italic (1 instance)",
+                "CcqtrkCpbwbsHelveticaNeue-MediumCond (1 instance)",
+                "CghwhtDvmsjsTimes-Italic (1 instance)",
+                "CgmvvnMymyxtArialMT-Bold (1 instance)",
+                "CgxkpcNwcywjTimes-Roman (1 instance)",
+                "ClxvmtWmsyglHelveticaNeue-Medium (1 instance)",
+                "CqnqxvJkkgwsArialNarrow-Bold (1 instance)",
+                "DbwphsDrkwwjUtopiaStd-BoldIt (1 instance)",
+                "DhhwdlGlbvlbUtopiaStd-Bold (1 instance)",
+                "DhxrcjGgvbkvArialMT-Bold (1 instance)",
+                "DlrcvwMryyjgHelveticaNeue-Condensed (1 instance)",
+                "DwskljKxlwwkTimes-Italic (1 instance)",
+                "FdprlwGgqnghTimes-Italic (1 instance)",
+                "FffgkgYtynywArialNarrow-Bold (1 instance)",
+                "FhfsbtLccqmmArialMT-Bold (1 instance)",
+                "FsbkhwRnhmllUtopiaStd-Italic (1 instance)",
+                "FtcndwHnmlryHelveticaNeue-MediumCond (1 instance)",
+                "FvlmtyBmyvtkArialNarrow-Bold (1 instance)",
+                "FxfphvLbcdsrArialMT-Bold (1 instance)",
+                "GcvxnxHvwrflArialMT-Bold (1 instance)",
+                "GdqspwPjhtmbUtopiaStd-Italic (1 instance)",
+                "GjblrvChhwnfTheSansMonoConNormal (1 instance)",
+                "GksfmxMjvqybArialMT-Bold (1 instance)",
+                "GrbsdkRfjvcnArialMT-Bold (1 instance)",
+                "GvlsdfYycvckTimes-Roman (1 instance)",
+                "GxpkhdHsfwwdArialNarrow-Bold (1 instance)",
+                "GylwqxDtxlmfArialNarrow-Bold (1 instance)",
+                "HbfpbvJkrvmsZapfDingbats (1 instance)",
+                "HdwgfwClxjsyTimes-Roman (1 instance)",
+                "HgvlkrBxggmdTheSansMonoConNormal (1 instance)",
+                "HgwffwTjskghTheSansMonoConNormal (1 instance)",
+                "HhpmwwRkggwtArialNarrow-Bold (1 instance)",
+                "HpptktPvckbrTheSansMonoConNormal (1 instance)",
+                "HrxqjsVwrgqcUtopiaStd-Italic (1 instance)",
+                "HsfbyxYnbvttHelveticaNeue-HeavyCond (1 instance)",
+                "HxwlqcFtwqkrUtopiaStd-Regular (1 instance)",
+                "JdjbbyLcgxhvUtopiaStd-BoldIt (1 instance)",
+                "JfrtwgFsfryrUtopiaStd-BoldIt (1 instance)",
+                "JfxcmyMkhlxsHelveticaNeue-MediumCond (1 instance)",
+                "JhyxfcGvltltUtopiaStd-Italic (1 instance)",
+                "JljpnkRgyxytArialNarrow-Bold (1 instance)",
+                "JmhxbxLpxdqwTimes-Roman (1 instance)",
+                "JmwwtqCfwvvvHelveticaNeue-MediumCond (1 instance)",
+                "JxgbcwShjywvUtopiaStd-Italic (1 instance)",
+                "KbhsdmBqnfsgTheSansMonoConNormal (1 instance)",
+                "KfqlpvQkgnwhUtopiaStd-BoldIt (1 instance)",
+                "KjwksbRphfcpArialNarrow-Bold (1 instance)",
+                "KmndckHgqcnvUtopiaStd-Regular (1 instance)",
+                "KnndgqVkvkfgHelveticaNeue-Condensed (1 instance)",
+                "KpjslwXqrrmvUtopiaStd-BoldIt (1 instance)",
+                "KssydxBqkmqrUtopiaStd-BoldIt (1 instance)",
+                "KyglhbKblmbjTimes-Italic (1 instance)",
+                "LbgscbXlhkldUtopiaStd-Regular (1 instance)",
+                "LddjcrFfxkrkHelveticaNeue-Condensed (1 instance)",
+                "LdjtgqVrnsbhHelveticaNeue-MediumCond (1 instance)",
+                "LjhjwcCgdyxqTheSansMonoConBlack (1 instance)",
+                "LtspybWbsrysHelveticaNeue-MediumCond (1 instance)",
+                "LwkxmlLpjmnpTimes-Roman (1 instance)",
+                "LygbgxYjchfnArialNarrow-Bold (1 instance)",
+                "MbpysxFngrvhTimes-Roman (1 instance)",
+                "MgkfwpCdgnxyArialNarrow-Bold (1 instance)",
+                "MgtbcvDcblmgHelveticaNeue-Condensed (1 instance)",
+                "MhsrvdTpdmmrArialNarrow-Bold (1 instance)",
+                "MjwjjpHlwhqvTimes-Italic (1 instance)",
+                "MngfbwPlwtyvArialMT-Bold (1 instance)",
+                "MnrflgNbrpsrTimes-Roman (1 instance)",
+                "MntsktKfdgdpTimes-Roman (1 instance)",
+                "MsbrtgLxwygtUtopiaStd-BoldIt (1 instance)",
+                "MtgqxxGfvskbTheSansMonoConNormal (1 instance)",
+                "NjsxjcTppgfrUtopiaStd-Italic (1 instance)",
+                "NwfqvlRlnvgxHelveticaNeue-MediumCond (1 instance)",
+                "NwpybmShhltlHelveticaNeue-Condensed (1 instance)",
+                "NyxpcgJlgnngUtopiaStd-Italic (1 instance)",
+                "PdjjcvNklqtsHelveticaNeue-MediumCond (1 instance)",
+                "PdpxxwTqpshxTimes-Roman (1 instance)",
+                "PlxpmdFhxdgmUtopiaStd-Regular (1 instance)",
+                "PwlhrhHwhtklUtopiaStd-Italic (1 instance)",
+                "QblsgcKfwlsnHelveticaNeue-CondensedObl (1 instance)",
+                "QbpbjyYjgrfgTheSansMonoConBlack (1 instance)",
+                "QddqsgMbnlqmArialMT-Bold (1 instance)",
+                "QkqtqtQklsdmUtopiaStd-Regular (1 instance)",
+                "QrfjdqYcmklhHelveticaNeue-Condensed (1 instance)",
+                "QrhdptGhbstjTimes-Italic (1 instance)",
+                "QtctpkVyfrcxUtopiaStd-Regular (1 instance)",
+                "QvbpvmYqxkqkHelveticaNeue-Condensed (1 instance)",
+                "QxqdnjGgfdpjTimes-Roman (1 instance)",
+                "QypdkyKblxywHelveticaNeue-MediumCond (1 instance)",
+                "RbgyjvRdlgbnTimes-Italic (1 instance)",
+                "RblcvlMnvlyjUtopiaStd-Regular (1 instance)",
+                "RcjmrtGfljspTheSansMonoConNormal (1 instance)",
+                "RdtdhgGkfbckArialMT-Bold (1 instance)",
+                "RjsclfRmbgmfTheSansMonoConBlack (1 instance)",
+                "RljbbtDfwfwtArialMT-Bold (1 instance)",
+                "RmpkpfScpqwqHelveticaNeue-Condensed (1 instance)",
+                "RrgvmbRxbvvjUtopiaStd-Regular (1 instance)",
+                "RsrqwnGrxjjmHelveticaNeue-BoldCond (1 instance)",
+                "ShpvwfTvfrcbHelveticaNeue-MediumCond (1 instance)",
+                "SkjlsbFbbydlHelveticaNeue-Condensed (1 instance)",
+                "SnrxgkXhqqsyTheSansMonoConNormal (1 instance)",
+                "SqhjypHlcktfTimes-Italic (1 instance)",
+                "SsbwldLqvbntUtopiaStd-BoldIt (1 instance)",
+                "SxtfshSqxdldHelveticaNeue-Condensed (1 instance)",
+                "ThyhdxRmcwmgHelveticaNeue-MediumCond (1 instance)",
+                "TkbglmBrwklhUtopiaStd-Regular (1 instance)",
+                "TlrwmcHvvqwyUtopiaStd-Italic (1 instance)",
+                "TmhcrkYpbjdsUtopiaStd-Regular (1 instance)",
+                "TmydjtXpmxygUtopiaStd-BoldIt (1 instance)",
+                "TpxcgqYtgnkbHelveticaNeue-Condensed (1 instance)",
+                "VcppfkQrytdvTimes-Roman (1 instance)",
+                "VhtpcwDfgnbvTheSansMonoConNormal (1 instance)",
+                "VkvdpbXtryjsHelveticaNeue-MediumCond (1 instance)",
+                "VrdrrlHhmnvxUtopiaStd-Regular (1 instance)",
+                "VwqgcnXlclmxTimes-Italic (1 instance)",
+                "VxnyvxDvnyvkTheSansMonoConNormal (1 instance)",
+                "WbmlblSrjpdmUtopiaStd-Italic (1 instance)",
+                "WbxfmjQlgpmyUtopiaStd-Italic (1 instance)",
+                "WbxgwqWmjhdkTheSansMonoConBlack (1 instance)",
+                "WdkrkjLvcbkfArialMT-Bold (1 instance)",
+                "WgdfbnNxtxtjTimes-Italic (1 instance)",
+                "WlnrbwScsmvpArialNarrow-Bold (1 instance)",
+                "WlnyhlYvchhrTimes-Italic (1 instance)",
+                "WlxydrTwryqsArialMT-Bold (1 instance)",
+                "WnfqdqXvpwbjUtopiaStd-Regular (1 instance)",
+                "WsrbgfYsxtjhUtopiaStd-BoldIt (1 instance)",
+                "WxsjkmDkxjynTimes-Italic (1 instance)",
+                "XdfdrlNkcwxgArialNarrow-Bold (1 instance)",
+                "XhbqdvKvtqkqUtopiaStd-Bold (1 instance)",
+                "XwlfcgFnyhhqTimes-Roman (1 instance)",
+                "YlpwxwFrrhqtTheSansMonoConNormal (1 instance)",
+                "YvsvxyKkbsgmTimes-Roman (1 instance)"
+            ]
+        }
+    },
+    "general-results": {
+        "checks-aborted": [],
+        "checks-completed": [
+            "born-digital",
+            "claims-pdfa-conformance",
+            "claims-pdfe-conformance",
+            "claims-pdfua-conformance",
+            "claims-pdfvt-conformance",
+            "claims-pdfx-conformance",
+            "contains-owner-password",
+            "contains-signature",
+            "damaged",
+            "image-only",
+            "password-protected",
+            "pdf-v2",
+            "unable-to-open",
+            "xfa-type"
+        ],
+        "errors": {},
+        "how-to-optimize": {},
+        "information": {
+            "born-digital": [
+                "Document was born digital.  It was produced from PDF authoring software and so it may contain text, images, tables, forms, and other objects.  These types of PDFs typically do not require OCR."
+            ],
+            "claims-pdfa-conformance": [
+                "Claims PDF/A compliance"
+            ]
+        }
+    },
+    "grayscale-images": {
+        "checks-aborted": [],
+        "checks-completed": [
+            "resolution-too-high",
+            "resolution-too-low",
+            "uses-jpeg2000-compression"
+        ],
+        "errors": {},
+        "how-to-optimize": {},
+        "information": {}
+    },
+    "image-results": {
+        "checks-aborted": [],
+        "checks-completed": [
+            "alternate-images"
+        ],
+        "errors": {},
+        "how-to-optimize": {},
+        "information": {}
+    },
+    "monochrome-images": {
+        "checks-aborted": [],
+        "checks-completed": [
+            "resolution-too-high",
+            "resolution-too-low",
+            "uses-jbig2-compression"
+        ],
+        "errors": {},
+        "how-to-optimize": {},
+        "information": {
+            "resolution-too-low": [
+                "Total: (1 instance)"
+            ]
+        }
+    },
+    "objects-results": {
+        "checks-aborted": [],
+        "checks-completed": [
+            "contains-javascript-actions",
+            "contains-thumbnails"
+        ],
+        "errors": {},
+        "how-to-optimize": {
+            "contains-thumbnails": [
+                "Embedded thumbnails are no longer commonly used and can be removed using PDF Optimizer to save space. (158 instances)"
+            ]
+        },
+        "information": {
+            "contains-thumbnails": [
+                "Total: (158 instances)"
+            ]
+        }
+    },
+    "userdata-results": {
+        "checks-aborted": [],
+        "checks-completed": [
+            "contains-annots",
+            "contains-annots-not-for-printing",
+            "contains-annots-not-for-viewing",
+            "contains-annots-without-normal-appearances",
+            "contains-embedded-files",
+            "contains-metadata",
+            "contains-optional-content",
+            "contains-private-data",
+            "contains-transparency"
+        ],
+        "errors": {},
+        "how-to-optimize": {
+            "contains-annots": [
+                "Annotations can be removed using PDF Optimizer to save space. (291 instances)"
+            ],
+            "contains-embedded-files": [
+                "Attached files can be removed using PDF Optimizer to save space. (1 instance)"
+            ],
+            "contains-metadata": [
+                "Metadata can be removed using PDF Optimizer to save space. (3 instances)",
+                "XMP Metadata padding can be removed using PDF Optimizer to save space. (3 instances)"
+            ]
+        },
+        "information": {
+            "contains-annots": [
+                "SubType: Link (291 instances)"
+            ],
+            "contains-embedded-files": [
+                "Total: (1 instance)"
+            ],
+            "contains-metadata": [
+                "SubType: XML, Update region size: 2048 (2 instances)",
+                "SubType: XML, Update region size: 2049 (1 instance)",
+                "Total: (3 instances)"
+            ]
+        }
+    }
+}

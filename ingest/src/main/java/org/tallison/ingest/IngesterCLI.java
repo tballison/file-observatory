@@ -17,7 +17,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class IngesterCLI {
-
+    //single threaded for now
     public static void main(String[] args) throws Exception {
         Connection pg = DriverManager.getConnection(args[0]);
         ESClient esClient = (ESClient) SearchClientFactory.getClient(args[1]);

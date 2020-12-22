@@ -41,7 +41,7 @@ COPY target/tika-pdftotext-1.0.0-SNAPSHOT.jar /tika-bin/tika-pdftotext-1.0.0-SNA
 
 #find a more elegant way of grabbing this after we release it
 COPY tika-server-core-2.0.0-SNAPSHOT.jar /tika-bin/tika-server-core-2.0.0-SNAPSHOT.jar
-ENTRYPOINT ["java","-cp","/tika-bin/*", "org.apache.tika.server.core.TikaServerCli", "-h", "0.0.0.0"]
+ENTRYPOINT ["java","-cp","/tika-bin/*", "org.apache.tika.server.core.TikaServerCli", "-spawnChild", "-h", "0.0.0.0"]
 
 #e.g.
 #docker run -d -p 9998:9998

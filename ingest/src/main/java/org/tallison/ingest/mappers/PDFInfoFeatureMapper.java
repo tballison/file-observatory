@@ -16,19 +16,19 @@ public class PDFInfoFeatureMapper implements FeatureMapper {
     Matcher js = Pattern.compile("JavaScript: ([^\r\n]+)").matcher("");
     @Override
     public void addFeatures(ResultSet resultSet, Path rootDir, StoredDocument storedDocument) throws SQLException {
-        String stdout = resultSet.getString("pi_stdout");
+        String stdout = resultSet.getString("pinfo_stdout");
         //todo add created and modified date
         for (String line : stdout.split("[\r\n]")) {
             if (producer.reset(line).find()) {
-                storedDocument.addNonBlankField("pi_producer", producer.group(1).trim());
+                storedDocument.addNonBlankField("pinfo_producer", producer.group(1).trim());
             } else if (creator.reset(line).find()) {
-                storedDocument.addNonBlankField("pi_creator", creator.group(1).trim());
+                storedDocument.addNonBlankField("pinfo_creator", creator.group(1).trim());
             } else if (version.reset(line).find()) {
-                storedDocument.addNonBlankField("pi_version", version.group(1).trim());
+                storedDocument.addNonBlankField("pinfo_version", version.group(1).trim());
             } else if (js.reset(line).find()) {
                 String val = js.group(1).trim();
                 String bool = (val.equals("yes")) ? "true" : "false";
-                storedDocument.addNonBlankField("pi_javascript", bool);
+                storedDocument.addNonBlankField("pinfo_javascript", bool);
             }
         }
 

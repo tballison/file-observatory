@@ -16,6 +16,7 @@
     <packaging>pom</packaging>
 
     <modules>
+        <module>arlington</module>
         <module>mutoolclean</module>
         <module>mutooltext</module>
         <module>qpdf</module>
@@ -30,6 +31,8 @@
         <module>pdfminertext</module>
         <module>pdfid</module>
         <module>pdfcpu</module>
+        <module>source-profile</module>
+        <module>pdfchecker</module>
     </modules>
 
     <dependencies>
@@ -48,6 +51,12 @@
             <groupId>org.apache.tika</groupId>
             <artifactId>tika-core</artifactId>
             <version>${tika.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-api</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
     </dependencies>
 </project>

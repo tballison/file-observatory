@@ -106,7 +106,7 @@ public class PDFChecker extends AbstractDirectoryProcessor {
         //runner.setMaxFiles(100);
         runner.execute();
         long elapsed = System.currentTimeMillis() - start;
-        System.out.println("Proccessed " + metadataWriter.getRecordsWritten() + " records in " + elapsed + "ms");
+        System.out.println("Processed " + metadataWriter.getRecordsWritten() + " records in " + elapsed + "ms");
 
     }
 }

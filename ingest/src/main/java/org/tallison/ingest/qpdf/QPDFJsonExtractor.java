@@ -7,7 +7,6 @@ import com.google.gson.JsonParser;
 import com.google.gson.JsonPrimitive;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.tallison.batchlite.AbstractFileProcessor;
 import org.tallison.ingest.mappers.QPDFFeatureMapper;
 
 import java.io.Reader;
