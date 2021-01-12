@@ -5,11 +5,14 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.gson.JsonPrimitive;
+import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tallison.ingest.mappers.QPDFFeatureMapper;
 
+import java.io.IOException;
 import java.io.Reader;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -28,15 +31,33 @@ public class QPDFJsonExtractor {
     private Matcher refMatcher = Pattern.compile("^\\d+ \\d+ R$").matcher("");
     private Matcher dateMatcher = Pattern.compile("^D:\\d{14,}").matcher("");
 
+    Set<String> imptIntKeys = new HashSet<>();
+    private JsonObject objects;
+    private String fileId;
+
     public QPDFJsonExtractor() {
         ignoreValues.add("/CharSet");
         ignoreValues.add("/Title");
         ignoreValues.add("/DA");
+        loadKeys("/important-int-keys.txt", imptIntKeys);
     }
 
-    private JsonObject objects;
-    private String fileId;
 
+
+    public static void loadKeys(String filePath, Set<String> keys) {
+        try {
+            List<String> lines = IOUtils.readLines(
+                    QPDFFeatureMapper.class.getResourceAsStream(filePath),
+                    StandardCharsets.UTF_8.name());
+            for (String line : lines) {
+                if (! line.startsWith("#") && line.trim().length() > 0) {
+                    keys.add(line);
+                }
+            }
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
     public QPDFResults extract(String fileId, Reader reader) {
         JsonElement root = JsonParser.parseReader(reader);
         QPDFResults results = new QPDFResults();
@@ -75,7 +96,11 @@ public class QPDFJsonExtractor {
                     results.keyValues.add(k + "->" +
                             Boolean.toString(primitive.getAsBoolean()).toUpperCase(Locale.US));
                 } else if (primitive.isNumber()) {
-                    results.keyValues.add(k + "->NUMBER");
+                    if (imptIntKeys.contains(k)) {
+                        results.keyValues.add(k+"->"+primitive.getAsString());
+                    } else {
+                        results.keyValues.add(k + "->NUMBER");
+                    }
                 } else if (primitive.isString()) {
                     String normalized = getNormalizedValue(k, primitive.getAsString());
                     if (normalized != null) {

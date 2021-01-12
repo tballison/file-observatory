@@ -14,6 +14,11 @@ public class PDFInfoFeatureMapper implements FeatureMapper {
     Matcher creator = Pattern.compile("Creator: ([^\r\n]+)").matcher("");
     Matcher version = Pattern.compile("PDF version: ([^\r\n]+)").matcher("");
     Matcher js = Pattern.compile("JavaScript: ([^\r\n]+)").matcher("");
+    Matcher encrypted = Pattern.compile("Encrypted:\\s+([^\r\n ]+)").matcher("");
+    Matcher pages = Pattern.compile("Pages:\\s+(\\d+)").matcher("");
+    Matcher tagged = Pattern.compile("Tagged:\\s+([^\n\r]+)").matcher("");
+    Matcher optimized = Pattern.compile("Optimized:\\s+([^\n\r]+)").matcher("");
+
     @Override
     public void addFeatures(ResultSet resultSet, Path rootDir, StoredDocument storedDocument) throws SQLException {
         String stdout = resultSet.getString("pinfo_stdout");
@@ -29,8 +34,24 @@ public class PDFInfoFeatureMapper implements FeatureMapper {
                 String val = js.group(1).trim();
                 String bool = (val.equals("yes")) ? "true" : "false";
                 storedDocument.addNonBlankField("pinfo_javascript", bool);
+            } else if (encrypted.reset(line).find()) {
+                String val = encrypted.group(1).trim();
+                String bool = (val.equals("yes")) ? "true" : "false";
+                storedDocument.addNonBlankField("pinfo_encrypted", bool);
+            } else if (pages.reset(line).find()) {
+                int pageCount = Integer.parseInt(pages.group(1));
+                storedDocument.addNonBlankField("pinfo_pages", Integer.toString(pageCount));
+            } else if (tagged.reset(line).find()) {
+                String val = tagged.group(1).trim();
+                String bool = (val.equals("yes")) ? "true" : "false";
+                storedDocument.addNonBlankField("pinfo_tagged", bool);
+            } else if (optimized.reset(line).find()) {
+                String val = optimized.group(1).trim();
+                String bool = (val.equals("yes")) ? "true" : "false";
+                storedDocument.addNonBlankField("pinfo_optimized", bool);
             }
         }
+        storedDocument.addNonBlankField("pinfo", stdout);
 
     }
 }

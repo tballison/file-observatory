@@ -54,7 +54,12 @@ public class ArlingtonMapper implements FeatureMapper {
             storedDocument.addNonBlankField("a_status", "missing");
             return;
         }
-        _processFile(p, storedDocument);
+        try {
+            _processFile(p, storedDocument);
+        } catch (IOException e) {
+            storedDocument.addNonBlankField("a_status", "bad_extract");
+            throw e;
+        }
     }
 
     protected void _processFile(Path p, StoredDocument storedDocument) throws IOException {

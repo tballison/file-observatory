@@ -30,20 +30,11 @@ public class QPDFFeatureMapper implements FeatureMapper {
     Set<String> commonKeys = new HashSet<>();
 
     public QPDFFeatureMapper() {
-
-        try {
-            List<String> lines = IOUtils.readLines(
-                            this.getClass().getResourceAsStream("/common_keys.txt"),
-                            StandardCharsets.UTF_8.name());
-            for (String line : lines) {
-                if (! line.startsWith("#")) {
-                    commonKeys.add(line);
-                }
-            }
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        QPDFJsonExtractor.loadKeys("/common-keys.txt", commonKeys);
     }
+
+
+
     @Override
     public void addFeatures(ResultSet resultSet, Path rootDir, StoredDocument storedDocument)
             throws SQLException {

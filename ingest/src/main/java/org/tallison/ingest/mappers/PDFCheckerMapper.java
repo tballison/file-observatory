@@ -44,15 +44,22 @@ public class PDFCheckerMapper implements FeatureMapper {
                 return;
             }
             JsonObject root = rootElement.getAsJsonObject();
+            StringBuilder sb = new StringBuilder();
             if (root.has("analysis-summary")) {
+
                 JsonObject summary = root.getAsJsonObject("analysis-summary");
+                if (summary.has("can-be-optimized")) {
+                    boolean canBeOptimized = summary.getAsJsonPrimitive("can-be-optimized").getAsBoolean();
+                    if (canBeOptimized) {
+                        sb.append("can-be-optimized").append(" ");
+                    }
+                }
                 if (summary.has("information")) {
                     JsonArray info = summary.getAsJsonArray("information");
-                    StringBuilder sb = new StringBuilder();
                     for (JsonElement el : info) {
                         sb.append(el.getAsString()).append(" ");
                     }
-                    storedDocument.addNonBlankField("pc_summary_info", sb.toString());
+                    storedDocument.addNonBlankField("pc_summary_info", sb.toString().trim());
                 }
             }
         }

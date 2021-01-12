@@ -1,6 +1,6 @@
 {
   "index_patterns": [
-    "file-observatory-202012"
+    "file-observatory-202101"
   ],
   "mappings": {
     "_meta": {
@@ -196,6 +196,11 @@
         "type": "integer",
         "store": true
       },
+      "pinfo" : {
+        "analyzer": "text_basic",
+        "type": "text",
+        "store": "true"
+      },
       "pinfo_creator": {
         "analyzer": "text_basic",
         "type": "text",
@@ -218,16 +223,28 @@
           }
         }
       },
-      "pc_summary_info": {
-        "analyzer": "text_basic",
-        "type": "text",
-        "store": "true"
-      },
       "pinfo_version": {
         "type": "keyword"
       },
       "pinfo_javascript": {
         "type": "boolean"
+      },
+      "pinfo_encrypted": {
+        "type": "boolean"
+      },
+      "pinfo_tagged": {
+        "type": "boolean"
+      },
+      "pinfo_optimized": {
+        "type": "boolean"
+      },
+      "pinfo_pages" : {
+        "type": "integer"
+      },
+      "pc_summary_info": {
+        "analyzer": "text_basic",
+        "type": "text",
+        "store": "true"
       },
       "a_status": {
         "type": "keyword"

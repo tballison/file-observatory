@@ -20,7 +20,8 @@ public class PDFCheckerMapperTest {
         StoredDocument sd = new StoredDocument("id");
         mapper.processJson(p, sd);
         String summaryInfo = sd.getFields().get("pc_summary_info").toString();
-        assertTrue(summaryInfo.startsWith("born-digital"));
+        assertTrue(summaryInfo.contains("can-be-optimized"));
+        assertTrue(summaryInfo.contains("born-digital"));
 
     }
 }
