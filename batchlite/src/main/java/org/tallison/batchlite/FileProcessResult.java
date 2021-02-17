@@ -18,8 +18,8 @@ package org.tallison.batchlite;
 
 public class FileProcessResult {
 
-    String stderr;
-    String stdout;
+    String stderr = "";
+    String stdout = "";
     int exitValue;
     long processTimeMillis = -1;
     boolean isTimeout = false;

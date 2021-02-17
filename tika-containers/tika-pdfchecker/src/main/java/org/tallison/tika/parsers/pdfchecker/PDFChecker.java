@@ -70,6 +70,7 @@ public class PDFChecker extends AbstractParser {
             ProcessBuilder pb = new ProcessBuilder(args);
             FileProcessResult processResult = ProcessExecutor.execute(pb, timeoutMillis,
                     1000, 1000);
+            metadata.set("pdfchecker_version", processResult.getStdout().trim());
             XHTMLContentHandler xhtml = new XHTMLContentHandler(contentHandler, metadata);
             xhtml.startDocument();
             readFile(output, metadata);
@@ -98,8 +99,7 @@ public class PDFChecker extends AbstractParser {
         try (Reader reader = Files.newBufferedReader(p)) {
             JsonElement rootElement = JsonParser.parseReader(reader);
             if (rootElement.isJsonNull()) {
-                //log
-                return;
+                throw new TikaException("Json root is null");
             }
             JsonObject root = rootElement.getAsJsonObject();
             StringBuilder sb = new StringBuilder();

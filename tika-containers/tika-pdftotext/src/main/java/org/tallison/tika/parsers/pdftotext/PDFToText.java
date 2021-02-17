@@ -40,7 +40,21 @@ public class PDFToText implements Parser {
     private static Logger LOGGER = LoggerFactory.getLogger(PDFToText.class);
 
     private long timeoutMillis = TIMEOUT_MILLIS_DEFAULT;
+    private String pdfToTextVersion = "";
+    public PDFToText() {
+        String[] args = new String[]{
+                "pdftotext", "-v"};
+        ProcessBuilder pb = new ProcessBuilder(args);
+        try {
+            FileProcessResult processResult = null;
+            processResult = ProcessExecutor.execute(pb, timeoutMillis,
+                    1000, 1000);
+            pdfToTextVersion = processResult.getStderr().split("[\r\n]")[0];
+        } catch (IOException e) {
 
+        }
+
+    }
     @Override
     public Set<MediaType> getSupportedTypes(ParseContext parseContext) {
         return SUPPORTED_TYPES;
@@ -49,6 +63,7 @@ public class PDFToText implements Parser {
     @Override
     public void parse(InputStream inputStream, ContentHandler contentHandler,
                       Metadata metadata, ParseContext parseContext) throws IOException, SAXException, TikaException {
+        metadata.add("pdftotext_version", pdfToTextVersion);
         try (TemporaryResources tmp = new TemporaryResources()) {
             Path path = TikaInputStream.get(inputStream, tmp).getPath();
             Path output = tmp.createTempFile();

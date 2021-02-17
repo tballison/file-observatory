@@ -41,6 +41,7 @@ public class TikaPDFToTextTest extends TikaTest {
         }
         List<Metadata> metadataList = JsonMetadataList.fromJson(reader);
         assertEquals(1, metadataList.size());
+        assertContains("pdftotext version ", metadataList.get(0).get("pdftotext_version"));
         assertContains("Toolkit\nApache Tika is a toolkit", metadataList.get(0).get(TikaCoreProperties.TIKA_CONTENT));
     }
 
