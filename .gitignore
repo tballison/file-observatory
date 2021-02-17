@@ -4,3 +4,4 @@ target/
 /tool-runners/pdfchecker/pdf-checker.tgz
 /tool-runners/arlington
 /tool-runners/arlington/grammar/
+/tika-containers/tika-pdfchecker/pdf-checker.tgz

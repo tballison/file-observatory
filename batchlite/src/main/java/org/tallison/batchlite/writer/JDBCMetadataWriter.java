@@ -84,9 +84,10 @@ public class JDBCMetadataWriter extends MetadataWriter {
     @Override
     protected void write(PathResultPair pair) throws IOException {
         int i = 0;
+        LOGGER.debug("about to write {}", pair);
         try {
             FileProcessResult result = pair.getResult();
-
+            insert.clearParameters();
             insert.setString(++i, clean(pair.getRelPath(), MAX_PATH_LENGTH));
             insert.setInt(++i, result.getExitValue());
             insert.setBoolean(++i, result.isTimeout());
@@ -99,11 +100,12 @@ public class JDBCMetadataWriter extends MetadataWriter {
             insert.setBoolean(++i, result.isStderrTruncated());
             insert.addBatch();
 
-            if (getRecordsWritten() % 100 == 0) {
+            if (getRecordsWritten() % 20 == 0) {
                 insert.executeBatch();
                 connection.commit();
             }
         } catch (SQLException e) {
+            LOGGER.warn("Can't execute batch insert", e);
             e.printStackTrace();
             throw new IOException(e);
         }
@@ -130,6 +132,7 @@ public class JDBCMetadataWriter extends MetadataWriter {
             connection.commit();
             connection.close();
         } catch (SQLException e) {
+            LOGGER.warn("problem closing jdbc writer", e);
             throw new IOException(e);
         }
     }

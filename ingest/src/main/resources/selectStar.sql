@@ -5,7 +5,7 @@ p.shasum256 as shasum_256,
 p.collection,
 a.timeout as arlington_timeout,
 a.exit_value as arlington_exit_value,
-mc.stderr mc_stderr,
+mc.stderr mc_warn,
 mc.stdout mc_stdout,
 mc.exit_value mc_exit,
 case
@@ -16,7 +16,7 @@ case
 	when length(mc.stderr) > 5 then 'warn'
 	else 'success'
 end as mc_status,
-mt.stderr mt_stderr,
+mt.stderr mt_warn,
 mt.stdout mt_stdout,
 mt.exit_value mt_exit,
 case
@@ -43,7 +43,7 @@ case
     when length(cpu.stderr) > 5 then 'warn'
 	else 'success'
 end as cpu_status,
-cpu.stderr as cpu_stderr,
+cpu.stderr as cpu_warn,
 pid.stderr pid_stderr,
 pid.stdout pid_stdout,
 pid.exit_value pid_exit,
@@ -77,7 +77,7 @@ case
 	when length(pinfo.stderr) > 5 then 'warn'
 	else 'success'
 end as pinfo_status,
-pmd.stderr pmd_stderr,
+pmd.stderr pmd_warn,
 pmd.stdout pmd_stdout,
 pmd.exit_value pmd_exit,
 case
@@ -88,7 +88,7 @@ case
 	when length(pmd.stderr) > 5 then 'warn'
 	else 'success'
 end as pmd_status,
-pmt.stderr pmt_stderr,
+pmt.stderr pmt_warn,
 pmt.stdout pmt_stdout,
 pmt.exit_value pmt_exit,
 case
@@ -151,7 +151,17 @@ case
 	when q.exit_value <> 0 then 'crash'
 	when length(q.stderr) > 5 then 'warn'
 	else 'success'
-end as q_status
+end as q_status,
+c.stdout clamav,
+c.stderr c_stderr,
+c.exit_value c_exit,
+case
+    when c.path is null then 'missing'
+	when c.timeout=true then 'timeout'
+	when c.exit_value <> 0 then 'crash'
+	when length(c.stderr) > 5 then 'warn'
+	else 'success'
+end as c_status
 
 --if using itext encrypted: com.itextpdf.text.exceptions.BadPasswordException
 from profiles p
@@ -170,4 +180,5 @@ left join pdftops ps on ps.path = p.path
 left join pdftotext ptt on ptt.path = p.path
 left join qpdf q on q.path = p.path
 left join tika t on t.path = p.path
+left join clamav c on c.path = p.path
 

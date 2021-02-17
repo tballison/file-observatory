@@ -37,10 +37,12 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 public abstract class AbstractDirectoryProcessor {
 
-    private static Logger LOGGER = LoggerFactory.getLogger(JDBCMetadataWriter.class);
+    private static Logger LOGGER = LoggerFactory.getLogger(AbstractDirectoryProcessor.class);
+    private final AtomicLong numAddedToQueue = new AtomicLong(0);
 
     static Path POISON = Paths.get("");
     private static long TIMEOUT_MILLIS = 720000;
@@ -91,15 +93,15 @@ public abstract class AbstractDirectoryProcessor {
                 try {
                     future = executorCompletionService.poll(60, TimeUnit.SECONDS);
                 } catch (InterruptedException e) {
+                    LOGGER.warn("interrupted: ", e);
                     break;
                 }
                 if (future != null) {
                     completed++;
                     try {
                         future.get();
-                    } catch (InterruptedException e) {
-                        break;
-                    } catch (ExecutionException e) {
+                    } catch (InterruptedException|ExecutionException e) {
+                        LOGGER.error("catastrophic failure", e);
                         e.printStackTrace();
                         throw new RuntimeException(e);
                     }
@@ -113,7 +115,8 @@ public abstract class AbstractDirectoryProcessor {
             executorService.shutdownNow();
         }
         long elapsed = System.currentTimeMillis()-start;
-        LOGGER.info("Finished "+metadataWriter.getRecordsWritten() + " records in "+
+        LOGGER.info("Finished adding " + numAddedToQueue.get() + " records to the queue;" +
+                        " and added "+metadataWriter.getRecordsWritten() + " records in "+
                 elapsed + " ms.");
 
     }
@@ -164,17 +167,24 @@ public abstract class AbstractDirectoryProcessor {
                     return FileVisitResult.TERMINATE;
                 }
                 if (path.getFileName().toString().startsWith(".")) {
+                    LOGGER.info("skipping hidden file: "+path);
                     //skip hidden files
                     return FileVisitResult.CONTINUE;
                 }
                 try {
                     boolean offered = queue.offer(path, TIMEOUT_MILLIS, TimeUnit.MILLISECONDS);
                     if (offered) {
+                        numAddedToQueue.incrementAndGet();
                         added++;
+                        if (numAddedToQueue.get() % 100 == 0) {
+                            LOGGER.debug("added to queue: "+numAddedToQueue.get());
+                        }
                     } else {
+                        LOGGER.warn("failed to offer file to queue in alloted time");
                         throw new RuntimeException("file adder timed out");
                     }
                 } catch (InterruptedException e) {
+                    LOGGER.warn("interrupted ", e);
                     //swallow
                 }
 
@@ -183,6 +193,7 @@ public abstract class AbstractDirectoryProcessor {
 
             @Override
             public FileVisitResult visitFileFailed(Path path, IOException e) throws IOException {
+                LOGGER.warn("visit file failed: "+path);
                 return FileVisitResult.CONTINUE;
             }
 
@@ -190,12 +201,6 @@ public abstract class AbstractDirectoryProcessor {
             public FileVisitResult postVisitDirectory(Path path, IOException e) throws IOException {
                 return FileVisitResult.CONTINUE;
             }
-        }
-    }
-
-    public static void createParent(Path path) throws IOException {
-        if (! Files.isDirectory(path.getParent())) {
-            Files.createDirectories(path.getParent());
         }
     }
 }

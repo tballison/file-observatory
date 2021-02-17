@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration>
+    <Appenders>
+        <CONSOLE name="STDOUT">
+            <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss} %t %-5p %c{1}:%L - %m%n"/>
+        </CONSOLE>
+    </Appenders>
+    <Loggers>
+        <Root level="info">
+            <AppenderRef ref="STDOUT"/>
+        </Root>
+    </Loggers>
+</Configuration>

@@ -246,10 +246,64 @@
         "type": "text",
         "store": "true"
       },
+      "pc_summary_errors": {
+        "type": "keyword"
+      },
+      "pc_font_errors": {
+        "type": "keyword"
+      },
+      "mc_status": {
+        "type": "keyword"
+      },
+      "mc_warn": {
+        "analyzer": "text_basic",
+        "type": "text",
+        "store": "true"
+      },
+      "mt_status": {
+        "type": "keyword"
+      },
+      "mt_warn": {
+        "analyzer": "text_basic",
+        "type": "text",
+        "store": "true"
+      },
+      "cpu_status": {
+        "type": "keyword"
+      },
+      "cpu_warn": {
+        "analyzer": "text_basic",
+        "type": "text",
+        "store": "true"
+      },
+      "pmd_status": {
+        "type": "keyword"
+      },
+      "pmd_warn": {
+        "analyzer": "text_basic",
+        "type": "text",
+        "store": "true"
+      },
+      "pmt_status": {
+        "type": "keyword"
+      },
+      "pmt_warn": {
+        "analyzer": "text_basic",
+        "type": "text",
+        "store": "true"
+      },
       "a_status": {
         "type": "keyword"
       },
       "a_warn": {
+        "analyzer": "text_basic",
+        "type": "text",
+        "store": "true"
+      },
+      "c_status": {
+        "type": "keyword"
+      },
+      "clamav": {
         "analyzer": "text_basic",
         "type": "text",
         "store": "true"

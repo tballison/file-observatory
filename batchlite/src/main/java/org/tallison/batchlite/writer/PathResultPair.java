@@ -39,4 +39,12 @@ public class PathResultPair {
     public FileProcessResult getResult() {
         return result;
     }
+
+    @Override
+    public String toString() {
+        return "PathResultPair{" +
+                "relPath='" + relPath + '\'' +
+                ", result=" + result +
+                '}';
+    }
 }

@@ -1,5 +1,6 @@
 package org.tallison.tika.parsers.pdftotext;
 
+import org.apache.tika.config.Field;
 import org.apache.tika.exception.TikaException;
 import org.apache.tika.io.TemporaryResources;
 import org.apache.tika.io.TikaInputStream;
@@ -39,6 +40,7 @@ public class PDFToText implements Parser {
     private static Logger LOGGER = LoggerFactory.getLogger(PDFToText.class);
 
     private long timeoutMillis = TIMEOUT_MILLIS_DEFAULT;
+
     @Override
     public Set<MediaType> getSupportedTypes(ParseContext parseContext) {
         return SUPPORTED_TYPES;
@@ -72,6 +74,11 @@ public class PDFToText implements Parser {
                         " :: "+processResult.getStderr());
             }
         }
+    }
+
+    @Field
+    public void setTimeoutMillis(long timeoutMillis) {
+        this.timeoutMillis = timeoutMillis;
     }
 
     private void readFile(Path output, XHTMLContentHandler xhtml) throws IOException, SAXException {

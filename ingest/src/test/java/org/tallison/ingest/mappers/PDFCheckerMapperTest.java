@@ -22,6 +22,19 @@ public class PDFCheckerMapperTest {
         String summaryInfo = sd.getFields().get("pc_summary_info").toString();
         assertTrue(summaryInfo.contains("can-be-optimized"));
         assertTrue(summaryInfo.contains("born-digital"));
-
     }
+
+    @Test
+    public void testFonts() throws Exception {
+        PDFCheckerMapper mapper = new PDFCheckerMapper();
+        Path p = Paths.get(
+                PDFCheckerMapperTest.class.getResource(
+                        "/test-documents/pdfchecker/fonts-PDFBOX-1002-2.pdf.json").toURI());
+        StoredDocument sd = new StoredDocument("id");
+        mapper.processJson(p, sd);
+        String summaryInfo = sd.getFields().get("pc_summary_info").toString();
+        assertTrue(summaryInfo.contains("can-be-optimized"));
+        assertTrue(summaryInfo.contains("born-digital"));
+    }
+
 }

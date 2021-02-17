@@ -61,7 +61,7 @@ public class TikaServerClient {
     private final static int TIMEOUT_SECONDS = 360; // seconds
 
     //if there are retries, what is the maximum amount of millis
-    private final static long MAX_TIME_FOR_RETRIES_MILLIS = 30000;
+    private final static long MAX_TIME_FOR_RETRIES_MILLIS = 60000;
 
     //how long to sleep each time if you couldn't connect to
     //the tika-server
@@ -142,13 +142,14 @@ public class TikaServerClient {
     private TikaServerResponse tryParse(String fileKey, TikaInputStream is) {
         int index = ThreadLocalRandom.current().nextInt(clients.size());
         WebClient client = clients.get(index);
+
         Response response = null;
         long start = System.currentTimeMillis();
         long elapsed = -1;
         try {
             if (inputMethod.equals(INPUT_METHOD.INPUTSTREAM)) {
                 response = client.accept("application/json")
-                        .put(is);
+                        .put(is.getPath().toFile());
             } else {
                 String p = is.getPath().toUri().toString();
                 response = client.accept("application/json")
@@ -158,7 +159,8 @@ public class TikaServerClient {
             LOG.info("took "+(System.currentTimeMillis()-start) +" to get response");
         } catch (javax.ws.rs.ProcessingException|IOException e) {
             elapsed = System.currentTimeMillis()-start;
-            LOG.warn("couldn't connect to tika-server", e);
+            LOG.warn("couldn't connect to tika-server "
+                    + client.getCurrentURI(), e);
             //server could be offline or a bad url
             return new TikaServerResponse(STATE.NO_RESPONSE_IO_EXCEPTION);
         }
@@ -176,7 +178,7 @@ public class TikaServerClient {
                     StandardCharsets.UTF_8))) {
                 return new TikaServerResponse(STATE.RESPONSE_SUCCESS,
                         -1, "", JsonMetadataList.fromJson(reader));
-            } catch (IOException | TikaException e) {
+            } catch (IOException e) {
                 LOG.warn("couldn't read http entity", e);
                 return new TikaServerResponse(STATE.RESPONSE_BAD_ENTITY,
                         200, "", null);

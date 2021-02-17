@@ -96,8 +96,11 @@ public class ClamAVRunner extends AbstractDirectoryProcessor {
             String ex = "";
             try {
                 val = clammer.scan(FileChannel.open(srcPath, StandardOpenOption.READ));
-            } catch (ClamAVException e) {
+            } catch (IOException|ClamAVException e) {
                 ex = e.getMessage();
+                if (ex == null) {
+                    ex = e.getClass().toString();
+                }
             }
             long elapsed = System.currentTimeMillis()-start;
             FileProcessResult r = new FileProcessResult();

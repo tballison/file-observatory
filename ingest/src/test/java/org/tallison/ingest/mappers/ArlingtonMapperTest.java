@@ -23,7 +23,7 @@ public class ArlingtonMapperTest extends MapperTest {
         ArlingtonMapper mapper = new ArlingtonMapper();
         StoredDocument sd = new StoredDocument("");
         mapper._processFile(getPath("arlington/GHOSTSCRIPT-688076-1.pdf.txt"), sd);
-        assertEquals("Failed to open", sd.getFields().get("a_warn"));
+        assertEquals("fail", sd.getFields().get("a_status"));
     }
 
     @Test

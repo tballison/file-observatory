@@ -4,6 +4,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.google.gson.JsonPrimitive;
 import org.tallison.ingest.FeatureMapper;
 import org.tallison.quaerite.core.StoredDocument;
 
@@ -13,6 +14,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
 
 public class PDFCheckerMapper implements FeatureMapper {
 
@@ -60,6 +63,28 @@ public class PDFCheckerMapper implements FeatureMapper {
                         sb.append(el.getAsString()).append(" ");
                     }
                     storedDocument.addNonBlankField("pc_summary_info", sb.toString().trim());
+                }
+                if (summary.has("errors")) {
+                    List<String> errors = new ArrayList<>();
+                    for (JsonElement el : summary.getAsJsonArray("errors")) {
+                        errors.add(el.getAsString());
+                    }
+                    if (errors.size() > 0) {
+                        storedDocument.addNonBlankField("pc_summary_errors", errors);
+                    }
+                }
+            }
+            if (root.has("fonts-results")) {
+                JsonObject fontsResults = root.getAsJsonObject("fonts-results");
+                if (fontsResults.has("errors")) {
+                    JsonObject fontErrors = fontsResults.getAsJsonObject("errors");
+                    List<String> fontErrorKeys = new ArrayList<>();
+                    for (String n : fontErrors.keySet()) {
+                        fontErrorKeys.add(n);
+                    }
+                    if (fontErrorKeys.size() > 0) {
+                        storedDocument.addNonBlankField("pc_font_errors", fontErrorKeys);
+                    }
                 }
             }
         }

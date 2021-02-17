@@ -17,6 +17,7 @@
 
     <modules>
         <module>arlington</module>
+        <module>clamav</module>
         <module>mutoolclean</module>
         <module>mutooltext</module>
         <module>qpdf</module>

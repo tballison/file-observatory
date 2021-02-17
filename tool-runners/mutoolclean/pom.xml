@@ -35,7 +35,7 @@
                             </filters>
                             <transformers>
                                 <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                                    <mainClass>org.tallison.fileutils.mutool.PDFCpuRunner</mainClass>
+                                    <mainClass>org.tallison.fileutils.mutool.MutoolClean</mainClass>
                                 </transformer>
 
                             </transformers>

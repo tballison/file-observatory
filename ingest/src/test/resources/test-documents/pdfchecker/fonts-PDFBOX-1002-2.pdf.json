@@ -1,0 +1,182 @@
+{
+    "analysis-summary": {
+        "can-be-optimized": true,
+        "date": "Wed Feb  3 21:46:29 2021",
+        "errors": [
+            "uses-base14fonts-not-embedded"
+        ],
+        "information": [
+            "born-digital",
+            "contains-annots",
+            "contains-annots-not-for-printing",
+            "contains-javascript-actions",
+            "contains-metadata",
+            "suboptimal-compression"
+        ],
+        "input": "/input/batch1/PDFBOX/PDFBOX-1002-2.pdf",
+        "pdf-checker-version": "2.0.1",
+        "profile": "/pdfchecker-bin/PDF_Checker/CheckerProfiles/everything.json",
+        "size-in-bytes": 81573,
+        "triggered-abort": ""
+    },
+    "cleanup-results": {
+        "checks-aborted": [],
+        "checks-completed": [
+            "suboptimal-compression"
+        ],
+        "errors": {},
+        "how-to-optimize": {},
+        "information": {
+            "suboptimal-compression": [
+                "Uncompressed: (31 instances)"
+            ]
+        }
+    },
+    "color-images": {
+        "checks-aborted": [],
+        "checks-completed": [
+            "image-depth",
+            "resolution-too-high",
+            "resolution-too-low",
+            "uses-jpeg2000-compression"
+        ],
+        "errors": {},
+        "how-to-optimize": {},
+        "information": {}
+    },
+    "fonts-results": {
+        "checks-aborted": [],
+        "checks-completed": [
+            "fontdescriptor-missing-capheight",
+            "fontdescriptor-missing-fields",
+            "uses-base14fonts-not-embedded",
+            "uses-fonts-fully-embedded",
+            "uses-fonts-not-embedded"
+        ],
+        "errors": {
+            "uses-base14fonts-not-embedded": [
+                "Arial-BoldMT (1 instance)",
+                "Helvetica (1 instance)",
+                "Helvetica-Bold (3 instances)"
+            ]
+        },
+        "how-to-optimize": {},
+        "information": {}
+    },
+    "general-results": {
+        "checks-aborted": [],
+        "checks-completed": [
+            "born-digital",
+            "claims-pdfa-conformance",
+            "claims-pdfe-conformance",
+            "claims-pdfua-conformance",
+            "claims-pdfvt-conformance",
+            "claims-pdfx-conformance",
+            "contains-owner-password",
+            "contains-signature",
+            "damaged",
+            "image-only",
+            "password-protected",
+            "pdf-v2",
+            "unable-to-open",
+            "xfa-type"
+        ],
+        "errors": {},
+        "how-to-optimize": {},
+        "information": {
+            "born-digital": [
+                "Document was born digital.  It was produced from PDF authoring software and so it may contain text, images, tables, forms, and other objects.  These types of PDFs typically do not require OCR."
+            ]
+        }
+    },
+    "grayscale-images": {
+        "checks-aborted": [],
+        "checks-completed": [
+            "resolution-too-high",
+            "resolution-too-low",
+            "uses-jpeg2000-compression"
+        ],
+        "errors": {},
+        "how-to-optimize": {},
+        "information": {}
+    },
+    "image-results": {
+        "checks-aborted": [],
+        "checks-completed": [
+            "alternate-images"
+        ],
+        "errors": {},
+        "how-to-optimize": {},
+        "information": {}
+    },
+    "monochrome-images": {
+        "checks-aborted": [],
+        "checks-completed": [
+            "resolution-too-high",
+            "resolution-too-low",
+            "uses-jbig2-compression"
+        ],
+        "errors": {},
+        "how-to-optimize": {},
+        "information": {}
+    },
+    "objects-results": {
+        "checks-aborted": [],
+        "checks-completed": [
+            "contains-javascript-actions",
+            "contains-thumbnails"
+        ],
+        "errors": {},
+        "how-to-optimize": {
+            "contains-javascript-actions": [
+                "Javascript actions can be removed using PDF Optimizer to save space or make the document more secure. (2 instances)"
+            ]
+        },
+        "information": {
+            "contains-javascript-actions": [
+                "Type: Annot, SubType: Widget (2 instances)"
+            ]
+        }
+    },
+    "userdata-results": {
+        "checks-aborted": [],
+        "checks-completed": [
+            "contains-annots",
+            "contains-annots-not-for-printing",
+            "contains-annots-not-for-viewing",
+            "contains-annots-without-normal-appearances",
+            "contains-embedded-files",
+            "contains-metadata",
+            "contains-optional-content",
+            "contains-private-data",
+            "contains-transparency"
+        ],
+        "errors": {},
+        "how-to-optimize": {
+            "contains-annots": [
+                "Annotations can be removed using PDF Optimizer to save space. (136 instances)"
+            ],
+            "contains-annots-not-for-printing": [
+                "Annotations not intended for printing can be removed using PDF Optimizer to save space. (2 instances)"
+            ],
+            "contains-metadata": [
+                "Metadata can be removed using PDF Optimizer to save space. (1 instance)",
+                "XMP Metadata padding can be removed using PDF Optimizer to save space. (1 instance)"
+            ]
+        },
+        "information": {
+            "contains-annots": [
+                "SubType: Line (6 instances)",
+                "SubType: Popup (6 instances)",
+                "SubType: Widget (124 instances)"
+            ],
+            "contains-annots-not-for-printing": [
+                "SubType: Widget (2 instances)"
+            ],
+            "contains-metadata": [
+                "SubType: XML, Update region size: 2048 (1 instance)",
+                "Total: (1 instance)"
+            ]
+        }
+    }
+}

@@ -22,6 +22,8 @@ import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.Options;
 import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -45,6 +47,7 @@ import java.util.concurrent.TimeUnit;
  * If you're already on AWS and have access to s3, do the processing there!
  */
 public class CCIndexWGetter {
+    Logger LOGGER = LoggerFactory.getLogger(CCIndexWGetter.class);
     private static final int POISON = -1;
     private static String AWS_URL_BASE = "https://commoncrawl.s3.amazonaws.com/cc-index/collections/";
     private static String AWS_URL_INDICES = "/indexes/cdx-";
@@ -145,22 +148,27 @@ public class CCIndexWGetter {
                 }
                 String num = StringUtils.leftPad(Integer.toString(indexNum), 5, "0");
                 String url = AWS_URL_BASE + collection + AWS_URL_INDICES + num + ".gz";
-                System.out.println("about to get "+url);
+                LOGGER.info("about to get ({})", url);
                 Path output = outputDir.resolve(collection+"-cdx-"+num+".gz");
-                ProcessBuilder pb = new ProcessBuilder("wget",
-                        "-O", output.toAbsolutePath().toString(), url);
-                Process process = pb.inheritIO().start();
-                process.waitFor(5, TimeUnit.MINUTES);
-                try {
-                    if (process.exitValue() != 0) {
-                        System.err.println("failed to get: "+url);
+                int tries = 0;
+                boolean finished = false;
+                while (! finished && ++tries < 3) {
+                    ProcessBuilder pb = new ProcessBuilder("wget", "-q",
+                            "-O", output.toAbsolutePath().toString(), url);
+                    Process process = pb.inheritIO().start();
+                    finished = process.waitFor(5, TimeUnit.MINUTES);
+                    if (finished) {
+                        LOGGER.info("successfully retrieved:" +output.getFileName());
+                    } else {
+                        LOGGER.warn("timeout on: "+output.getFileName());
+                        process.destroy();
+                        process.destroyForcibly();
+                        //sleep a bit and hope the process has fully finished
+                        //otherwise, it might not let go of the file
+                        Thread.sleep(1000);
+                        Files.delete(output);
                     }
-                } catch (IllegalThreadStateException e) {
-                    e.printStackTrace();
-                    process.destroyForcibly();
-                    return -1;
                 }
-                System.out.println("got "+url);
             }
         }
     }

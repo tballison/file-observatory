@@ -48,7 +48,7 @@ public class IndexerCLI {
         options.addOption("m", "max", true,
                 "maximum number of records to index");
         options.addOption("n", "numThreads", true,
-                "number of threads.  Don't use more than 3!");
+                "number of threads.");
         options.addOption("f", "filterFile",
                 true,
                 "json file that describes filters");

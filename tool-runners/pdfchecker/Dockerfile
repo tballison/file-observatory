@@ -13,4 +13,6 @@ COPY pdf-checker.tgz /pdfchecker-bin/pdf-checker.tgz
 RUN cd /pdfchecker-bin && tar -xzvf pdf-checker.tgz
 
 COPY target/pdfchecker-1.0.0-SNAPSHOT.jar /pdfchecker-1.0.0-SNAPSHOT.jar
+# to run against a single file:
+#/pdfchecker-bin/PDF_Checker/pdfchecker -j /pdfchecker-bin/PDF_Checker/CheckerProfiles/everything.json -i <input_file.pdf> -s <output.json>
 ENTRYPOINT ["java","-jar","/pdfchecker-1.0.0-SNAPSHOT.jar"]

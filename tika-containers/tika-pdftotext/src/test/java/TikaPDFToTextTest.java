@@ -3,6 +3,7 @@ import org.apache.cxf.helpers.IOUtils;
 import org.apache.cxf.jaxrs.client.WebClient;
 import org.apache.tika.TikaTest;
 import org.apache.tika.metadata.Metadata;
+import org.apache.tika.metadata.TikaCoreProperties;
 import org.apache.tika.metadata.serialization.JsonMetadataList;
 import org.apache.tika.sax.AbstractRecursiveParserWrapperHandler;
 import org.junit.Ignore;
@@ -31,10 +32,16 @@ public class TikaPDFToTextTest extends TikaTest {
                 .acceptEncoding("gzip")
                 .put(ClassLoader.getSystemResourceAsStream("test-documents/testPDF.pdf"));
 
-        Reader reader = new InputStreamReader(new GzipCompressorInputStream((InputStream) response.getEntity()), UTF_8);
+        Reader reader = null;
+        String encoding = response.getHeaderString("content-encoding");
+        if ("gzip".equals(encoding)) {
+            reader = new InputStreamReader(new GzipCompressorInputStream((InputStream) response.getEntity()), UTF_8);
+        } else {
+            reader = new InputStreamReader((InputStream) response.getEntity(), UTF_8);
+        }
         List<Metadata> metadataList = JsonMetadataList.fromJson(reader);
         assertEquals(1, metadataList.size());
-        assertContains("Toolkit\nApache Tika is a toolkit", metadataList.get(0).get(AbstractRecursiveParserWrapperHandler.TIKA_CONTENT));
+        assertContains("Toolkit\nApache Tika is a toolkit", metadataList.get(0).get(TikaCoreProperties.TIKA_CONTENT));
     }
 
     @Test
@@ -56,8 +63,39 @@ public class TikaPDFToTextTest extends TikaTest {
             List<Metadata> metadataList = JsonMetadataList.fromJson(reader);
             assertEquals(1, metadataList.size());
             assertContains("Bad exit value: 1 ::",
-                    metadataList.get(0).get("X-TIKA:EXCEPTION:runtime"));
+                    metadataList.get(0).get(TikaCoreProperties.CONTAINER_EXCEPTION));
             length -= step;
         }
     }
+
+    @Test
+    @Ignore("once container is running")
+    public void testMaxFiles() throws Exception {
+        Response response = null;
+        for (int i = 0; i < 100; i++) {
+            try {
+                response = WebClient
+                        .create(END_POINT + META_PATH)
+                        .accept("application/json")
+                        .acceptEncoding("gzip")
+                        .put(ClassLoader.getSystemResourceAsStream("test-documents/testPDF.pdf"));
+
+            } catch (Exception e) {
+                System.out.println("sleeping");
+                Thread.sleep(1000);
+                continue;
+            }
+            Reader reader = null;
+            String encoding = response.getHeaderString("content-encoding");
+            if ("gzip".equals(encoding)) {
+                reader = new InputStreamReader(new GzipCompressorInputStream((InputStream) response.getEntity()), UTF_8);
+            } else {
+                reader = new InputStreamReader((InputStream) response.getEntity(), UTF_8);
+            }
+            List<Metadata> metadataList = JsonMetadataList.fromJson(reader);
+            assertEquals(1, metadataList.size());
+            assertContains("Toolkit\nApache Tika is a toolkit", metadataList.get(0).get(TikaCoreProperties.TIKA_CONTENT));
+        }
+    }
+
 }

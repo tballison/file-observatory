@@ -80,7 +80,7 @@ public class TestGrammarRunner extends AbstractDirectoryProcessor {
         public void process(String relPath, Path srcPath, Path outputPath,
                             MetadataWriter metadataWriter) throws IOException {
             if (Files.isRegularFile(outputPath)) {
-                LOG.trace("skipping "+relPath);
+                LOG.info("skipping "+relPath);
                 return;
             }
             List<String> commandLine = new ArrayList<>();

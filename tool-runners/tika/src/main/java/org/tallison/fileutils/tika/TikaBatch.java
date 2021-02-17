@@ -19,6 +19,7 @@ package org.tallison.fileutils.tika;
 import org.apache.tika.exception.TikaException;
 import org.apache.tika.io.TikaInputStream;
 import org.apache.tika.metadata.Metadata;
+import org.apache.tika.metadata.TikaCoreProperties;
 import org.apache.tika.metadata.serialization.JsonMetadataList;
 import org.apache.tika.sax.AbstractRecursiveParserWrapperHandler;
 import org.slf4j.Logger;
@@ -41,6 +42,8 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class TikaBatch extends AbstractDirectoryProcessor {
 
@@ -54,15 +57,19 @@ public class TikaBatch extends AbstractDirectoryProcessor {
     private final String[] tikaServerUrls;
 
     public TikaBatch(ConfigSrcTarg config,
-                     String[] tikaServerUrls) {
+                     String tikaServerHost, int[] ports) {
         super(config.getSrcRoot(), config.getMetadataWriter());
         this.targRoot = config.getTargRoot();
         this.numThreads = config.getNumThreads();
-        this.tikaServerUrls = tikaServerUrls;
+        this.tikaServerUrls = new String[ports.length];
+        for (int i = 0; i < ports.length; i++) {
+            tikaServerUrls[i] = tikaServerHost+":"+ports[i];
+        }
     }
 
     @Override
     public List<AbstractFileProcessor> getProcessors(ArrayBlockingQueue<Path> queue) {
+        setMaxFiles(1000);
         List<AbstractFileProcessor> processors = new ArrayList<>();
         for (int i = 0; i < numThreads; i++) {
             processors.add(new TikaProcessor(queue, rootDir, targRoot, metadataWriter, tikaServerUrls));
@@ -111,7 +118,7 @@ public class TikaBatch extends AbstractDirectoryProcessor {
                 }
                 try (Writer writer = Files.newBufferedWriter(outputPath, StandardCharsets.UTF_8)) {
                     JsonMetadataList.toJson(metadataList, writer);
-                } catch (IOException | TikaException e) {
+                } catch (IOException e) {
                     LOG.warn("problem writing json", e);
                 }
             }
@@ -134,7 +141,7 @@ public class TikaBatch extends AbstractDirectoryProcessor {
             if (metadataList == null || metadataList.size() == 0) {
                 return "";
             }
-            String stack = metadataList.get(0).get(AbstractRecursiveParserWrapperHandler.CONTAINER_EXCEPTION);
+            String stack = metadataList.get(0).get(TikaCoreProperties.CONTAINER_EXCEPTION);
             if (stack != null) {
                 return stack;
             }
@@ -143,12 +150,27 @@ public class TikaBatch extends AbstractDirectoryProcessor {
     }
 
     public static void main(String[] args) throws Exception {
-        String tikaServerUrlString = args[4];
-        TikaBatch runner = new TikaBatch(ConfigSrcTarg.build(args, MAX_STDOUT, MAX_STDERR),
-                tikaServerUrlString.split(","));
+        String tikaServerUrl = args[4];
+        String portString = args[5];
+        Matcher m = Pattern.compile("\\A(\\d+)-(\\d+)\\Z").matcher(portString);
+        int[] ports;
+        long begin = System.currentTimeMillis();
+        if (m.find()) {
+            int start = Integer.parseInt(m.group(1));
+            int end = Integer.parseInt(m.group(2));
+            ports = new int[end-start+1];
+            for (int p = start, i = 0; p <= end; p++, i++) {
+                ports[i] = p;
+            }
+        } else {
+            ports = new int[1];
+            ports[0] = Integer.parseInt(portString);
+        }
+        TikaBatch runner = new TikaBatch(ConfigSrcTarg.build(args,
+                MAX_STDOUT, MAX_STDERR), tikaServerUrl, ports);
         //runner.setMaxFiles(100);
         runner.execute();
-
+        System.out.println("finished in "+(System.currentTimeMillis()-begin) + " ms");
     }
 }
 

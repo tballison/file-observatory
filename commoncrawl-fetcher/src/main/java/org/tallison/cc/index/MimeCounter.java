@@ -4,7 +4,7 @@ import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.Options;
-import org.apache.commons.lang3.mutable.MutableInt;
+import org.apache.commons.lang3.mutable.MutableLong;
 import org.apache.log4j.Logger;
 import org.tallison.util.MapUtil;
 
@@ -34,7 +34,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.zip.GZIPInputStream;
 
 public class MimeCounter {
@@ -83,7 +83,7 @@ public class MimeCounter {
         RecordFilter filter = CompositeRecordFilter.load(filterFile);
 
         long start = System.currentTimeMillis();
-        AtomicInteger totalProcessed = new AtomicInteger(0);
+        AtomicLong totalProcessed = new AtomicLong(0);
         List<MimeCounts> mimeCounts = new ArrayList<>();
         try {
             ExecutorService executorService = Executors.newFixedThreadPool(numThreads);
@@ -115,32 +115,36 @@ public class MimeCounter {
     }
 
     private void report(List<MimeCounts> mimeCounts) {
-        Map<String, Integer> mimes = new HashMap<>();
-        Map<String, Integer> detectedMimes = new HashMap<>();
+        Map<String, Long> mimes = new HashMap<>();
+        Map<String, Long> detectedMimes = new HashMap<>();
+        Map<String, Long> detectedToMime = new HashMap<>();
         for (MimeCounts m : mimeCounts) {
             update(m.mimes, mimes);
             update(m.detectedMimes, detectedMimes);
+            update(m.detectedToMime, detectedToMime);
         }
         dump("mimes", mimes);
         System.out.println("\n\n");
         dump("detected_mimes", detectedMimes);
+        System.out.println("\n\n");
+        dump("detected->mime", detectedToMime);
 
     }
 
-    private void dump(String title, Map<String, Integer> mimes) {
+    private void dump(String title, Map<String, Long> mimes) {
         System.out.println(title);
-        for (Map.Entry<String, Integer> e : MapUtil.sortByDescendingValue(mimes).entrySet()) {
+        for (Map.Entry<String, Long> e : MapUtil.sortByDescendingValue(mimes).entrySet()) {
             System.out.println("\t"+e.getKey() + "\t"+e.getValue());
         }
     }
 
-    private void update(Map<String, MutableInt> mimeCounts, Map<String, Integer> mimes) {
-        for (Map.Entry<String, MutableInt> e : mimeCounts.entrySet()) {
-            Integer val = mimes.get(e.getKey());
+    private void update(Map<String, MutableLong> mimeCounts, Map<String, Long> mimes) {
+        for (Map.Entry<String, MutableLong> e : mimeCounts.entrySet()) {
+            Long val = mimes.get(e.getKey());
             if (val == null) {
-                val = e.getValue().intValue();
+                val = e.getValue().longValue();
             } else {
-                val += e.getValue().intValue();
+                val += e.getValue().longValue();
             }
             mimes.put(e.getKey(), val);
         }
@@ -166,11 +170,11 @@ public class MimeCounter {
     private static class MimeCounterWrapper implements Callable<MimeCounts> {
 
         private final ArrayBlockingQueue<Path> paths;
-        private final AtomicInteger totalProcessed;
+        private final AtomicLong totalProcessed;
         private final MimeProcessor mimeProcessor;
 
         MimeCounterWrapper(ArrayBlockingQueue<Path> paths,
-                        MimeProcessor mimeProcessor, AtomicInteger processed) {
+                        MimeProcessor mimeProcessor, AtomicLong processed) {
             this.paths = paths;
             this.mimeProcessor = mimeProcessor;
             this.totalProcessed = processed;
@@ -194,7 +198,7 @@ public class MimeCounter {
         }
 
         private void processFile(Path path, AbstractRecordProcessor recordProcessor) {
-            int processed = totalProcessed.incrementAndGet();
+            long processed = totalProcessed.incrementAndGet();
 
             try (InputStream is = new BufferedInputStream(new GZIPInputStream(Files.newInputStream(path)))) {
                 try (BufferedReader reader = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
@@ -245,8 +249,7 @@ public class MimeCounter {
                 if (!recordFilter.accept(r)) {
                     continue;
                 }
-                mimeCounts.incrementMime(r.getNormalizedMime());
-                mimeCounts.incrementDetectedMime(r.getNormalizedDetectedMime());
+                mimeCounts.incrementMimes(r.getNormalizedMime(), r.getNormalizedDetectedMime());
             }
         }
 
@@ -261,27 +264,24 @@ public class MimeCounter {
     }
 
     private static class MimeCounts {
-        Map<String, MutableInt> mimes = new HashMap<>();
-        Map<String, MutableInt> detectedMimes = new HashMap<>();
+        Map<String, MutableLong> mimes = new HashMap<>();
+        Map<String, MutableLong> detectedMimes = new HashMap<>();
+        Map<String, MutableLong> detectedToMime = new HashMap<>();
+        void incrementMimes(String mime, String detectedMime) {
+            increment(mime, mimes);
+            increment(detectedMime, detectedMimes);
+            increment(detectedMime+"->"+mime, detectedToMime);
+        }
 
-        void incrementMime(String mime) {
+        private void increment(String mime, Map<String, MutableLong> mimes) {
             mime = (mime == null) ? "NULL" : mime;
-            MutableInt count = mimes.get(mime);
+            MutableLong count = mimes.get(mime);
             if (count == null) {
-                count = new MutableInt(0);
+                count = new MutableLong(0);
                 mimes.put(mime, count);
             }
             count.increment();
         }
 
-        void incrementDetectedMime(String mime) {
-            mime = (mime == null) ? "NULL" : mime;
-            MutableInt count = detectedMimes.get(mime);
-            if (count == null) {
-                count = new MutableInt(0);
-                detectedMimes.put(mime, count);
-            }
-            count.increment();
-        }
     }
 }

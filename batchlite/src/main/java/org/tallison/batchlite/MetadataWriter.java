@@ -41,7 +41,7 @@ public abstract class MetadataWriter implements Callable<Integer> {
     private static Logger LOGGER = LoggerFactory.getLogger(MetadataWriter.class);
 
     private static PathResultPair POISON = new PathResultPair(null, null);
-    private static final long MAX_POLL_SECONDS = 600;
+    private static final long MAX_POLL_SECONDS = 6000;
     private static final int MAX_BUFFER = 10000;
     int recordsWritten = 0;
     private int maxStdoutBuffer = MAX_BUFFER;
@@ -72,11 +72,12 @@ public abstract class MetadataWriter implements Callable<Integer> {
         try {
             boolean offered = rows.offer(new PathResultPair(relPath, result), MAX_POLL_SECONDS, TimeUnit.SECONDS);
             if (!offered) {
+                LOGGER.error("timeout error after ", MAX_POLL_SECONDS);
                 throw new IOException(new TimeoutException("timeout after "+ MAX_POLL_SECONDS +
                         " seconds"));
             }
         } catch (InterruptedException e) {
-            //LOG?
+            LOGGER.warn("interrupted ", e);
         }
     }
 
@@ -84,10 +85,12 @@ public abstract class MetadataWriter implements Callable<Integer> {
         try {
             boolean offered = rows.offer(POISON, MAX_POLL_SECONDS, TimeUnit.SECONDS);
             if (!offered) {
+                LOGGER.error("timeout error after ", MAX_POLL_SECONDS);
                 throw new IOException(new TimeoutException("timeout after " + MAX_POLL_SECONDS +
                         " seconds"));
             }
         } catch (InterruptedException e) {
+            LOGGER.warn("interrupted ", e);
             throw new IOException(e);
         }
 
@@ -107,7 +110,7 @@ public abstract class MetadataWriter implements Callable<Integer> {
             }
             write(pair);
             if (++recordsWritten % 1000 == 0) {
-                System.out.println("processed " + recordsWritten + " records");
+                LOGGER.info("processed {} records", recordsWritten);
             }
         }
     }

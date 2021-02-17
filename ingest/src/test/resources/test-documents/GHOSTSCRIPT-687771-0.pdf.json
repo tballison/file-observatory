@@ -1,0 +1,742 @@
+{
+  "acroform": {
+    "fields": [],
+    "hasacroform": false,
+    "needappearances": false
+  },
+  "encrypt": {
+    "capabilities": {
+      "accessibility": true,
+      "extract": true,
+      "moddifyannotations": true,
+      "modify": true,
+      "modifyassembly": true,
+      "modifyforms": true,
+      "modifyother": true,
+      "printhigh": true,
+      "printlow": true
+    },
+    "encrypted": false,
+    "ownerpasswordmatched": false,
+    "parameters": {
+      "P": 0,
+      "R": 0,
+      "V": 0,
+      "bits": 0,
+      "filemethod": "none",
+      "key": null,
+      "method": "none",
+      "streammethod": "none",
+      "stringmethod": "none"
+    },
+    "userpasswordmatched": false
+  },
+  "objectinfo": {
+    "1 0 R": {
+      "stream": {
+        "filter": null,
+        "is": false,
+        "length": null
+      }
+    },
+    "10 0 R": {
+      "stream": {
+        "filter": null,
+        "is": false,
+        "length": null
+      }
+    },
+    "11 0 R": {
+      "stream": {
+        "filter": null,
+        "is": false,
+        "length": null
+      }
+    },
+    "12 0 R": {
+      "stream": {
+        "filter": null,
+        "is": false,
+        "length": null
+      }
+    },
+    "13 0 R": {
+      "stream": {
+        "filter": null,
+        "is": false,
+        "length": null
+      }
+    },
+    "14 0 R": {
+      "stream": {
+        "filter": "/DCTDecode",
+        "is": true,
+        "length": 77208
+      }
+    },
+    "15 0 R": {
+      "stream": {
+        "filter": "/CCITTFaxDecode",
+        "is": true,
+        "length": 50672
+      }
+    },
+    "16 0 R": {
+      "stream": {
+        "filter": null,
+        "is": true,
+        "length": 100
+      }
+    },
+    "17 0 R": {
+      "stream": {
+        "filter": null,
+        "is": false,
+        "length": null
+      }
+    },
+    "18 0 R": {
+      "stream": {
+        "filter": null,
+        "is": true,
+        "length": 13496
+      }
+    },
+    "19 0 R": {
+      "stream": {
+        "filter": null,
+        "is": false,
+        "length": null
+      }
+    },
+    "2 0 R": {
+      "stream": {
+        "filter": "/DCTDecode",
+        "is": true,
+        "length": 69224
+      }
+    },
+    "20 0 R": {
+      "stream": {
+        "filter": null,
+        "is": true,
+        "length": 2423
+      }
+    },
+    "21 0 R": {
+      "stream": {
+        "filter": null,
+        "is": false,
+        "length": null
+      }
+    },
+    "22 0 R": {
+      "stream": {
+        "filter": null,
+        "is": false,
+        "length": null
+      }
+    },
+    "23 0 R": {
+      "stream": {
+        "filter": "/DCTDecode",
+        "is": true,
+        "length": 80600
+      }
+    },
+    "24 0 R": {
+      "stream": {
+        "filter": "/CCITTFaxDecode",
+        "is": true,
+        "length": 102264
+      }
+    },
+    "25 0 R": {
+      "stream": {
+        "filter": null,
+        "is": true,
+        "length": 100
+      }
+    },
+    "26 0 R": {
+      "stream": {
+        "filter": null,
+        "is": false,
+        "length": null
+      }
+    },
+    "27 0 R": {
+      "stream": {
+        "filter": null,
+        "is": true,
+        "length": 10232
+      }
+    },
+    "28 0 R": {
+      "stream": {
+        "filter": null,
+        "is": false,
+        "length": null
+      }
+    },
+    "29 0 R": {
+      "stream": {
+        "filter": null,
+        "is": true,
+        "length": 1664
+      }
+    },
+    "3 0 R": {
+      "stream": {
+        "filter": "/CCITTFaxDecode",
+        "is": true,
+        "length": 55936
+      }
+    },
+    "30 0 R": {
+      "stream": {
+        "filter": null,
+        "is": false,
+        "length": null
+      }
+    },
+    "31 0 R": {
+      "stream": {
+        "filter": null,
+        "is": false,
+        "length": null
+      }
+    },
+    "32 0 R": {
+      "stream": {
+        "filter": "/DCTDecode",
+        "is": true,
+        "length": 69108
+      }
+    },
+    "33 0 R": {
+      "stream": {
+        "filter": "/CCITTFaxDecode",
+        "is": true,
+        "length": 69592
+      }
+    },
+    "34 0 R": {
+      "stream": {
+        "filter": null,
+        "is": true,
+        "length": 100
+      }
+    },
+    "35 0 R": {
+      "stream": {
+        "filter": null,
+        "is": false,
+        "length": null
+      }
+    },
+    "36 0 R": {
+      "stream": {
+        "filter": null,
+        "is": true,
+        "length": 15695
+      }
+    },
+    "37 0 R": {
+      "stream": {
+        "filter": null,
+        "is": false,
+        "length": null
+      }
+    },
+    "38 0 R": {
+      "stream": {
+        "filter": null,
+        "is": true,
+        "length": 2668
+      }
+    },
+    "39 0 R": {
+      "stream": {
+        "filter": null,
+        "is": false,
+        "length": null
+      }
+    },
+    "4 0 R": {
+      "stream": {
+        "filter": null,
+        "is": true,
+        "length": 98
+      }
+    },
+    "40 0 R": {
+      "stream": {
+        "filter": null,
+        "is": false,
+        "length": null
+      }
+    },
+    "5 0 R": {
+      "stream": {
+        "filter": null,
+        "is": false,
+        "length": null
+      }
+    },
+    "6 0 R": {
+      "stream": {
+        "filter": null,
+        "is": true,
+        "length": 14866
+      }
+    },
+    "7 0 R": {
+      "stream": {
+        "filter": null,
+        "is": false,
+        "length": null
+      }
+    },
+    "8 0 R": {
+      "stream": {
+        "filter": null,
+        "is": false,
+        "length": null
+      }
+    },
+    "9 0 R": {
+      "stream": {
+        "filter": null,
+        "is": true,
+        "length": 2444
+      }
+    }
+  },
+  "objects": {
+    "1 0 R": {
+      "/CreationDate": "D:20030303152025",
+      "/Creator": "Canon ",
+      "/Producer": " "
+    },
+    "10 0 R": 2444,
+    "11 0 R": {
+      "/Count": 4,
+      "/Kids": [
+        "12 0 R",
+        "22 0 R",
+        "31 0 R",
+        "40 0 R"
+      ],
+      "/Type": "/Pages"
+    },
+    "12 0 R": {
+      "/Contents": [
+        "4 0 R",
+        "6 0 R"
+      ],
+      "/MediaBox": [
+        0,
+        0,
+        595.20,
+        841.92
+      ],
+      "/Parent": "11 0 R",
+      "/Resources": {
+        "/Font": {
+          "/F3": "8 0 R"
+        },
+        "/ProcSet": [
+          "/PDF",
+          "/Text",
+          "/ImageB",
+          "/ImageC",
+          "/ImageI"
+        ],
+        "/Subtype": "9 0 R",
+        "/XObject": {
+          "/Obj2": "2 0 R",
+          "/Obj3": "3 0 R"
+        }
+      },
+      "/Type": "/Page"
+    },
+    "13 0 R": {
+      "/Pages": "11 0 R",
+      "/Type": "/Catalog"
+    },
+    "14 0 R": {
+      "/BitsPerComponent": 8,
+      "/ColorSpace": "/DeviceGray",
+      "/Filter": "/DCTDecode",
+      "/Height": 1754,
+      "/Length": 77208,
+      "/Name": "/Obj14",
+      "/Subtype": "/Image",
+      "/Type": "/XObject",
+      "/Width": 1240
+    },
+    "15 0 R": {
+      "/BitsPerComponent": 1,
+      "/DecodeParms": {
+        "/Columns": 2176,
+        "/K": -1
+      },
+      "/Filter": "/CCITTFaxDecode",
+      "/Height": 3300,
+      "/ImageMask": true,
+      "/Length": 50672,
+      "/Name": "/Obj15",
+      "/Subtype": "/Image",
+      "/Type": "/XObject",
+      "/Width": 2176
+    },
+    "16 0 R": {
+      "/Length": "17 0 R"
+    },
+    "17 0 R": 100,
+    "18 0 R": {
+      "/Length": "19 0 R"
+    },
+    "19 0 R": 13496,
+    "2 0 R": {
+      "/BitsPerComponent": 8,
+      "/ColorSpace": "/DeviceGray",
+      "/Filter": "/DCTDecode",
+      "/Height": 1754,
+      "/Length": 69224,
+      "/Name": "/Obj2",
+      "/Subtype": "/Image",
+      "/Type": "/XObject",
+      "/Width": 1240
+    },
+    "20 0 R": {
+      "/Length": "21 0 R"
+    },
+    "21 0 R": 2423,
+    "22 0 R": {
+      "/Contents": [
+        "16 0 R",
+        "18 0 R"
+      ],
+      "/MediaBox": [
+        0,
+        0,
+        595.20,
+        841.92
+      ],
+      "/Parent": "11 0 R",
+      "/Resources": {
+        "/Font": {
+          "/F3": "8 0 R"
+        },
+        "/ProcSet": [
+          "/PDF",
+          "/Text",
+          "/ImageB",
+          "/ImageC",
+          "/ImageI"
+        ],
+        "/Subtype": "20 0 R",
+        "/XObject": {
+          "/Obj14": "14 0 R",
+          "/Obj15": "15 0 R"
+        }
+      },
+      "/Type": "/Page"
+    },
+    "23 0 R": {
+      "/BitsPerComponent": 8,
+      "/ColorSpace": "/DeviceGray",
+      "/Filter": "/DCTDecode",
+      "/Height": 1754,
+      "/Length": 80600,
+      "/Name": "/Obj23",
+      "/Subtype": "/Image",
+      "/Type": "/XObject",
+      "/Width": 1240
+    },
+    "24 0 R": {
+      "/BitsPerComponent": 1,
+      "/DecodeParms": {
+        "/Columns": 2160,
+        "/K": -1
+      },
+      "/Filter": "/CCITTFaxDecode",
+      "/Height": 3328,
+      "/ImageMask": true,
+      "/Length": 102264,
+      "/Name": "/Obj24",
+      "/Subtype": "/Image",
+      "/Type": "/XObject",
+      "/Width": 2160
+    },
+    "25 0 R": {
+      "/Length": "26 0 R"
+    },
+    "26 0 R": 100,
+    "27 0 R": {
+      "/Length": "28 0 R"
+    },
+    "28 0 R": 10232,
+    "29 0 R": {
+      "/Length": "30 0 R"
+    },
+    "3 0 R": {
+      "/BitsPerComponent": 1,
+      "/DecodeParms": {
+        "/Columns": 2272,
+        "/K": -1
+      },
+      "/Filter": "/CCITTFaxDecode",
+      "/Height": 3404,
+      "/ImageMask": true,
+      "/Length": 55936,
+      "/Name": "/Obj3",
+      "/Subtype": "/Image",
+      "/Type": "/XObject",
+      "/Width": 2272
+    },
+    "30 0 R": 1664,
+    "31 0 R": {
+      "/Contents": [
+        "25 0 R",
+        "27 0 R"
+      ],
+      "/MediaBox": [
+        0,
+        0,
+        595.20,
+        841.92
+      ],
+      "/Parent": "11 0 R",
+      "/Resources": {
+        "/Font": {
+          "/F3": "8 0 R"
+        },
+        "/ProcSet": [
+          "/PDF",
+          "/Text",
+          "/ImageB",
+          "/ImageC",
+          "/ImageI"
+        ],
+        "/Subtype": "29 0 R",
+        "/XObject": {
+          "/Obj23": "23 0 R",
+          "/Obj24": "24 0 R"
+        }
+      },
+      "/Type": "/Page"
+    },
+    "32 0 R": {
+      "/BitsPerComponent": 8,
+      "/ColorSpace": "/DeviceGray",
+      "/Filter": "/DCTDecode",
+      "/Height": 1754,
+      "/Length": 69108,
+      "/Name": "/Obj32",
+      "/Subtype": "/Image",
+      "/Type": "/XObject",
+      "/Width": 1240
+    },
+    "33 0 R": {
+      "/BitsPerComponent": 1,
+      "/DecodeParms": {
+        "/Columns": 2160,
+        "/K": -1
+      },
+      "/Filter": "/CCITTFaxDecode",
+      "/Height": 3292,
+      "/ImageMask": true,
+      "/Length": 69592,
+      "/Name": "/Obj33",
+      "/Subtype": "/Image",
+      "/Type": "/XObject",
+      "/Width": 2160
+    },
+    "34 0 R": {
+      "/Length": "35 0 R"
+    },
+    "35 0 R": 100,
+    "36 0 R": {
+      "/Length": "37 0 R"
+    },
+    "37 0 R": 15695,
+    "38 0 R": {
+      "/Length": "39 0 R"
+    },
+    "39 0 R": 2668,
+    "4 0 R": {
+      "/Length": "5 0 R"
+    },
+    "40 0 R": {
+      "/Contents": [
+        "34 0 R",
+        "36 0 R"
+      ],
+      "/MediaBox": [
+        0,
+        0,
+        595.20,
+        841.92
+      ],
+      "/Parent": "11 0 R",
+      "/Resources": {
+        "/Font": {
+          "/F3": "8 0 R"
+        },
+        "/ProcSet": [
+          "/PDF",
+          "/Text",
+          "/ImageB",
+          "/ImageC",
+          "/ImageI"
+        ],
+        "/Subtype": "38 0 R",
+        "/XObject": {
+          "/Obj32": "32 0 R",
+          "/Obj33": "33 0 R"
+        }
+      },
+      "/Type": "/Page"
+    },
+    "5 0 R": 98,
+    "6 0 R": {
+      "/Length": "7 0 R"
+    },
+    "7 0 R": 14866,
+    "8 0 R": {
+      "/BaseFont": "/Helvetica",
+      "/Encoding": "/WinAnsiEncoding",
+      "/Name": "/F3",
+      "/Subtype": "/Type1",
+      "/Type": "/Font"
+    },
+    "9 0 R": {
+      "/Length": "10 0 R"
+    },
+    "trailer": {
+      "/Info": "1 0 R",
+      "/Prev": 485209,
+      "/Root": "13 0 R",
+      "/Size": 41
+    }
+  },
+  "outlines": [],
+  "pagelabels": [],
+  "pages": [
+    {
+      "contents": [
+        "4 0 R",
+        "6 0 R"
+      ],
+      "images": [
+        {
+          "bitspercomponent": 8,
+          "colorspace": "/DeviceGray",
+          "decodeparms": [
+            null
+          ],
+          "filter": [
+            "/DCTDecode"
+          ],
+          "filterable": false,
+          "height": 1754,
+          "name": "/Obj2",
+          "object": "2 0 R",
+          "width": 1240
+        }
+      ],
+      "label": null,
+      "object": "12 0 R",
+      "outlines": [],
+      "pageposfrom1": 1
+    },
+    {
+      "contents": [
+        "16 0 R",
+        "18 0 R"
+      ],
+      "images": [
+        {
+          "bitspercomponent": 8,
+          "colorspace": "/DeviceGray",
+          "decodeparms": [
+            null
+          ],
+          "filter": [
+            "/DCTDecode"
+          ],
+          "filterable": false,
+          "height": 1754,
+          "name": "/Obj14",
+          "object": "14 0 R",
+          "width": 1240
+        }
+      ],
+      "label": null,
+      "object": "22 0 R",
+      "outlines": [],
+      "pageposfrom1": 2
+    },
+    {
+      "contents": [
+        "25 0 R",
+        "27 0 R"
+      ],
+      "images": [
+        {
+          "bitspercomponent": 8,
+          "colorspace": "/DeviceGray",
+          "decodeparms": [
+            null
+          ],
+          "filter": [
+            "/DCTDecode"
+          ],
+          "filterable": false,
+          "height": 1754,
+          "name": "/Obj23",
+          "object": "23 0 R",
+          "width": 1240
+        }
+      ],
+      "label": null,
+      "object": "31 0 R",
+      "outlines": [],
+      "pageposfrom1": 3
+    },
+    {
+      "contents": [
+        "34 0 R",
+        "36 0 R"
+      ],
+      "images": [
+        {
+          "bitspercomponent": 8,
+          "colorspace": "/DeviceGray",
+          "decodeparms": [
+            null
+          ],
+          "filter": [
+            "/DCTDecode"
+          ],
+          "filterable": false,
+          "height": 1754,
+          "name": "/Obj32",
+          "object": "32 0 R",
+          "width": 1240
+        }
+      ],
+      "label": null,
+      "object": "40 0 R",
+      "outlines": [],
+      "pageposfrom1": 4
+    }
+  ],
+  "parameters": {
+    "decodelevel": "generalized"
+  },
+  "version": 1
+}

@@ -40,7 +40,7 @@ public class TikaFeatureMapper implements FeatureMapper {
         List<Metadata> metadataList = null;
         try (BufferedReader reader = Files.newBufferedReader(p, StandardCharsets.UTF_8)) {
             metadataList = JsonMetadataList.fromJson(reader);
-        } catch (IOException| TikaException e) {
+        } catch (IOException e) {
             e.printStackTrace();
             //log
             return;
