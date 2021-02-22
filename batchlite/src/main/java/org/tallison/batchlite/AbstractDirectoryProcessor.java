@@ -16,9 +16,15 @@
  */
 package org.tallison.batchlite;
 
+import org.apache.tika.config.TikaConfig;
+import org.apache.tika.exception.TikaConfigException;
+import org.apache.tika.exception.TikaException;
+import org.apache.tika.pipes.fetchiterator.FetchEmitTuple;
+import org.apache.tika.pipes.fetchiterator.FetchIterator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tallison.batchlite.writer.JDBCMetadataWriter;
+import org.xml.sax.SAXException;
 
 import java.io.IOException;
 import java.nio.file.FileVisitResult;
@@ -47,34 +53,37 @@ public abstract class AbstractDirectoryProcessor {
     static Path POISON = Paths.get("");
     private static long TIMEOUT_MILLIS = 720000;
     private static int QUEUE_SIZE = 1000;
+    protected final Path tikaConfigPath;
+    protected final TikaConfig tikaConfig;
     private int maxFiles = -1;
-    private int numThreads;
-    protected final Path rootDir;
+    protected int numThreads;
     protected final MetadataWriter metadataWriter;
 
-    public AbstractDirectoryProcessor(Path rootDir, MetadataWriter metadataWriter) {
-        this.rootDir = rootDir.toAbsolutePath();
-        if (! Files.isDirectory(rootDir)) {
-           throw new RuntimeException(rootDir + " does not exist");
+    public AbstractDirectoryProcessor(ConfigSrc configSrc)
+            throws TikaConfigException {
+        this.tikaConfigPath = configSrc.getTikaConfig();
+        try {
+            this.tikaConfig = new TikaConfig(tikaConfigPath);
+        } catch (TikaException|IOException|SAXException e) {
+            throw new TikaConfigException("bad config", e);
         }
-        this.metadataWriter = metadataWriter;
+        this.metadataWriter = configSrc.getMetadataWriter();
+        this.numThreads = configSrc.getNumThreads();
     }
 
-    protected Path getRootDir() {
-        return rootDir;
-    }
-
-    public void execute() throws SQLException, IOException {
-        ArrayBlockingQueue<Path> queue = new ArrayBlockingQueue<>(QUEUE_SIZE);
+    public void execute() throws SQLException, IOException, TikaException {
+        FetchIterator fetchIterator = tikaConfig.getFetchIterator();
+        ArrayBlockingQueue<FetchEmitTuple> queue = fetchIterator.init(numThreads);
         List<AbstractFileProcessor> processors = getProcessors(queue);
-        numThreads = processors.size()+2;
+        int totalThreads = processors.size()+2;
 
-        ExecutorService executorService = Executors.newFixedThreadPool(numThreads);
-        ExecutorCompletionService<Integer> executorCompletionService = new ExecutorCompletionService<>(executorService);
+        ExecutorService executorService = Executors.newFixedThreadPool(totalThreads);
+        ExecutorCompletionService<Integer> executorCompletionService
+                = new ExecutorCompletionService<>(executorService);
 
         long start = System.currentTimeMillis();
+        executorCompletionService.submit(fetchIterator);
         executorCompletionService.submit(metadataWriter);
-        executorCompletionService.submit(new DirectoryCrawler(rootDir, queue));
 
         for (int i = 0; i < processors.size(); i++) {
             executorCompletionService.submit(processors.get(i));
@@ -88,7 +97,7 @@ public abstract class AbstractDirectoryProcessor {
         //If something catastrophic happens in the writer, this
         //will stop early with a runtime exception from future.get()
         try {
-            while (completed < numThreads) {
+            while (completed < totalThreads) {
                 Future<Integer> future = null;
                 try {
                     future = executorCompletionService.poll(60, TimeUnit.SECONDS);
@@ -125,82 +134,6 @@ public abstract class AbstractDirectoryProcessor {
         this.maxFiles = maxFiles;
     }
 
-    public abstract List<AbstractFileProcessor> getProcessors(ArrayBlockingQueue<Path> queue);
+    public abstract List<AbstractFileProcessor> getProcessors(ArrayBlockingQueue<FetchEmitTuple> queue) throws IOException, TikaException;
 
-    private class DirectoryCrawler implements Callable<Integer> {
-        private final Path rootDir;
-        private final ArrayBlockingQueue<Path> queue;
-
-        private DirectoryCrawler(Path rootDir, ArrayBlockingQueue queue) {
-            this.rootDir = rootDir;
-            this.queue = queue;
-        }
-
-
-        @Override
-        public Integer call() throws Exception {
-            Files.walkFileTree(rootDir, new PathAdder(queue));
-
-            for (int i = 0; i < numThreads; i++) {
-                //TODO: could lock forever...fix this
-                queue.put(POISON);
-            }
-
-            return 2;
-        }
-
-        private class PathAdder implements FileVisitor<Path> {
-            private final ArrayBlockingQueue<Path> queue;
-            int added = 0;
-            public PathAdder(ArrayBlockingQueue<Path> queue) {
-                this.queue = queue;
-            }
-
-            @Override
-            public FileVisitResult preVisitDirectory(Path path, BasicFileAttributes basicFileAttributes) throws IOException {
-                return FileVisitResult.CONTINUE;
-            }
-
-            @Override
-            public FileVisitResult visitFile(Path path, BasicFileAttributes basicFileAttributes) throws IOException {
-                if (maxFiles > -1 && added >= maxFiles) {
-                    return FileVisitResult.TERMINATE;
-                }
-                if (path.getFileName().toString().startsWith(".")) {
-                    LOGGER.info("skipping hidden file: "+path);
-                    //skip hidden files
-                    return FileVisitResult.CONTINUE;
-                }
-                try {
-                    boolean offered = queue.offer(path, TIMEOUT_MILLIS, TimeUnit.MILLISECONDS);
-                    if (offered) {
-                        numAddedToQueue.incrementAndGet();
-                        added++;
-                        if (numAddedToQueue.get() % 100 == 0) {
-                            LOGGER.debug("added to queue: "+numAddedToQueue.get());
-                        }
-                    } else {
-                        LOGGER.warn("failed to offer file to queue in alloted time");
-                        throw new RuntimeException("file adder timed out");
-                    }
-                } catch (InterruptedException e) {
-                    LOGGER.warn("interrupted ", e);
-                    //swallow
-                }
-
-                return FileVisitResult.CONTINUE;
-            }
-
-            @Override
-            public FileVisitResult visitFileFailed(Path path, IOException e) throws IOException {
-                LOGGER.warn("visit file failed: "+path);
-                return FileVisitResult.CONTINUE;
-            }
-
-            @Override
-            public FileVisitResult postVisitDirectory(Path path, IOException e) throws IOException {
-                return FileVisitResult.CONTINUE;
-            }
-        }
-    }
 }

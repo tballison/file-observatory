@@ -16,25 +16,26 @@
  */
 package org.tallison.fileutils.arlington;
 
+import org.apache.tika.config.TikaConfig;
+import org.apache.tika.exception.TikaConfigException;
+import org.apache.tika.exception.TikaException;
+import org.apache.tika.pipes.fetchiterator.FetchEmitTuple;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tallison.batchlite.AbstractDirectoryProcessor;
 import org.tallison.batchlite.AbstractFileProcessor;
-import org.tallison.batchlite.ConfigSrcTarg;
+import org.tallison.batchlite.ConfigSrc;
 import org.tallison.batchlite.FileProcessResult;
 import org.tallison.batchlite.FileToFileProcessor;
 import org.tallison.batchlite.MetadataWriter;
 import org.tallison.batchlite.ProcessExecutor;
-import org.tallison.batchlite.writer.MetadataWriterFactory;
+import org.xml.sax.SAXException;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.Writer;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -43,21 +44,17 @@ public class TestGrammarRunner extends AbstractDirectoryProcessor {
     private static final Logger LOG = LoggerFactory.getLogger(TestGrammarRunner.class);
 
     private static final int MAX_BUFFER = 20000;
-    private final int numThreads;
     private final long timeoutMillis = 120000;
-    private final Path targRoot;
 
-    public TestGrammarRunner(ConfigSrcTarg config) {
-        super(config.getSrcRoot(), config.getMetadataWriter());
-        this.targRoot = config.getTargRoot();
-        this.numThreads = config.getNumThreads();
+    public TestGrammarRunner(ConfigSrc config) throws TikaConfigException {
+        super(config);
     }
 
     @Override
-    public List<AbstractFileProcessor> getProcessors(ArrayBlockingQueue<Path> queue) {
+    public List<AbstractFileProcessor> getProcessors(ArrayBlockingQueue<FetchEmitTuple> queue) throws IOException, TikaException {
         List<AbstractFileProcessor> processors = new ArrayList<>();
         for (int i = 0; i < numThreads; i++) {
-            TestGrammarProcessor p = new TestGrammarProcessor(queue, rootDir, targRoot, metadataWriter);
+            TestGrammarProcessor p = new TestGrammarProcessor(queue, tikaConfig, metadataWriter);
             p.setFileTimeoutMillis(timeoutMillis);
             processors.add(p);
         }
@@ -66,9 +63,9 @@ public class TestGrammarRunner extends AbstractDirectoryProcessor {
 
     private class TestGrammarProcessor extends FileToFileProcessor {
 
-        public TestGrammarProcessor(ArrayBlockingQueue<Path> queue,
-                                    Path srcRoot, Path targRoot, MetadataWriter metadataWriter) {
-            super(queue, srcRoot, targRoot, metadataWriter);
+        public TestGrammarProcessor(ArrayBlockingQueue<FetchEmitTuple> queue,
+                                    TikaConfig tikaConfig, MetadataWriter metadataWriter) throws IOException, TikaException {
+            super(queue, tikaConfig, metadataWriter);
         }
 
         @Override
@@ -79,10 +76,7 @@ public class TestGrammarRunner extends AbstractDirectoryProcessor {
         @Override
         public void process(String relPath, Path srcPath, Path outputPath,
                             MetadataWriter metadataWriter) throws IOException {
-            if (Files.isRegularFile(outputPath)) {
-                LOG.info("skipping "+relPath);
-                return;
-            }
+
             List<String> commandLine = new ArrayList<>();
             commandLine.add("./TestGrammar");
             commandLine.add(srcPath.toAbsolutePath().toString());
@@ -107,7 +101,7 @@ public class TestGrammarRunner extends AbstractDirectoryProcessor {
     public static void main(String[] args) throws Exception {
 
         TestGrammarRunner runner = new TestGrammarRunner(
-                ConfigSrcTarg.build(args, 1, MAX_BUFFER));
+                ConfigSrc.build(args, 1, MAX_BUFFER));
         //runner.setMaxFiles(100);
         runner.execute();
     }

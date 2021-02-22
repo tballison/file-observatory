@@ -16,7 +16,15 @@
  */
 package org.tallison.batchlite;
 
+import org.apache.tika.config.TikaConfig;
+import org.apache.tika.exception.TikaException;
+import org.apache.tika.io.TikaInputStream;
+import org.apache.tika.metadata.Metadata;
+import org.apache.tika.pipes.fetcher.Fetcher;
+import org.apache.tika.pipes.fetchiterator.FetchEmitTuple;
+
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Path;
 import java.util.concurrent.ArrayBlockingQueue;
 
@@ -30,20 +38,27 @@ import java.util.concurrent.ArrayBlockingQueue;
  */
 public abstract class FileProcessor extends AbstractFileProcessor {
 
-    private final Path srcRoot;
     private final MetadataWriter metadataWriter;
+    private final Fetcher fetcher;
 
-    public FileProcessor(ArrayBlockingQueue<Path> queue,
-                         Path srcRoot, MetadataWriter metadataWriter) {
-        super(queue);
-        this.srcRoot = srcRoot.toAbsolutePath();
+    public FileProcessor(ArrayBlockingQueue<FetchEmitTuple> queue,
+                         TikaConfig tikaConfig, MetadataWriter metadataWriter)
+            throws IOException, TikaException {
+        super(queue, tikaConfig);
         this.metadataWriter = metadataWriter;
+        this.fetcher = tikaConfig.getFetcherManager()
+                .getFetcher(AbstractFileProcessor.FETCHER_NAME);
     }
 
     @Override
-    public void process(Path srcPath) throws IOException {
-        String relPath = srcRoot.relativize(srcPath).toString();
-        process(relPath, srcPath, metadataWriter);
+    public void process(FetchEmitTuple fetchEmitTuple) throws IOException {
+        String relPath = fetchEmitTuple.getFetchKey().getKey();
+        try (InputStream is = fetcher.fetch(relPath, new Metadata());
+             TikaInputStream tis = TikaInputStream.get(is)) {
+            process(relPath, tis.getPath(), metadataWriter);
+        } catch (TikaException e) {
+            throw new IOException(e);
+        }
     }
 
     protected abstract void process(String relPath, Path srcPath,

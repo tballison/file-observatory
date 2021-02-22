@@ -15,6 +15,10 @@
  * limitations under the License.
  */
 package org.tallison.fileutils.pdfinfo;
+import org.apache.tika.config.TikaConfig;
+import org.apache.tika.exception.TikaConfigException;
+import org.apache.tika.exception.TikaException;
+import org.apache.tika.pipes.fetchiterator.FetchEmitTuple;
 import org.apache.tika.utils.ProcessUtils;
 import org.tallison.batchlite.AbstractDirectoryProcessor;
 import org.tallison.batchlite.AbstractFileProcessor;
@@ -35,17 +39,16 @@ public class PDFInfo extends AbstractDirectoryProcessor {
     private static final int MAX_STDOUT = 20000;
     private static final int MAX_STDERR = 20000;
     private static final long TIMEOUT_MILLIS = 60000;
-    private final int numThreads;
-    public PDFInfo(ConfigSrc config) {
-        super(config.getSrcRoot(), config.getMetadataWriter());
-        this.numThreads = config.getNumThreads();
+
+    public PDFInfo(ConfigSrc config) throws TikaConfigException {
+        super(config);
     }
 
     @Override
-    public List<AbstractFileProcessor> getProcessors(ArrayBlockingQueue<Path> queue) {
+    public List<AbstractFileProcessor> getProcessors(ArrayBlockingQueue<FetchEmitTuple> queue) throws IOException, TikaException {
         List<AbstractFileProcessor> processors = new ArrayList<>();
         for (int i = 0; i < numThreads; i++) {
-            PDFInfoProcessor p = new PDFInfoProcessor(queue, rootDir, metadataWriter);
+            PDFInfoProcessor p = new PDFInfoProcessor(queue, tikaConfig, metadataWriter);
             p.setFileTimeoutMillis(TIMEOUT_MILLIS);
             processors.add(p);
         }
@@ -54,9 +57,9 @@ public class PDFInfo extends AbstractDirectoryProcessor {
 
     private class PDFInfoProcessor extends CommandlineFileProcessor {
 
-        public PDFInfoProcessor(ArrayBlockingQueue<Path> queue,
-                                Path srcRoot, MetadataWriter metadataWriter) {
-            super(queue, srcRoot, metadataWriter);
+        public PDFInfoProcessor(ArrayBlockingQueue<FetchEmitTuple> queue,
+                                TikaConfig tikaConfig, MetadataWriter metadataWriter) throws IOException, TikaException {
+            super(queue, tikaConfig, metadataWriter);
         }
 
         @Override

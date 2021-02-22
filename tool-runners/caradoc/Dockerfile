@@ -30,7 +30,6 @@ RUN apt-get update &&\
 
 COPY target/caradoc-1.0.0-SNAPSHOT.jar /caradoc-1.0.0-SNAPSHOT.jar
 ENTRYPOINT ["java","-jar","/caradoc-1.0.0-SNAPSHOT.jar"]
-
 #e.g.
 #debug: docker run -it --entrypoint /bin/bash mutooltotext-container
 # docker build -t mutool-clean-image .

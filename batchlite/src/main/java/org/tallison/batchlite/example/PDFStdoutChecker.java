@@ -16,12 +16,16 @@
  */
 package org.tallison.batchlite.example;
 
+import org.apache.tika.config.TikaConfig;
+import org.apache.tika.exception.TikaException;
+import org.apache.tika.pipes.fetchiterator.FetchEmitTuple;
 import org.apache.tika.utils.ProcessUtils;
 import org.tallison.batchlite.AbstractDirectoryProcessor;
 import org.tallison.batchlite.AbstractFileProcessor;
 import org.tallison.batchlite.CommandlineStdoutToFileProcessor;
-import org.tallison.batchlite.ConfigSrcTarg;
+import org.tallison.batchlite.ConfigSrc;
 import org.tallison.batchlite.MetadataWriter;
+import org.xml.sax.SAXException;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -43,29 +47,26 @@ import java.util.concurrent.ArrayBlockingQueue;
 public class PDFStdoutChecker extends AbstractDirectoryProcessor {
 
     private final String pdfcheckerRoot;
-    private final Path targRoot;
-    private final int numThreads;
 
-    public PDFStdoutChecker(String pdfcheckerRoot, ConfigSrcTarg config) {
-        super(config.getSrcRoot(), config.getMetadataWriter());
+    public PDFStdoutChecker(String pdfcheckerRoot, ConfigSrc config) throws TikaException, IOException, SAXException {
+        super(config);
         this.pdfcheckerRoot = pdfcheckerRoot;
-        this.targRoot = config.getTargRoot();
-        this.numThreads = config.getNumThreads();
     }
 
     @Override
-    public List<AbstractFileProcessor> getProcessors(ArrayBlockingQueue<Path> queue) {
+    public List<AbstractFileProcessor> getProcessors(ArrayBlockingQueue<FetchEmitTuple> queue)
+            throws IOException, TikaException {
         List<AbstractFileProcessor> processors = new ArrayList<>();
         for (int i = 0; i < numThreads; i++) {
-            processors.add(new FileToFileProcessor(queue, getRootDir(), targRoot, metadataWriter));
+            processors.add(new PDFCheckerProcessor(queue, tikaConfig, metadataWriter));
         }
         return processors;
     }
 
-    private class FileToFileProcessor extends CommandlineStdoutToFileProcessor {
-        public FileToFileProcessor(ArrayBlockingQueue<Path> queue, Path srcRoot, Path targRoot,
-                                   MetadataWriter metadataWriter) {
-            super(queue, srcRoot, targRoot, metadataWriter);
+    private class PDFCheckerProcessor extends CommandlineStdoutToFileProcessor {
+        public PDFCheckerProcessor(ArrayBlockingQueue<FetchEmitTuple> queue, TikaConfig tikaConfig,
+                                   MetadataWriter metadataWriter) throws IOException, TikaException {
+            super(queue, tikaConfig, metadataWriter);
         }
 
         @Override
@@ -89,8 +90,8 @@ public class PDFStdoutChecker extends AbstractDirectoryProcessor {
         String pdfCheckerRoot = args[0];
         String[] newArgs = new String[args.length-1];
         System.arraycopy(args, 1, newArgs, 0, newArgs.length);
-        PDFStdoutChecker runner = new PDFStdoutChecker(pdfCheckerRoot,
-                ConfigSrcTarg.build(newArgs, 10000, 10000));
+        ConfigSrc configSrc = ConfigSrc.build(newArgs, 10000, 10000);
+        PDFStdoutChecker runner = new PDFStdoutChecker(pdfCheckerRoot, configSrc);
         runner.execute();
     }
 }

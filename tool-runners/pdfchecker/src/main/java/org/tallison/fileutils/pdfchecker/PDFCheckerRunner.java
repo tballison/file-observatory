@@ -16,11 +16,15 @@
  */
 package org.tallison.fileutils.pdfchecker;
 
+import org.apache.tika.config.TikaConfig;
+import org.apache.tika.exception.TikaConfigException;
+import org.apache.tika.exception.TikaException;
+import org.apache.tika.pipes.fetchiterator.FetchEmitTuple;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tallison.batchlite.AbstractDirectoryProcessor;
 import org.tallison.batchlite.AbstractFileProcessor;
-import org.tallison.batchlite.ConfigSrcTarg;
+import org.tallison.batchlite.ConfigSrc;
 import org.tallison.batchlite.FileProcessResult;
 import org.tallison.batchlite.FileToFileProcessor;
 import org.tallison.batchlite.MetadataWriter;
@@ -37,21 +41,17 @@ public class PDFCheckerRunner extends AbstractDirectoryProcessor {
     private static final Logger LOG = LoggerFactory.getLogger(PDFCheckerRunner.class);
 
     private static final int MAX_BUFFER = 20000;
-    private final int numThreads;
     private final long timeoutMillis = 60000;
-    private final Path targRoot;
 
-    public PDFCheckerRunner(ConfigSrcTarg config) {
-        super(config.getSrcRoot(), config.getMetadataWriter());
-        this.targRoot = config.getTargRoot();
-        this.numThreads = config.getNumThreads();
+    public PDFCheckerRunner(ConfigSrc config) throws TikaConfigException {
+        super(config);
     }
 
     @Override
-    public List<AbstractFileProcessor> getProcessors(ArrayBlockingQueue<Path> queue) {
+    public List<AbstractFileProcessor> getProcessors(ArrayBlockingQueue<FetchEmitTuple> queue) throws IOException, TikaException {
         List<AbstractFileProcessor> processors = new ArrayList<>();
         for (int i = 0; i < numThreads; i++) {
-            PDFCheckerProcessor p = new PDFCheckerProcessor(queue, rootDir, targRoot, metadataWriter);
+            PDFCheckerProcessor p = new PDFCheckerProcessor(queue, tikaConfig, metadataWriter);
             p.setFileTimeoutMillis(timeoutMillis);
             processors.add(p);
         }
@@ -60,10 +60,11 @@ public class PDFCheckerRunner extends AbstractDirectoryProcessor {
 
     private class PDFCheckerProcessor extends FileToFileProcessor {
 
-        public PDFCheckerProcessor(ArrayBlockingQueue<Path> queue,
-                                   Path srcRoot, Path targRoot, MetadataWriter metadataWriter) {
-            super(queue, srcRoot, targRoot, metadataWriter);
+        public PDFCheckerProcessor(ArrayBlockingQueue<FetchEmitTuple> queue,
+                                   TikaConfig tikaConfig, MetadataWriter metadataWriter) throws IOException, TikaException {
+            super(queue, tikaConfig, metadataWriter);
         }
+
 
         @Override
         public String getExtension() {
@@ -73,10 +74,7 @@ public class PDFCheckerRunner extends AbstractDirectoryProcessor {
         @Override
         public void process(String relPath, Path srcPath, Path outputPath,
                             MetadataWriter metadataWriter) throws IOException {
-            if (Files.isRegularFile(outputPath)) {
-                LOG.trace("skipping "+relPath);
-                return;
-            }
+
             List<String> commandLine = new ArrayList<>();
             commandLine.add("/pdfchecker-bin/PDF_Checker/pdfchecker");
             commandLine.add("-j");
@@ -97,7 +95,7 @@ public class PDFCheckerRunner extends AbstractDirectoryProcessor {
 
     public static void main(String[] args) throws Exception {
 
-        PDFCheckerRunner runner = new PDFCheckerRunner(ConfigSrcTarg.build(args, MAX_BUFFER, MAX_BUFFER));
+        PDFCheckerRunner runner = new PDFCheckerRunner(ConfigSrc.build(args, MAX_BUFFER, MAX_BUFFER));
         //runner.setMaxFiles(100);
         runner.execute();
     }

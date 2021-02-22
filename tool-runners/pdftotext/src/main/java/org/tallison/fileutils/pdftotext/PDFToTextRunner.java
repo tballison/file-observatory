@@ -16,23 +16,23 @@
  */
 package org.tallison.fileutils.pdftotext;
 
+import org.apache.tika.config.TikaConfig;
+import org.apache.tika.exception.TikaConfigException;
+import org.apache.tika.exception.TikaException;
+import org.apache.tika.pipes.fetchiterator.FetchEmitTuple;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tallison.batchlite.AbstractDirectoryProcessor;
 import org.tallison.batchlite.AbstractFileProcessor;
-import org.tallison.batchlite.ConfigSrcTarg;
+import org.tallison.batchlite.ConfigSrc;
 import org.tallison.batchlite.FileProcessResult;
 import org.tallison.batchlite.FileToFileProcessor;
 import org.tallison.batchlite.MetadataWriter;
 import org.tallison.batchlite.ProcessExecutor;
-import org.tallison.batchlite.writer.MetadataWriterFactory;
 
 import java.io.IOException;
-import java.io.Writer;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -41,21 +41,17 @@ public class PDFToTextRunner extends AbstractDirectoryProcessor {
     private static final Logger LOG = LoggerFactory.getLogger(PDFToTextRunner.class);
 
     private static final int MAX_BUFFER = 20000;
-    private final int numThreads;
     private final long timeoutMillis = 60000;
-    private final Path targRoot;
 
-    public PDFToTextRunner(ConfigSrcTarg config) {
-        super(config.getSrcRoot(), config.getMetadataWriter());
-        this.targRoot = config.getTargRoot();
-        this.numThreads = config.getNumThreads();
+    public PDFToTextRunner(ConfigSrc config) throws TikaConfigException {
+        super(config);
     }
 
     @Override
-    public List<AbstractFileProcessor> getProcessors(ArrayBlockingQueue<Path> queue) {
+    public List<AbstractFileProcessor> getProcessors(ArrayBlockingQueue<FetchEmitTuple> queue) throws IOException, TikaException {
         List<AbstractFileProcessor> processors = new ArrayList<>();
         for (int i = 0; i < numThreads; i++) {
-            PDFToTextProcessor p = new PDFToTextProcessor(queue, rootDir, targRoot, metadataWriter);
+            PDFToTextProcessor p = new PDFToTextProcessor(queue, tikaConfig, metadataWriter);
             p.setFileTimeoutMillis(timeoutMillis);
             processors.add(p);
         }
@@ -64,9 +60,9 @@ public class PDFToTextRunner extends AbstractDirectoryProcessor {
 
     private class PDFToTextProcessor extends FileToFileProcessor {
 
-        public PDFToTextProcessor(ArrayBlockingQueue<Path> queue,
-                                  Path srcRoot, Path targRoot, MetadataWriter metadataWriter) {
-            super(queue, srcRoot, targRoot, metadataWriter);
+        public PDFToTextProcessor(ArrayBlockingQueue<FetchEmitTuple> queue,
+                                  TikaConfig tikaConfig, MetadataWriter metadataWriter) throws IOException, TikaException {
+            super(queue, tikaConfig, metadataWriter);
         }
 
         @Override
@@ -77,10 +73,7 @@ public class PDFToTextRunner extends AbstractDirectoryProcessor {
         @Override
         public void process(String relPath, Path srcPath, Path outputPath,
                             MetadataWriter metadataWriter) throws IOException {
-            if (Files.isRegularFile(outputPath)) {
-                LOG.trace("skipping "+relPath);
-                return;
-            }
+
             List<String> commandLine = new ArrayList<>();
             commandLine.add("pdftotext");
             commandLine.add(srcPath.toAbsolutePath().toString());
@@ -97,7 +90,7 @@ public class PDFToTextRunner extends AbstractDirectoryProcessor {
 
     public static void main(String[] args) throws Exception {
 
-        PDFToTextRunner runner = new PDFToTextRunner(ConfigSrcTarg.build(args, MAX_BUFFER, MAX_BUFFER));
+        PDFToTextRunner runner = new PDFToTextRunner(ConfigSrc.build(args, MAX_BUFFER, MAX_BUFFER));
         //runner.setMaxFiles(100);
         runner.execute();
     }

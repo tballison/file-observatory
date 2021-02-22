@@ -16,6 +16,10 @@
  */
 package org.tallison.fileutils.pdfimages;
 
+import org.apache.tika.config.TikaConfig;
+import org.apache.tika.exception.TikaConfigException;
+import org.apache.tika.exception.TikaException;
+import org.apache.tika.pipes.fetchiterator.FetchEmitTuple;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tallison.batchlite.AbstractDirectoryProcessor;
@@ -40,20 +44,18 @@ public class PDFImagesRunner extends AbstractDirectoryProcessor {
     private static final Logger LOG = LoggerFactory.getLogger(PDFImagesRunner.class);
 
     private static final int MAX_BUFFER = 20000;
-    private final int numThreads;
     private final long timeoutMillis = 60000;
 
-    public PDFImagesRunner(ConfigSrc config) {
-        super(config.getSrcRoot(), config.getMetadataWriter());
-        this.numThreads = config.getNumThreads();
+    public PDFImagesRunner(ConfigSrc config) throws TikaConfigException {
+        super(config);
     }
 
     @Override
-    public List<AbstractFileProcessor> getProcessors(ArrayBlockingQueue<Path> queue) {
+    public List<AbstractFileProcessor> getProcessors(ArrayBlockingQueue<FetchEmitTuple> queue) throws IOException, TikaException {
         List<AbstractFileProcessor> processors = new ArrayList<>();
         for (int i = 0; i < numThreads; i++) {
             PDFImagesProcessor p = new PDFImagesProcessor(queue,
-                    rootDir, metadataWriter);
+                    tikaConfig, metadataWriter);
             p.setFileTimeoutMillis(timeoutMillis);
             processors.add(p);
         }
@@ -62,9 +64,9 @@ public class PDFImagesRunner extends AbstractDirectoryProcessor {
 
     private class PDFImagesProcessor extends FileProcessor {
 
-        public PDFImagesProcessor(ArrayBlockingQueue<Path> queue,
-                                 Path srcRoot, MetadataWriter metadataWriter) {
-            super(queue, srcRoot, metadataWriter);
+        public PDFImagesProcessor(ArrayBlockingQueue<FetchEmitTuple> queue,
+                                  TikaConfig tikaConfig, MetadataWriter metadataWriter) throws IOException, TikaException {
+            super(queue, tikaConfig, metadataWriter);
         }
 
 

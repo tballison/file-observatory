@@ -16,6 +16,10 @@
  */
 package org.tallison.fileutils.caradoc;
 
+import org.apache.tika.config.TikaConfig;
+import org.apache.tika.exception.TikaConfigException;
+import org.apache.tika.exception.TikaException;
+import org.apache.tika.pipes.fetchiterator.FetchEmitTuple;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tallison.batchlite.AbstractDirectoryProcessor;
@@ -25,6 +29,7 @@ import org.tallison.batchlite.FileProcessResult;
 import org.tallison.batchlite.FileProcessor;
 import org.tallison.batchlite.MetadataWriter;
 import org.tallison.batchlite.ProcessExecutor;
+import org.xml.sax.SAXException;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -38,19 +43,18 @@ public class Caradoc extends AbstractDirectoryProcessor {
     private static final int MAX_STDOUT = 20000;
     private static final int MAX_STDERR = 20000;
 
-    private final int numThreads;
     private final long timeoutMillis = 60000;
 
-    public Caradoc(ConfigSrc config) {
-        super(config.getSrcRoot(), config.getMetadataWriter());
-        this.numThreads = config.getNumThreads();
+    public Caradoc(ConfigSrc config) throws TikaConfigException {
+        super(config);
     }
 
     @Override
-    public List<AbstractFileProcessor> getProcessors(ArrayBlockingQueue<Path> queue) {
+    public List<AbstractFileProcessor> getProcessors(ArrayBlockingQueue<FetchEmitTuple> queue)
+            throws IOException, TikaException {
         List<AbstractFileProcessor> processors = new ArrayList<>();
         for (int i = 0; i < numThreads; i++) {
-            CaradocProcessor p = new CaradocProcessor(queue, rootDir, metadataWriter);
+            CaradocProcessor p = new CaradocProcessor(queue, tikaConfig, metadataWriter);
             p.setFileTimeoutMillis(timeoutMillis);
             processors.add(p);
         }
@@ -59,9 +63,10 @@ public class Caradoc extends AbstractDirectoryProcessor {
 
     private class CaradocProcessor extends FileProcessor {
 
-        public CaradocProcessor(ArrayBlockingQueue<Path> queue,
-                                Path srcRoot, MetadataWriter metadataWriter) {
-            super(queue, srcRoot, metadataWriter);
+        public CaradocProcessor(ArrayBlockingQueue<FetchEmitTuple> queue,
+                                TikaConfig tikaConfig, MetadataWriter metadataWriter)
+                throws IOException, TikaException {
+            super(queue, tikaConfig, metadataWriter);
         }
 
         @Override

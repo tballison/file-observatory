@@ -16,17 +16,21 @@
  */
 package org.tallison.batchlite.example;
 
+import org.apache.tika.config.TikaConfig;
+import org.apache.tika.exception.TikaException;
+import org.apache.tika.pipes.fetchiterator.FetchEmitTuple;
 import org.apache.tika.utils.ProcessUtils;
 import org.tallison.batchlite.AbstractDirectoryProcessor;
 import org.tallison.batchlite.AbstractFileProcessor;
 import org.tallison.batchlite.CommandlineFileToFileProcessor;
+import org.tallison.batchlite.ConfigSrc;
 import org.tallison.batchlite.MetadataWriter;
 import org.tallison.batchlite.writer.MetadataWriterFactory;
+import org.xml.sax.SAXException;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -42,30 +46,30 @@ import java.util.concurrent.ArrayBlockingQueue;
  */
 public class PDFChecker extends AbstractDirectoryProcessor {
 
+    private static final int MAX_STDOUT = 10000;
+    private static final int MAX_STDERR = 10000;
     private final String pdfcheckerRoot;
-    private final Path targRoot;
-    private final int numThreads;
 
-    public PDFChecker(String pdfCheckerRoot, Path srcRoot, Path targRoot, MetadataWriter metadataWriter, int numThreads) {
-        super(srcRoot, metadataWriter);
+    public PDFChecker(String pdfCheckerRoot, ConfigSrc configSrc)
+            throws TikaException, IOException, SAXException {
+        super(configSrc);
         this.pdfcheckerRoot = pdfCheckerRoot;
-        this.targRoot = targRoot;
-        this.numThreads = numThreads;
     }
 
     @Override
-    public List<AbstractFileProcessor> getProcessors(ArrayBlockingQueue<Path> queue) {
+    public List<AbstractFileProcessor> getProcessors(ArrayBlockingQueue<FetchEmitTuple> queue)
+            throws IOException, TikaException {
         List<AbstractFileProcessor> processors = new ArrayList<>();
         for (int i = 0; i < numThreads; i++) {
-            processors.add(new FileToFileProcessor(queue, getRootDir(), targRoot, metadataWriter));
+            processors.add(new PDFCheckerProcessor(queue, tikaConfig, metadataWriter));
         }
         return processors;
     }
 
-    private class FileToFileProcessor extends CommandlineFileToFileProcessor {
-        public FileToFileProcessor(ArrayBlockingQueue<Path> queue, Path srcRoot, Path targRoot,
-                                   MetadataWriter metadataWriter) {
-            super(queue, srcRoot, targRoot, metadataWriter);
+    private class PDFCheckerProcessor extends CommandlineFileToFileProcessor {
+        public PDFCheckerProcessor(ArrayBlockingQueue<FetchEmitTuple> queue, TikaConfig tikaConfig,
+                                   MetadataWriter metadataWriter) throws IOException, TikaException {
+            super(queue, tikaConfig, metadataWriter);
         }
 
         @Override
@@ -92,21 +96,17 @@ public class PDFChecker extends AbstractDirectoryProcessor {
 
     public static void main(String[] args) throws Exception {
         String pdfcheckerRoot = args[0];
-        Path srcRoot = Paths.get(args[1]);
-        Path targRoot = Paths.get(args[2]);
-        String metadataWriterString = args[3];
-        int numThreads = 10;
-        if (args.length > 4) {
-            numThreads = Integer.parseInt(args[4]);
-        }
+        String[] newArgs = new String[args.length-1];
+        System.arraycopy(args, 1, newArgs, 0, newArgs.length);
+        ConfigSrc configSrc = ConfigSrc.build(newArgs, MAX_STDOUT, MAX_STDERR);
         long start = System.currentTimeMillis();
-        MetadataWriter metadataWriter = MetadataWriterFactory.build(metadataWriterString, 100000, 100000);
 
-        PDFChecker runner = new PDFChecker(pdfcheckerRoot, srcRoot, targRoot, metadataWriter, numThreads);
+        PDFChecker runner = new PDFChecker(pdfcheckerRoot, configSrc);
         //runner.setMaxFiles(100);
         runner.execute();
         long elapsed = System.currentTimeMillis() - start;
-        System.out.println("Processed " + metadataWriter.getRecordsWritten() + " records in " + elapsed + "ms");
+        System.out.println("Processed " +
+                configSrc.getMetadataWriter().getRecordsWritten() + " records in " + elapsed + "ms");
 
     }
 }

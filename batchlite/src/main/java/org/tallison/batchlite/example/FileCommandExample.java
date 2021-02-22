@@ -16,13 +16,18 @@
  */
 package org.tallison.batchlite.example;
 
+import org.apache.tika.config.TikaConfig;
+import org.apache.tika.exception.TikaException;
+import org.apache.tika.pipes.fetchiterator.FetchEmitTuple;
 import org.apache.tika.utils.ProcessUtils;
 import org.tallison.batchlite.AbstractDirectoryProcessor;
 import org.tallison.batchlite.AbstractFileProcessor;
 import org.tallison.batchlite.CommandlineFileProcessor;
 import org.tallison.batchlite.ConfigSrc;
 import org.tallison.batchlite.MetadataWriter;
+import org.xml.sax.SAXException;
 
+import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -35,26 +40,27 @@ import java.util.concurrent.ArrayBlockingQueue;
 public class FileCommandExample extends AbstractDirectoryProcessor {
 
     private static final int MAX_BUFFER = 10000;
-    private final int numThreads;
 
-    public FileCommandExample(ConfigSrc config) {
-        super(config.getSrcRoot(), config.getMetadataWriter());
-        this.numThreads = config.getNumThreads();
+
+    public FileCommandExample(ConfigSrc config) throws TikaException, IOException, SAXException {
+        super(config);
     }
 
     @Override
-    public List<AbstractFileProcessor> getProcessors(ArrayBlockingQueue<Path> queue) {
+    public List<AbstractFileProcessor> getProcessors(ArrayBlockingQueue<FetchEmitTuple> queue)
+            throws IOException, TikaException {
         List<AbstractFileProcessor> processors = new ArrayList<>();
         for (int i = 0; i < numThreads; i++) {
-            processors.add(new FileCommandProcessor(queue, getRootDir(), metadataWriter));
+            processors.add(new FileCommandProcessor(queue, tikaConfig, metadataWriter));
         }
         return processors;
     }
 
     private class FileCommandProcessor extends CommandlineFileProcessor {
-        public FileCommandProcessor(ArrayBlockingQueue<Path> queue, Path srcRoot,
-                                    MetadataWriter metadataWriter) {
-            super(queue, srcRoot, metadataWriter);
+        public FileCommandProcessor(ArrayBlockingQueue<FetchEmitTuple> queue,
+                                    TikaConfig tikaConfig,
+                                    MetadataWriter metadataWriter) throws IOException, TikaException {
+            super(queue, tikaConfig, metadataWriter);
         }
 
         @Override

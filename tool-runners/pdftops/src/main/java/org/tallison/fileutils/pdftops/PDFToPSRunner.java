@@ -16,15 +16,17 @@
  */
 package org.tallison.fileutils.pdftops;
 
+import org.apache.tika.config.TikaConfig;
+import org.apache.tika.exception.TikaConfigException;
+import org.apache.tika.exception.TikaException;
+import org.apache.tika.pipes.fetchiterator.FetchEmitTuple;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tallison.batchlite.AbstractDirectoryProcessor;
 import org.tallison.batchlite.AbstractFileProcessor;
 import org.tallison.batchlite.ConfigSrc;
-import org.tallison.batchlite.ConfigSrcTarg;
 import org.tallison.batchlite.FileProcessResult;
 import org.tallison.batchlite.FileProcessor;
-import org.tallison.batchlite.FileToFileProcessor;
 import org.tallison.batchlite.MetadataWriter;
 import org.tallison.batchlite.ProcessExecutor;
 
@@ -42,20 +44,18 @@ public class PDFToPSRunner extends AbstractDirectoryProcessor {
     private static final Logger LOG = LoggerFactory.getLogger(PDFToPSRunner.class);
 
     private static final int MAX_BUFFER = 20000;
-    private final int numThreads;
     private final long timeoutMillis = 60000;
 
-    public PDFToPSRunner(ConfigSrc config) {
-        super(config.getSrcRoot(), config.getMetadataWriter());
-        this.numThreads = config.getNumThreads();
+    public PDFToPSRunner(ConfigSrc config) throws TikaConfigException {
+        super(config);
     }
 
     @Override
-    public List<AbstractFileProcessor> getProcessors(ArrayBlockingQueue<Path> queue) {
+    public List<AbstractFileProcessor> getProcessors(ArrayBlockingQueue<FetchEmitTuple> queue) throws IOException, TikaException {
         List<AbstractFileProcessor> processors = new ArrayList<>();
         for (int i = 0; i < numThreads; i++) {
             PDFToPSProcessor p = new PDFToPSProcessor(queue,
-                    rootDir, metadataWriter);
+                    tikaConfig, metadataWriter);
             p.setFileTimeoutMillis(timeoutMillis);
             processors.add(p);
         }
@@ -64,9 +64,9 @@ public class PDFToPSRunner extends AbstractDirectoryProcessor {
 
     private class PDFToPSProcessor extends FileProcessor {
 
-        public PDFToPSProcessor(ArrayBlockingQueue<Path> queue,
-                                 Path srcRoot, MetadataWriter metadataWriter) {
-            super(queue, srcRoot, metadataWriter);
+        public PDFToPSProcessor(ArrayBlockingQueue<FetchEmitTuple> queue,
+                                TikaConfig tikaConfig, MetadataWriter metadataWriter) throws IOException, TikaException {
+            super(queue, tikaConfig, metadataWriter);
         }
 
 

@@ -19,6 +19,10 @@ package org.tallison.fileutils.clamav;
 import io.sensesecure.clamav4j.ClamAV;
 import io.sensesecure.clamav4j.ClamAVException;
 import io.sensesecure.clamav4j.ClamAVVersion;
+import org.apache.tika.config.TikaConfig;
+import org.apache.tika.exception.TikaConfigException;
+import org.apache.tika.exception.TikaException;
+import org.apache.tika.pipes.fetchiterator.FetchEmitTuple;
 import org.apache.tika.utils.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,6 +32,7 @@ import org.tallison.batchlite.ConfigSrc;
 import org.tallison.batchlite.FileProcessResult;
 import org.tallison.batchlite.FileProcessor;
 import org.tallison.batchlite.MetadataWriter;
+import org.xml.sax.SAXException;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -47,19 +52,18 @@ public class ClamAVRunner extends AbstractDirectoryProcessor {
     //I don't think this actually works
     private static final int TIMEOUT_MILLIS = 120000;
 
-    private final int numThreads;
+
     private final long timeoutMillis = 60000;
 
-    public ClamAVRunner(ConfigSrc config) {
-        super(config.getSrcRoot(), config.getMetadataWriter());
-        this.numThreads = config.getNumThreads();
+    public ClamAVRunner(ConfigSrc config) throws TikaConfigException {
+        super(config);
     }
 
     @Override
-    public List<AbstractFileProcessor> getProcessors(ArrayBlockingQueue<Path> queue) {
+    public List<AbstractFileProcessor> getProcessors(ArrayBlockingQueue<FetchEmitTuple> queue) throws TikaException, IOException {
         List<AbstractFileProcessor> processors = new ArrayList<>();
         for (int i = 0; i < numThreads; i++) {
-            ClamAVProcessor p = new ClamAVProcessor(queue, rootDir, metadataWriter);
+            ClamAVProcessor p = new ClamAVProcessor(queue, tikaConfig, metadataWriter);
             p.setFileTimeoutMillis(timeoutMillis);
             processors.add(p);
         }
@@ -74,9 +78,9 @@ public class ClamAVRunner extends AbstractDirectoryProcessor {
         private final ClamAV clammer = new ClamAV(
                 new InetSocketAddress("localhost",3310), TIMEOUT_MILLIS);
         private final int id;
-        public ClamAVProcessor(ArrayBlockingQueue<Path> queue,
-                               Path srcRoot, MetadataWriter metadataWriter) {
-            super(queue, srcRoot, metadataWriter);
+        public ClamAVProcessor(ArrayBlockingQueue<FetchEmitTuple> queue,
+                               TikaConfig tikaConfig, MetadataWriter metadataWriter) throws TikaException, IOException {
+            super(queue, tikaConfig, metadataWriter);
             id = COUNTER.getAndIncrement();
             if (id == 0) {
                 ClamAVVersion version = clammer.getVersion();

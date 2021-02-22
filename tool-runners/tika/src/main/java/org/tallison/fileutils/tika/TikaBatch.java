@@ -16,17 +16,19 @@
  */
 package org.tallison.fileutils.tika;
 
+import org.apache.tika.config.TikaConfig;
+import org.apache.tika.exception.TikaConfigException;
 import org.apache.tika.exception.TikaException;
 import org.apache.tika.io.TikaInputStream;
 import org.apache.tika.metadata.Metadata;
 import org.apache.tika.metadata.TikaCoreProperties;
 import org.apache.tika.metadata.serialization.JsonMetadataList;
-import org.apache.tika.sax.AbstractRecursiveParserWrapperHandler;
+import org.apache.tika.pipes.fetchiterator.FetchEmitTuple;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tallison.batchlite.AbstractDirectoryProcessor;
 import org.tallison.batchlite.AbstractFileProcessor;
-import org.tallison.batchlite.ConfigSrcTarg;
+import org.tallison.batchlite.ConfigSrc;
 import org.tallison.batchlite.FileProcessResult;
 import org.tallison.batchlite.FileToFileProcessor;
 import org.tallison.batchlite.MetadataWriter;
@@ -52,15 +54,11 @@ public class TikaBatch extends AbstractDirectoryProcessor {
     private static int MAX_STDOUT = 10000;
     private static int MAX_STDERR = 10000;
 
-    private final Path targRoot;
-    private final int numThreads;
     private final String[] tikaServerUrls;
 
-    public TikaBatch(ConfigSrcTarg config,
-                     String tikaServerHost, int[] ports) {
-        super(config.getSrcRoot(), config.getMetadataWriter());
-        this.targRoot = config.getTargRoot();
-        this.numThreads = config.getNumThreads();
+    public TikaBatch(ConfigSrc config,
+                     String tikaServerHost, int[] ports) throws TikaConfigException {
+        super(config);
         this.tikaServerUrls = new String[ports.length];
         for (int i = 0; i < ports.length; i++) {
             tikaServerUrls[i] = tikaServerHost+":"+ports[i];
@@ -68,11 +66,11 @@ public class TikaBatch extends AbstractDirectoryProcessor {
     }
 
     @Override
-    public List<AbstractFileProcessor> getProcessors(ArrayBlockingQueue<Path> queue) {
+    public List<AbstractFileProcessor> getProcessors(ArrayBlockingQueue<FetchEmitTuple> queue) throws IOException, TikaException {
         setMaxFiles(1000);
         List<AbstractFileProcessor> processors = new ArrayList<>();
         for (int i = 0; i < numThreads; i++) {
-            processors.add(new TikaProcessor(queue, rootDir, targRoot, metadataWriter, tikaServerUrls));
+            processors.add(new TikaProcessor(queue, tikaConfig, metadataWriter, tikaServerUrls));
         }
         return processors;
     }
@@ -81,10 +79,9 @@ public class TikaBatch extends AbstractDirectoryProcessor {
 
         private final TikaServerClient tikaClient;
 
-        public TikaProcessor(ArrayBlockingQueue<Path> queue, Path srcRoot,
-                             Path targRoot, MetadataWriter metadataWriter,
-                             String[] tikaServerUrls) {
-            super(queue, srcRoot, targRoot, metadataWriter);
+        public TikaProcessor(ArrayBlockingQueue<FetchEmitTuple> queue, TikaConfig tikaConfig, MetadataWriter metadataWriter,
+                             String[] tikaServerUrls) throws IOException, TikaException {
+            super(queue, tikaConfig, metadataWriter);
             tikaClient = new TikaServerClient(TikaServerClient.INPUT_METHOD.INPUTSTREAM,
                     tikaServerUrls);
         }
@@ -98,10 +95,7 @@ public class TikaBatch extends AbstractDirectoryProcessor {
         public void process(String relPath, Path srcPath,
                             Path outputPath, MetadataWriter metadataWriter)
                 throws IOException {
-            if (Files.isRegularFile(outputPath)) {
-                LOG.trace("skipping " + relPath);
-                return;
-            }
+
             int exitValue = 0;
             long start = System.currentTimeMillis();
             List<Metadata> metadataList = null;
@@ -166,7 +160,7 @@ public class TikaBatch extends AbstractDirectoryProcessor {
             ports = new int[1];
             ports[0] = Integer.parseInt(portString);
         }
-        TikaBatch runner = new TikaBatch(ConfigSrcTarg.build(args,
+        TikaBatch runner = new TikaBatch(ConfigSrc.build(args,
                 MAX_STDOUT, MAX_STDERR), tikaServerUrl, ports);
         //runner.setMaxFiles(100);
         runner.execute();

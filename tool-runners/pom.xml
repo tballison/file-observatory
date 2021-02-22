@@ -19,6 +19,7 @@
         <module>arlington</module>
         <module>caradoc</module>
         <module>clamav</module>
+        <module>fileprofiler</module>
         <module>mutoolclean</module>
         <module>mutooltext</module>
         <module>qpdf</module>
@@ -33,7 +34,6 @@
         <module>pdfminertext</module>
         <module>pdfid</module>
         <module>pdfcpu</module>
-        <module>source-profile</module>
         <module>pdfchecker</module>
     </modules>
 
