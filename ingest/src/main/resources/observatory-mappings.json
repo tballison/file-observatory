@@ -1,6 +1,6 @@
 {
   "index_patterns": [
-    "file-observatory-202101"
+    "file-observatory-202102"
   ],
   "mappings": {
     "_meta": {
@@ -21,7 +21,7 @@
         "type": "keyword"
       },
       "size": {
-        "type": "integer",
+        "type": "long",
         "store": true
       },
       "tk_shasum_256": {
@@ -300,13 +300,26 @@
         "type": "text",
         "store": "true"
       },
-      "c_status": {
+      "cd_status": {
         "type": "keyword"
+      },
+      "cd": {
+        "analyzer": "text_basic",
+        "type": "text",
+        "store": "true"
+      },
+      "cd_warn": {
+        "analyzer": "text_basic",
+        "type": "text",
+        "store": "true"
       },
       "clamav": {
         "analyzer": "text_basic",
         "type": "text",
         "store": "true"
+      },
+      "c_status": {
+        "type": "keyword"
       },
       "tools_status": {
         "type": "text",
