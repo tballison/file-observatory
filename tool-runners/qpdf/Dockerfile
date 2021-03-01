@@ -9,10 +9,12 @@
   #
   ##RUN make install
 
-
-FROM alpine:3
+#alpine version dictates which qpdf version is available.
+#see e.g. https://pkgs.alpinelinux.org/packages?name=qpdf&branch=v3.13
+#to search for a match
+FROM alpine:3.13
 RUN apk add --no-cache \
-    qpdf=10.0.1-r0 \
+    qpdf=10.1.0-r0 \
     openjdk11-jre
 
 
