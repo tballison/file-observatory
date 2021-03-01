@@ -48,6 +48,9 @@ public class MutoolClean extends AbstractDirectoryProcessor {
         super(config);
     }
 
+    public static String getName() {
+        return "mutoolclean";
+    }
     @Override
     public List<AbstractFileProcessor> getProcessors(ArrayBlockingQueue<FetchEmitTuple> queue) throws IOException, TikaException {
         List<AbstractFileProcessor> processors = new ArrayList<>();
@@ -92,7 +95,7 @@ public class MutoolClean extends AbstractDirectoryProcessor {
 
     public static void main(String[] args) throws Exception {
             MutoolClean runner = new MutoolClean(
-                    ConfigSrc.build(args, MAX_STDOUT, MAX_STDERR)
+                    ConfigSrc.build(args, getName(), MAX_STDOUT, MAX_STDERR)
             );
             runner.execute();
     }

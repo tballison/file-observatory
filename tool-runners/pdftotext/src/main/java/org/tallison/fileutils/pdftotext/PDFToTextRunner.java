@@ -47,6 +47,10 @@ public class PDFToTextRunner extends AbstractDirectoryProcessor {
         super(config);
     }
 
+    public static String getName() {
+        return "pdftotext";
+    }
+
     @Override
     public List<AbstractFileProcessor> getProcessors(ArrayBlockingQueue<FetchEmitTuple> queue) throws IOException, TikaException {
         List<AbstractFileProcessor> processors = new ArrayList<>();
@@ -67,7 +71,7 @@ public class PDFToTextRunner extends AbstractDirectoryProcessor {
 
         @Override
         public String getExtension() {
-            return ".txt";
+            return "txt";
         }
 
         @Override
@@ -90,7 +94,9 @@ public class PDFToTextRunner extends AbstractDirectoryProcessor {
 
     public static void main(String[] args) throws Exception {
 
-        PDFToTextRunner runner = new PDFToTextRunner(ConfigSrc.build(args, MAX_BUFFER, MAX_BUFFER));
+        PDFToTextRunner runner = new PDFToTextRunner(ConfigSrc.build(
+                args, getName(),
+                MAX_BUFFER, MAX_BUFFER));
         //runner.setMaxFiles(100);
         runner.execute();
     }

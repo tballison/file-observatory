@@ -30,7 +30,9 @@ public class JSONMetadataWriter extends MetadataWriter {
 
     private final Path metadataRootDir;
 
-    public JSONMetadataWriter(Path metadataRootDir) {
+    public JSONMetadataWriter(String name,
+                              Path metadataRootDir) {
+        super(name);
         this.metadataRootDir = metadataRootDir;
     }
 

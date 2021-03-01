@@ -44,6 +44,10 @@ public class PDFInfo extends AbstractDirectoryProcessor {
         super(config);
     }
 
+    public static String getName() {
+        return "pdfinfo";
+    }
+
     @Override
     public List<AbstractFileProcessor> getProcessors(ArrayBlockingQueue<FetchEmitTuple> queue) throws IOException, TikaException {
         List<AbstractFileProcessor> processors = new ArrayList<>();
@@ -72,7 +76,8 @@ public class PDFInfo extends AbstractDirectoryProcessor {
     }
 
     public static void main(String[] args) throws Exception {
-        PDFInfo runner = new PDFInfo(ConfigSrc.build(args, MAX_STDOUT, MAX_STDERR));
+        PDFInfo runner = new PDFInfo(
+                ConfigSrc.build(args, getName(), MAX_STDOUT, MAX_STDERR));
         runner.execute();
     }
 }

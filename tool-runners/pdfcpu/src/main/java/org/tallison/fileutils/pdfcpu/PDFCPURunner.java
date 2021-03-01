@@ -19,6 +19,7 @@ package org.tallison.fileutils.pdfcpu;
 import org.apache.tika.config.TikaConfig;
 import org.apache.tika.exception.TikaConfigException;
 import org.apache.tika.exception.TikaException;
+import org.apache.tika.io.TemporaryResources;
 import org.apache.tika.pipes.fetchiterator.FetchEmitTuple;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,10 +32,13 @@ import org.tallison.batchlite.MetadataWriter;
 import org.tallison.batchlite.ProcessExecutor;
 
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
+
+import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 
 public class PDFCPURunner extends AbstractDirectoryProcessor {
     private static final Logger LOG = LoggerFactory.getLogger(org.tallison.fileutils.pdfcpu.PDFCPURunner.class);
@@ -45,6 +49,10 @@ public class PDFCPURunner extends AbstractDirectoryProcessor {
 
     public PDFCPURunner(ConfigSrc config) throws TikaConfigException {
         super(config);
+    }
+
+    public static String getName() {
+        return "pdfcpu";
     }
 
     @Override
@@ -68,27 +76,42 @@ public class PDFCPURunner extends AbstractDirectoryProcessor {
         @Override
         protected void process(String relPath, Path srcPath, MetadataWriter metadataWriter) throws IOException {
             LOG.debug("processing {}", relPath);
+            FileProcessResult r = null;
+            Path tmpDotPDF = null;
+            try {
+                List<String> commandLine = new ArrayList<>();
+                commandLine.add("/root/pdfcpu");
+                commandLine.add("validate");
+                commandLine.add("-mode");
+                commandLine.add("strict");
 
-            List<String> commandLine = new ArrayList<>();
-            commandLine.add("/root/pdfcpu");
-            commandLine.add("validate");
-            commandLine.add("-mode");
-            commandLine.add("strict");
-            commandLine.add(srcPath.toAbsolutePath().toString());
+                if (! srcPath.toAbsolutePath().endsWith(".pdf")) {
+                    tmpDotPDF = Files.createTempFile("cpu-runner", ".pdf");
+                    Files.move(srcPath, tmpDotPDF, REPLACE_EXISTING);
+                    commandLine.add(tmpDotPDF.toAbsolutePath().toString());
+                } else {
+                    commandLine.add(srcPath.toAbsolutePath().toString());
+                }
 
 
-            FileProcessResult r = ProcessExecutor.execute(
-                    new ProcessBuilder(commandLine.toArray(new String[commandLine.size()])),
-                    timeoutMillis, metadataWriter.getMaxStdoutBuffer(),
-                    metadataWriter.getMaxStderrBuffer());
+
+                r = ProcessExecutor.execute(
+                        new ProcessBuilder(commandLine.toArray(new String[commandLine.size()])),
+                        timeoutMillis, metadataWriter.getMaxStdoutBuffer(),
+                        metadataWriter.getMaxStderrBuffer());
+
+            } finally {
+                if (tmpDotPDF != null) {
+                    Files.move(tmpDotPDF, srcPath, REPLACE_EXISTING);
+                }
+            }
             metadataWriter.write(relPath, r);
-
         }
     }
 
     public static void main(String[] args) throws Exception {
         PDFCPURunner runner = new org.tallison.fileutils.pdfcpu.PDFCPURunner(
-                ConfigSrc.build(args, MAX_STDOUT, MAX_STDERR)
+                ConfigSrc.build(args, getName(), MAX_STDOUT, MAX_STDERR)
         );
         runner.execute();
     }

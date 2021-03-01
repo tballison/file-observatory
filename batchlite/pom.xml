@@ -53,7 +53,11 @@
             <artifactId>tika-fetch-iterator-s3</artifactId>
             <version>${tika.version}</version>
         </dependency>
-
+        <dependency>
+            <groupId>org.apache.tika</groupId>
+            <artifactId>tika-fetch-iterator-jdbc</artifactId>
+            <version>${tika.version}</version>
+        </dependency>
         <!--
         <dependency>
             <groupId>com.h2database</groupId>

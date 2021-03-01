@@ -25,7 +25,12 @@ import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Savepoint;
+import java.sql.Statement;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 //e.g. /data/docs output jdbc:h2:file:/home/tallison/Desktop/h2_results:file_metadata 10
 
@@ -39,45 +44,64 @@ public class JDBCMetadataWriter extends MetadataWriter {
     private final PreparedStatement insert;
 
 
-    JDBCMetadataWriter(String jdbcString, int maxStdout, int maxStderr) throws IOException {
-        int tableIndex = jdbcString.lastIndexOf(":");
-        if (tableIndex < 0) {
-            throw new RuntimeException("must specify table name after :");
-        }
-        isPostgres = jdbcString.startsWith("jdbc:postgresql");
-        String table = jdbcString.substring(tableIndex+1);
-        jdbcString = jdbcString.substring(0, tableIndex);
+    JDBCMetadataWriter(String name, String connectionString, boolean isDelta,
+                       int maxStdout, int maxStderr) throws IOException {
+        super(name);
+        String table = name;
+        isPostgres = connectionString.startsWith("jdbc:postgresql");
         String sql = "insert into "+table+" values (?,?,?,?,?," +
                 "?,?,?,?,?);";
         try {
-            connection = DriverManager.getConnection(jdbcString);
+            connection = DriverManager.getConnection(connectionString);
             connection.setAutoCommit(false);
-            createTable(connection, table, maxStdout, maxStderr);
+            createTable(connection, table, isDelta, maxStdout, maxStderr);
             insert = connection.prepareStatement(sql);
         } catch (SQLException e) {
-            LOGGER.warn("problem with connection string: >"+jdbcString+"<");
+            LOGGER.warn("problem with connection string: >"+connectionString+"<");
             throw new IOException(e);
         }
     }
 
-    private static void createTable(Connection connection, String table,
+    private static void createTable(Connection connection, String table, boolean isDelta,
                                     int maxStdout, int maxStderr) throws SQLException {
-        String sql = "drop table if exists "+table;
-        connection.createStatement().execute(sql);
+        String sql;
 
-        sql = "create table "+table+" ("+
-                "path varchar("+MAX_PATH_LENGTH+") primary key,"+
-                "exit_value integer," +
-                "timeout boolean,"+
-                "process_time_ms BIGINT,"+
-                "stdout varchar("+maxStdout+"),"+
-                "stdout_length bigint,"+
-                "stdout_truncated boolean," +
-                "stderr varchar("+maxStderr+"),"+
-                "stderr_length bigint,"+
-                "stderr_truncated boolean)";
-        connection.createStatement().execute(sql);
-        connection.commit();
+        if (! isDelta) {
+            sql = "drop table if exists " + table;
+            connection.createStatement().execute(sql);
+        }
+        if (! tableExists(connection, table)) {
+
+            sql = "create table " + table + " (" +
+                    "path varchar(" + MAX_PATH_LENGTH + ") primary key," +
+                    "exit_value integer," +
+                    "timeout boolean," +
+                    "process_time_ms BIGINT," +
+                    "stdout varchar(" + maxStdout + ")," +
+                    "stdout_length bigint," +
+                    "stdout_truncated boolean," +
+                    "stderr varchar(" + maxStderr + ")," +
+                    "stderr_length bigint," +
+                    "stderr_truncated boolean)";
+            connection.createStatement().execute(sql);
+            connection.commit();
+        }
+    }
+
+    private static boolean tableExists(Connection connection, String table) throws SQLException {
+        Savepoint savepoint = connection.setSavepoint();
+        try {
+            try (Statement st = connection.createStatement();
+            ResultSet rs = st.executeQuery("select * from "+table+" limit 1")) {
+                while (rs.next()) {
+
+                }
+                return true;
+            }
+        } catch (SQLException e) {
+            connection.rollback(savepoint);
+            return false;
+        }
     }
 
 

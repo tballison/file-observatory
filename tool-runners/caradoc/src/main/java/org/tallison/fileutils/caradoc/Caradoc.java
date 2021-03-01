@@ -45,8 +45,13 @@ public class Caradoc extends AbstractDirectoryProcessor {
 
     private final long timeoutMillis = 60000;
 
+
     public Caradoc(ConfigSrc config) throws TikaConfigException {
         super(config);
+    }
+
+    public static String getName() {
+        return "caradoc";
     }
 
     @Override
@@ -90,7 +95,7 @@ public class Caradoc extends AbstractDirectoryProcessor {
 
     public static void main(String[] args) throws Exception {
         Caradoc runner = new Caradoc(
-                ConfigSrc.build(args, MAX_STDOUT, MAX_STDERR)
+                ConfigSrc.build(args, getName(), MAX_STDOUT, MAX_STDERR)
         );
         runner.execute();
     }

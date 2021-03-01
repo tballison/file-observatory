@@ -49,6 +49,10 @@ public class MutoolTextRunner extends AbstractDirectoryProcessor {
         super(config);
     }
 
+    public static String getName() {
+        return "mutooltext";
+    }
+
     @Override
     public List<AbstractFileProcessor> getProcessors(ArrayBlockingQueue<FetchEmitTuple> queue)
             throws IOException, TikaException {
@@ -69,7 +73,7 @@ public class MutoolTextRunner extends AbstractDirectoryProcessor {
 
         @Override
         public String getExtension() {
-            return ".txt";
+            return "txt";
         }
 
         @Override
@@ -78,22 +82,24 @@ public class MutoolTextRunner extends AbstractDirectoryProcessor {
             List<String> commandLine = new ArrayList<>();
             commandLine.add("mutool");
             commandLine.add("convert");
+            commandLine.add("-F");
+            commandLine.add("text");
             commandLine.add("-o");
             commandLine.add(outputPath.toAbsolutePath().toString());
             commandLine.add(srcPath.toAbsolutePath().toString());
             if (!Files.isDirectory(outputPath.getParent())) {
                 Files.createDirectories(outputPath.getParent());
             }
-
             FileProcessResult r = ProcessExecutor.execute(
-                    new ProcessBuilder(commandLine.toArray(new String[commandLine.size()])),
+                    new ProcessBuilder(commandLine.toArray(new String[0])),
                     timeoutMillis, metadataWriter.getMaxStdoutBuffer(), metadataWriter.getMaxStderrBuffer());
             metadataWriter.write(relPath, r);
         }
     }
 
     public static void main(String[] args) throws Exception {
-        MutoolTextRunner runner = new MutoolTextRunner(ConfigSrc.build(args, MAX_STDOUT, MAX_STDERR));
+        MutoolTextRunner runner = new MutoolTextRunner(
+                ConfigSrc.build(args, getName(), MAX_STDOUT, MAX_STDERR));
         //runner.setMaxFiles(100);
         runner.execute();
     }

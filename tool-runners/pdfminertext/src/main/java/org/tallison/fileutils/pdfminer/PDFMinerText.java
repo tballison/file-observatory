@@ -48,6 +48,10 @@ public class PDFMinerText extends AbstractDirectoryProcessor {
         super(config);
     }
 
+    public static String getName() {
+        return "pdfminertext";
+    }
+
     @Override
     public List<AbstractFileProcessor> getProcessors(ArrayBlockingQueue<FetchEmitTuple> queue) throws IOException, TikaException {
         List<AbstractFileProcessor> processors = new ArrayList<>();
@@ -94,13 +98,14 @@ public class PDFMinerText extends AbstractDirectoryProcessor {
 
         @Override
         protected String getExtension() {
-            return ".txt";
+            return "txt";
         }
     }
 
     public static void main(String[] args) throws Exception {
         PDFMinerText runner = new PDFMinerText(
-                ConfigSrc.build(args, MAX_STDOUT, MAX_STDERR)
+                ConfigSrc.build(args, getName(),
+                        MAX_STDOUT, MAX_STDERR)
         );
         runner.execute();
     }

@@ -1,44 +1,54 @@
 package org.tallison.ingest.mappers;
 
+import org.apache.tika.config.TikaConfig;
 import org.apache.tika.exception.TikaException;
 import org.apache.tika.metadata.DublinCore;
 import org.apache.tika.metadata.Metadata;
 import org.apache.tika.metadata.PDF;
 import org.apache.tika.metadata.TikaCoreProperties;
 import org.apache.tika.metadata.serialization.JsonMetadataList;
+import org.apache.tika.pipes.fetcher.Fetcher;
 import org.tallison.ingest.FeatureMapper;
 import org.tallison.quaerite.core.StoredDocument;
 
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Map;
 
 public class TikaFeatureMapper implements FeatureMapper {
 
     @Override
-    public void addFeatures(ResultSet resultSet, Path rootDir, StoredDocument storedDocument) throws SQLException {
-        addFromResultSet(resultSet, storedDocument);
-        addFromMetadataList(resultSet.getString(1), rootDir, storedDocument);
+    public void addFeatures(Map<String, String> row, Fetcher fetcher, StoredDocument storedDocument) throws SQLException {
+        addFromResultSet(row, storedDocument);
+        addFromMetadataList(row.get(REL_PATH_KEY), fetcher, storedDocument);
     }
 
-    private void addFromResultSet(ResultSet resultSet, StoredDocument storedDocument) throws SQLException {
-        int exit = resultSet.getInt("tk_exit");
-        storedDocument.addNonBlankField("tk_exit", Integer.toString(exit));
+    private void addFromResultSet(Map<String, String> row, StoredDocument storedDocument) throws SQLException {
+        storedDocument.addNonBlankField("tk_exit", row.get("tk_exit"));
     }
 
-    private void addFromMetadataList(String relPath, Path rootDir, StoredDocument storedDocument) {
-        Path p = rootDir.resolve("tika/json/output/"+relPath+".json");
-        if (! Files.isRegularFile(p)) {
-            //log
-            return;
+    private void addFromMetadataList(String relPath, Fetcher fetcher, StoredDocument storedDocument) {
+        String k = "tika/" + relPath + ".json";
+        try (InputStream is = fetcher.fetch(k, new Metadata())) {
+            processJson(is, storedDocument);
+        } catch (Exception e) {
+            storedDocument.addNonBlankField("a_status", "missing");
         }
+    }
+
+    private void processJson(InputStream is, StoredDocument storedDocument) {
+
         List<Metadata> metadataList = null;
-        try (BufferedReader reader = Files.newBufferedReader(p, StandardCharsets.UTF_8)) {
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(is,
+                StandardCharsets.UTF_8))) {
             metadataList = JsonMetadataList.fromJson(reader);
         } catch (IOException e) {
             e.printStackTrace();

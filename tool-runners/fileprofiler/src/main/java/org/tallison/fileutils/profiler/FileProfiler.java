@@ -29,16 +29,19 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 
 
 public class FileProfiler {
-    public static String DB_CONNECTION = "DB_CONNECTION";
 
+    private static long TIMEOUT_MILLIS = 600000;
     private final Connection connection;
     private final TikaConfig tikaConfig;
     private final int numThreads;
@@ -57,8 +60,9 @@ public class FileProfiler {
         ExecutorCompletionService<Integer> executorCompletionService = new ExecutorCompletionService<>(executorService);
 
         FetchIterator fetchIterator = tikaConfig.getFetchIterator();
-        ArrayBlockingQueue<FetchEmitTuple> queue = fetchIterator.init(numThreads);
-        executorCompletionService.submit(fetchIterator);
+        ArrayBlockingQueue<FetchEmitTuple> queue = new ArrayBlockingQueue<>(1000);
+
+        executorCompletionService.submit(new FetchIteratorWrapper(queue, fetchIterator));
         for (int i = 0; i < numThreads; i++) {
             executorCompletionService.submit(new PrimaryProfiler(queue, tikaConfig, connection));
         }
@@ -68,8 +72,8 @@ public class FileProfiler {
             Future<Integer> future = executorCompletionService.take();
             future.get();
             completed++;
-
         }
+        executorService.shutdownNow();
     }
 
     private void createTable(Connection connection) throws SQLException {
@@ -130,14 +134,33 @@ public class FileProfiler {
 
     }
 
+    private static class FetchIteratorWrapper implements Callable<Integer> {
+        private final ArrayBlockingQueue<FetchEmitTuple> queue;
+        private final FetchIterator fetchIterator;
+        private FetchIteratorWrapper(ArrayBlockingQueue<FetchEmitTuple> queue,
+                                     FetchIterator fetchIterator) {
+            this.queue = queue;
+            this.fetchIterator = fetchIterator;
+        }
+        @Override
+        public Integer call() throws Exception {
+            for (FetchEmitTuple t : fetchIterator) {
+                boolean offered = queue.offer(t, TIMEOUT_MILLIS, TimeUnit.MILLISECONDS);
+                if (offered == false) {
+                    throw new TimeoutException();
+                }
+            }
+            return 1;
+        }
+    }
+
     public static void main(String[] args) throws Exception {
         Connection connection = DriverManager.getConnection(
-                System.getenv(DB_CONNECTION));
+                System.getenv(ConfigSrc.METADATA_WRITER_STRING));
         Path tikaConfigPath = Paths.get(System.getenv(ConfigSrc.TIKA_CONFIG));
         int numThreads = Integer.parseInt(System.getenv(ConfigSrc.NUM_THREADS));
         TikaConfig tikaConfig = new TikaConfig(tikaConfigPath);
         FileProfiler fp = new FileProfiler(connection, tikaConfig, numThreads);
         fp.execute();
     }
-
 }

@@ -88,7 +88,7 @@ public class TikaBatch extends AbstractDirectoryProcessor {
 
         @Override
         public String getExtension() {
-            return ".json";
+            return "json";
         }
 
         @Override
@@ -144,8 +144,8 @@ public class TikaBatch extends AbstractDirectoryProcessor {
     }
 
     public static void main(String[] args) throws Exception {
-        String tikaServerUrl = args[4];
-        String portString = args[5];
+        String tikaServerUrl = args[3];
+        String portString = args[4];
         Matcher m = Pattern.compile("\\A(\\d+)-(\\d+)\\Z").matcher(portString);
         int[] ports;
         long begin = System.currentTimeMillis();
@@ -160,7 +160,7 @@ public class TikaBatch extends AbstractDirectoryProcessor {
             ports = new int[1];
             ports[0] = Integer.parseInt(portString);
         }
-        TikaBatch runner = new TikaBatch(ConfigSrc.build(args,
+        TikaBatch runner = new TikaBatch(ConfigSrc.build(args, "tika",
                 MAX_STDOUT, MAX_STDERR), tikaServerUrl, ports);
         //runner.setMaxFiles(100);
         runner.execute();

@@ -90,7 +90,7 @@ public class PDFStdoutChecker extends AbstractDirectoryProcessor {
         String pdfCheckerRoot = args[0];
         String[] newArgs = new String[args.length-1];
         System.arraycopy(args, 1, newArgs, 0, newArgs.length);
-        ConfigSrc configSrc = ConfigSrc.build(newArgs, 10000, 10000);
+        ConfigSrc configSrc = ConfigSrc.build(newArgs, "pdfchecker",10000, 10000);
         PDFStdoutChecker runner = new PDFStdoutChecker(pdfCheckerRoot, configSrc);
         runner.execute();
     }

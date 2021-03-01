@@ -47,6 +47,10 @@ public class PDFIdRunner extends AbstractDirectoryProcessor {
         super(config);
     }
 
+    public static String getName() {
+        return "pdfid";
+    }
+
     @Override
     public List<AbstractFileProcessor> getProcessors(ArrayBlockingQueue<FetchEmitTuple> queue) throws IOException, TikaException {
         List<AbstractFileProcessor> processors = new ArrayList<>();
@@ -88,7 +92,7 @@ public class PDFIdRunner extends AbstractDirectoryProcessor {
 
     public static void main(String[] args) throws Exception {
         PDFIdRunner runner = new PDFIdRunner(
-                ConfigSrc.build(args, MAX_STDOUT, MAX_STDERR)
+                ConfigSrc.build(args, getName(), MAX_STDOUT, MAX_STDERR)
         );
         runner.execute();
     }

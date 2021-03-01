@@ -44,7 +44,10 @@ public class PolyFile extends AbstractDirectoryProcessor {
 
     public PolyFile(ConfigSrc config) throws TikaConfigException {
         super(config);
+    }
 
+    public static String getName() {
+        return "polyfile";
     }
 
     @Override
@@ -67,7 +70,7 @@ public class PolyFile extends AbstractDirectoryProcessor {
 
         @Override
         public String getExtension() {
-            return ".json";
+            return "json";
         }
 
         @Override
@@ -93,7 +96,9 @@ public class PolyFile extends AbstractDirectoryProcessor {
 
     public static void main(String[] args) throws Exception {
 
-        PolyFile runner = new PolyFile(ConfigSrc.build(args, 10, 1000));
+        PolyFile runner = new PolyFile(
+                ConfigSrc.build(args,
+                        getName(), 10, 1000));
         //runner.setMaxFiles(100);
         runner.execute();
     }

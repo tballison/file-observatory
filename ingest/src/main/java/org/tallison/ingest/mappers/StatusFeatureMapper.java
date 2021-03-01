@@ -1,5 +1,6 @@
 package org.tallison.ingest.mappers;
 
+import org.apache.tika.pipes.fetcher.Fetcher;
 import org.tallison.ingest.FeatureMapper;
 import org.tallison.quaerite.core.StoredDocument;
 
@@ -19,17 +20,18 @@ import static org.tallison.ingest.mappers.QPDFFeatureMapper.joinWith;
 public class StatusFeatureMapper implements FeatureMapper {
     Pattern toolPattern = Pattern.compile("^([a-zA-Z]+)_status");
     Map<String, String> labelTools = new HashMap<>();
+
     @Override
-    public void addFeatures(ResultSet resultSet, Path rootDir, StoredDocument storedDocument) throws SQLException {
+    public void addFeatures(Map<String, String> row, Fetcher fetcher, StoredDocument storedDocument) throws SQLException {
         if (labelTools.size() == 0) {
-            loadLabelTools(resultSet);
+            loadLabelTools(row);
         }
         List<String> crashes = new ArrayList<>();
         List<String> warns = new ArrayList<>();
         List<String> timeouts = new ArrayList<>();
         List<String> overall = new ArrayList<>();
         for (Map.Entry<String, String> e : labelTools.entrySet()) {
-            String status = resultSet.getString(e.getKey());
+            String status = row.get(e.getKey());
             if ("crash".equals(status) || "timeout".equals(status)) {
                 crashes.add(e.getValue());
             } else if ("warn".equals(status)) {
@@ -51,10 +53,9 @@ public class StatusFeatureMapper implements FeatureMapper {
         storedDocument.addNonBlankField("tools_status", joinWith(" ", overall));
     }
 
-    private void loadLabelTools(ResultSet resultSet) throws SQLException {
+    private void loadLabelTools(Map<String, String> row) throws SQLException {
         Matcher m = toolPattern.matcher("");
-        for (int i = 1; i <= resultSet.getMetaData().getColumnCount(); i++) {
-            String label = resultSet.getMetaData().getColumnLabel(i);
+        for (String label : row.keySet()) {
             if (m.reset(label).find()) {
                 labelTools.put(label, m.group(1));
             }

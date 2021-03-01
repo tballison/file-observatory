@@ -49,7 +49,9 @@ public class PDFImagesRunner extends AbstractDirectoryProcessor {
     public PDFImagesRunner(ConfigSrc config) throws TikaConfigException {
         super(config);
     }
-
+    public static String getName() {
+        return "pdfimages";
+    }
     @Override
     public List<AbstractFileProcessor> getProcessors(ArrayBlockingQueue<FetchEmitTuple> queue) throws IOException, TikaException {
         List<AbstractFileProcessor> processors = new ArrayList<>();
@@ -116,7 +118,8 @@ public class PDFImagesRunner extends AbstractDirectoryProcessor {
 
     public static void main(String[] args) throws Exception {
 
-        PDFImagesRunner runner = new PDFImagesRunner(ConfigSrc.build(args, MAX_BUFFER, MAX_BUFFER));
+        PDFImagesRunner runner = new PDFImagesRunner(
+                ConfigSrc.build(args, getName(), MAX_BUFFER, MAX_BUFFER));
         //runner.setMaxFiles(100);
         runner.execute();
     }

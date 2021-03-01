@@ -75,7 +75,7 @@ public class FileCommandExample extends AbstractDirectoryProcessor {
 
     public static void main(String[] args) throws Exception {
         FileCommandExample runner = new FileCommandExample(
-                ConfigSrc.build(args, MAX_BUFFER, MAX_BUFFER)
+                ConfigSrc.build(args, "file", MAX_BUFFER, MAX_BUFFER)
         );
         runner.execute();
     }

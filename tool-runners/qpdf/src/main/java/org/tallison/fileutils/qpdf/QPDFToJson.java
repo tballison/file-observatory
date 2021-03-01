@@ -50,6 +50,9 @@ public class QPDFToJson extends AbstractDirectoryProcessor {
         super(config);
     }
 
+    public static String getName() {
+        return "qpdf";
+    }
     @Override
     public List<AbstractFileProcessor> getProcessors(ArrayBlockingQueue<FetchEmitTuple> queue) throws IOException, TikaException {
         List<AbstractFileProcessor> processors = new ArrayList<>();
@@ -71,7 +74,7 @@ public class QPDFToJson extends AbstractDirectoryProcessor {
 
         @Override
         public String getExtension() {
-            return ".json";
+            return "json";
         }
 
         @Override
@@ -91,7 +94,8 @@ public class QPDFToJson extends AbstractDirectoryProcessor {
     }
 
     public static void main(String[] args) throws Exception {
-        QPDFToJson runner = new QPDFToJson(ConfigSrc.build(args, 1, MAX_STDERR));
+        QPDFToJson runner = new QPDFToJson(ConfigSrc.build(
+                args, getName(), 1, MAX_STDERR));
         runner.execute();
     }
 }

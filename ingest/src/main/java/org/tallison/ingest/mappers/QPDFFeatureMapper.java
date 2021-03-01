@@ -1,23 +1,25 @@
 package org.tallison.ingest.mappers;
 
-import org.apache.commons.io.IOUtils;
+import org.apache.tika.metadata.Metadata;
+import org.apache.tika.pipes.fetcher.Fetcher;
 import org.tallison.ingest.FeatureMapper;
 import org.tallison.ingest.qpdf.QPDFJsonExtractor;
 import org.tallison.ingest.qpdf.QPDFResults;
 import org.tallison.quaerite.core.StoredDocument;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.Reader;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -26,30 +28,40 @@ public class QPDFFeatureMapper implements FeatureMapper {
 
     //if a key matches this regex, do not put it in the out of spec key
     public static final Pattern IN_SPEC = Pattern.compile("\\A\\/(?:(?:R|CS|Cs|cs|GS|Gs|gs|P|p|SH|Sh|sh|F|FM|Fm|fm|I|IM|Im|XO|Xo|TT|MC)\\d+)|TT\\d+_\\d+\\Z");
-    private static final int MAX_STRING_LENGTH = 1000;
-    Set<String> commonKeys = new HashSet<>();
+    private static final int MAX_STRING_LENGTH = 100;
+    private static Set<String> COMMON_KEYS = new HashSet<>();
+
 
     public QPDFFeatureMapper() {
-        QPDFJsonExtractor.loadKeys("/common-keys.txt", commonKeys);
+        QPDFJsonExtractor.loadKeys("/common-keys.txt", COMMON_KEYS);
     }
 
 
 
     @Override
-    public void addFeatures(ResultSet resultSet, Path rootDir, StoredDocument storedDocument)
+    public void addFeatures(Map<String, String> row, Fetcher fetcher, StoredDocument storedDocument)
             throws SQLException {
-        try {
-            processJson(resultSet.getString(1), rootDir, storedDocument);
-        } catch (IOException e) {
-            e.printStackTrace();
-            //log
+        processJson(row.get(FeatureMapper.REL_PATH_KEY), fetcher, storedDocument);
+    }
+
+    private void processJson(String relPath, Fetcher fetcher,
+                             StoredDocument storedDocument) {
+        String k = "qpdf/" + relPath + ".json";
+        try (InputStream is = fetcher.fetch(k, new Metadata())) {
+            try {
+                processJson(relPath, is, storedDocument);
+            } catch (IOException e) {
+                storedDocument.addNonBlankField("q_status", "bad_extract");
+            }
+        } catch (Exception e) {
+            storedDocument.addNonBlankField("q_status", "missing");
+
         }
     }
 
-    private void processJson(String relPath, Path rootDir,
+    private void processJson(String relPath, InputStream is,
                              StoredDocument storedDocument) throws IOException {
-        Path p = rootDir.resolve("qpdf/output/"+relPath+".json");
-        try (Reader r = Files.newBufferedReader(p, StandardCharsets.UTF_8)) {
+        try (Reader r = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
             QPDFResults results = new QPDFJsonExtractor().extract(relPath, r);
             results = normalize(results);
             storedDocument.addNonBlankField("q_keys", toList(results.keys));
@@ -75,6 +87,7 @@ public class QPDFFeatureMapper implements FeatureMapper {
 
         } catch (IllegalStateException e) {
             //log
+            throw new IOException(e);
         }
     }
 
@@ -109,7 +122,7 @@ public class QPDFFeatureMapper implements FeatureMapper {
         List<String> list = new ArrayList<>();
         Matcher m = IN_SPEC.matcher("");
         for (String k : keys) {
-            if (! commonKeys.contains(k)) {
+            if (! COMMON_KEYS.contains(k)) {
                 if (! m.reset(k).find()) {
                     list.add(k);
                 }

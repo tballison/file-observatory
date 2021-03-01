@@ -5,42 +5,55 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.gson.JsonPrimitive;
+import org.apache.tika.exception.TikaException;
+import org.apache.tika.metadata.Metadata;
+import org.apache.tika.pipes.fetcher.Fetcher;
 import org.tallison.ingest.FeatureMapper;
 import org.tallison.quaerite.core.StoredDocument;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.Reader;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 public class PDFCheckerMapper implements FeatureMapper {
 
     @Override
-    public void addFeatures(ResultSet resultSet, Path rootDir, StoredDocument storedDocument) throws SQLException {
+    public void addFeatures(Map<String, String> row, Fetcher fetcher, StoredDocument storedDocument) throws SQLException {
         try {
-            addFromJSON(resultSet.getString(1), rootDir, storedDocument);
+            addFromJSON(row.get(REL_PATH_KEY), fetcher, storedDocument);
         } catch (IOException e) {
             //log
             e.printStackTrace();
         }
     }
 
-    private void addFromJSON(String relPath, Path rootDir,
+    private void addFromJSON(String relPath, Fetcher fetcher,
                              StoredDocument storedDocument) throws IOException {
-        Path p = rootDir.resolve("pdfchecker/output/" + relPath + ".json");
-        if (!Files.isRegularFile(p)) {
-            //log
-            return;
+        String k = "pdfchecker/" + relPath + ".json";
+        try (InputStream is = fetcher.fetch(k, new Metadata())) {
+            try {
+                processJson(is, storedDocument);
+            } catch (IOException e) {
+                storedDocument.addNonBlankField("pc_status", "bad_extract");
+            }
+        } catch (IOException | TikaException e) {
+            storedDocument.addNonBlankField("pc_status", "missing");
         }
-        processJson(p, storedDocument);
+
     }
 
-    protected void processJson(Path p, StoredDocument storedDocument) throws IOException {
-        try (Reader reader = Files.newBufferedReader(p)) {
+    protected void processJson(InputStream is, StoredDocument storedDocument) throws IOException {
+        try (Reader reader = new BufferedReader(new InputStreamReader(is, StandardCharsets.US_ASCII))) {
             JsonElement rootElement = JsonParser.parseReader(reader);
             if (rootElement.isJsonNull()) {
                 //log

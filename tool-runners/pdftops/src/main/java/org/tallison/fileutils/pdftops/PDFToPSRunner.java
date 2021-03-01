@@ -50,6 +50,10 @@ public class PDFToPSRunner extends AbstractDirectoryProcessor {
         super(config);
     }
 
+    public static String getName() {
+        return "pdftops";
+    }
+
     @Override
     public List<AbstractFileProcessor> getProcessors(ArrayBlockingQueue<FetchEmitTuple> queue) throws IOException, TikaException {
         List<AbstractFileProcessor> processors = new ArrayList<>();
@@ -82,7 +86,8 @@ public class PDFToPSRunner extends AbstractDirectoryProcessor {
             FileProcessResult result = null;
             try {
                 result = ProcessExecutor.execute(
-                        new ProcessBuilder(commandLine.toArray(new String[commandLine.size()])),
+                        new ProcessBuilder(commandLine.toArray(
+                                new String[0])),
                         timeoutMillis, metadataWriter.getMaxStdoutBuffer(), metadataWriter.getMaxStderrBuffer());
             } finally {
                 Files.delete(tmpFile);
@@ -94,7 +99,8 @@ public class PDFToPSRunner extends AbstractDirectoryProcessor {
 
     public static void main(String[] args) throws Exception {
 
-        PDFToPSRunner runner = new PDFToPSRunner(ConfigSrc.build(args, MAX_BUFFER, MAX_BUFFER));
+        PDFToPSRunner runner = new PDFToPSRunner(ConfigSrc.build(args,
+                getName(), MAX_BUFFER, MAX_BUFFER));
         //runner.setMaxFiles(100);
         runner.execute();
     }

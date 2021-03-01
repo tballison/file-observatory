@@ -23,13 +23,15 @@ import java.nio.file.Paths;
 
 public class MetadataWriterFactory {
 
-    public static MetadataWriter build(String writerString, int maxStdout, int maxStderr) throws IOException {
+    public static MetadataWriter build(String name, String writerString,
+                                       boolean isDelta,
+                                       int maxStdout, int maxStderr) throws IOException {
         if (writerString.startsWith("jdbc:")) {
-            return new JDBCMetadataWriter(writerString, maxStdout, maxStderr);
+            return new JDBCMetadataWriter(name, writerString, isDelta, maxStdout, maxStderr);
         } else if (writerString.endsWith(".csv") || writerString.endsWith(".tsv")) {
-            return new CSVMetadataWriter(Paths.get(writerString));
+            return new CSVMetadataWriter(name, Paths.get(writerString));
         } else {
-            return new JSONMetadataWriter(Paths.get(writerString));
+            return new JSONMetadataWriter(name, Paths.get(writerString));
         }
     }
 }

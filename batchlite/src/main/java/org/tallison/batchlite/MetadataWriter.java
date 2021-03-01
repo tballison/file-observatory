@@ -47,7 +47,14 @@ public abstract class MetadataWriter implements Callable<Integer> {
     private int maxStdoutBuffer = MAX_BUFFER;
     private int maxStderrBuffer = MAX_BUFFER;
     private final ArrayBlockingQueue<PathResultPair> rows = new ArrayBlockingQueue<>(1000);
+    private final String name;
+    public MetadataWriter(String name) {
+        this.name = name;
+    }
 
+    public String getName() {
+        return name;
+    }
     abstract protected void write(PathResultPair pathResultPair) throws IOException;
 
     abstract protected void close() throws IOException;

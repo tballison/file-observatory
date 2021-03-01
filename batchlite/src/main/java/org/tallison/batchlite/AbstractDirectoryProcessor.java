@@ -21,6 +21,7 @@ import org.apache.tika.exception.TikaConfigException;
 import org.apache.tika.exception.TikaException;
 import org.apache.tika.pipes.fetchiterator.FetchEmitTuple;
 import org.apache.tika.pipes.fetchiterator.FetchIterator;
+import org.apache.tika.pipes.fetchiterator.jdbc.JDBCFetchIterator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tallison.batchlite.writer.JDBCMetadataWriter;
@@ -43,6 +44,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicLong;
 
 public abstract class AbstractDirectoryProcessor {
@@ -73,7 +75,15 @@ public abstract class AbstractDirectoryProcessor {
 
     public void execute() throws SQLException, IOException, TikaException {
         FetchIterator fetchIterator = tikaConfig.getFetchIterator();
-        ArrayBlockingQueue<FetchEmitTuple> queue = fetchIterator.init(numThreads);
+        if (fetchIterator instanceof JDBCFetchIterator) {
+            String select = ((JDBCFetchIterator) fetchIterator).getSelect();
+            if (select.contains("${name}")) {
+                select = select.replaceAll("\\$\\{name\\}", metadataWriter.getName());
+                ((JDBCFetchIterator)fetchIterator).setSelect(select);
+            }
+        }
+        ArrayBlockingQueue<FetchEmitTuple> queue = new ArrayBlockingQueue<>(1000);
+
         List<AbstractFileProcessor> processors = getProcessors(queue);
         int totalThreads = processors.size()+2;
 
@@ -82,7 +92,7 @@ public abstract class AbstractDirectoryProcessor {
                 = new ExecutorCompletionService<>(executorService);
 
         long start = System.currentTimeMillis();
-        executorCompletionService.submit(fetchIterator);
+        executorCompletionService.submit(new FetchIteratorWrapper(queue, fetchIterator, processors.size()));
         executorCompletionService.submit(metadataWriter);
 
         for (int i = 0; i < processors.size(); i++) {
@@ -136,4 +146,33 @@ public abstract class AbstractDirectoryProcessor {
 
     public abstract List<AbstractFileProcessor> getProcessors(ArrayBlockingQueue<FetchEmitTuple> queue) throws IOException, TikaException;
 
+    private static class FetchIteratorWrapper implements Callable<Integer> {
+        private final ArrayBlockingQueue<FetchEmitTuple> queue;
+        private final FetchIterator fetchIterator;
+        private final int numWorkers;
+        private FetchIteratorWrapper(ArrayBlockingQueue<FetchEmitTuple> queue,
+                                     FetchIterator fetchIterator, int numWorkers) {
+            this.queue = queue;
+            this.fetchIterator = fetchIterator;
+            this.numWorkers = numWorkers;
+        }
+        @Override
+        public Integer call() throws Exception {
+            for (FetchEmitTuple t : fetchIterator) {
+                boolean offered = queue.offer(t, TIMEOUT_MILLIS,
+                        TimeUnit.MILLISECONDS);
+                if (offered == false) {
+                    throw new TimeoutException();
+                }
+            }
+            for (int i = 0; i < numWorkers; i++) {
+                boolean offered = queue.offer(FetchIterator.COMPLETED_SEMAPHORE,
+                        TIMEOUT_MILLIS, TimeUnit.MILLISECONDS);
+                if (offered == false) {
+                    throw new TimeoutException();
+                }
+            }
+            return 1;
+        }
+    }
 }

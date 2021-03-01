@@ -50,6 +50,9 @@ public class PDFToPPMRunner extends AbstractDirectoryProcessor {
         super(config);
     }
 
+    public static String getName() {
+        return "pdftoppm";
+    }
     @Override
     public List<AbstractFileProcessor> getProcessors(ArrayBlockingQueue<FetchEmitTuple> queue) throws IOException, TikaException {
         List<AbstractFileProcessor> processors = new ArrayList<>();
@@ -117,7 +120,9 @@ public class PDFToPPMRunner extends AbstractDirectoryProcessor {
 
     public static void main(String[] args) throws Exception {
 
-        PDFToPPMRunner runner = new PDFToPPMRunner(ConfigSrc.build(args, MAX_BUFFER, MAX_BUFFER));
+        PDFToPPMRunner runner = new PDFToPPMRunner(
+                ConfigSrc.build(args, getName(),
+                        MAX_BUFFER, MAX_BUFFER));
         //runner.setMaxFiles(100);
         runner.execute();
     }

@@ -46,6 +46,10 @@ public class TestGrammarRunner extends AbstractDirectoryProcessor {
     private static final int MAX_BUFFER = 20000;
     private final long timeoutMillis = 120000;
 
+    public static String getName() {
+        return "arlington";
+    }
+
     public TestGrammarRunner(ConfigSrc config) throws TikaConfigException {
         super(config);
     }
@@ -70,7 +74,7 @@ public class TestGrammarRunner extends AbstractDirectoryProcessor {
 
         @Override
         public String getExtension() {
-            return ".txt";
+            return "txt";
         }
 
         @Override
@@ -82,13 +86,7 @@ public class TestGrammarRunner extends AbstractDirectoryProcessor {
             commandLine.add(srcPath.toAbsolutePath().toString());
             commandLine.add("/grammar/tsv/latest");
             commandLine.add(outputPath.toAbsolutePath().toString());
-            if (! Files.isDirectory(outputPath.getParent())) {
-                try {
-                    Files.createDirectories(outputPath.getParent());
-                } catch (FileAlreadyExistsException e) {
-                    //swallow
-                }
-            }
+
             ProcessBuilder pb = new ProcessBuilder(commandLine.toArray(new String[commandLine.size()]));
             pb.directory(new File("/grammar/"));
             FileProcessResult r = ProcessExecutor.execute(pb,
@@ -101,8 +99,8 @@ public class TestGrammarRunner extends AbstractDirectoryProcessor {
     public static void main(String[] args) throws Exception {
 
         TestGrammarRunner runner = new TestGrammarRunner(
-                ConfigSrc.build(args, 1, MAX_BUFFER));
-        //runner.setMaxFiles(100);
+                ConfigSrc.build(args, getName(), 1, MAX_BUFFER));
+
         runner.execute();
     }
 }

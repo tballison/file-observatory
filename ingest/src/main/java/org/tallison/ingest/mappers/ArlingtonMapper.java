@@ -1,5 +1,10 @@
 package org.tallison.ingest.mappers;
 
+import org.apache.tika.exception.TikaException;
+import org.apache.tika.metadata.Metadata;
+import org.apache.tika.pipes.emitter.TikaEmitterException;
+import org.apache.tika.pipes.fetcher.FetchKey;
+import org.apache.tika.pipes.fetcher.Fetcher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tallison.ingest.FeatureMapper;
@@ -8,6 +13,8 @@ import org.tallison.quaerite.core.StoredDocument;
 
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -15,6 +22,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.regex.Matcher;
@@ -28,10 +36,19 @@ public class ArlingtonMapper implements FeatureMapper {
 
 
     @Override
-    public void addFeatures(ResultSet resultSet, Path rootDir, StoredDocument storedDocument)
+    public void addFeatures(Map<String, String> row, Fetcher fetcher, StoredDocument storedDocument)
             throws SQLException {
-        boolean timeout = resultSet.getBoolean("arlington_timeout");
-        int exit = resultSet.getInt("arlington_exit_value");
+        boolean timeout = false;
+        int exit = -1;
+        String timeoutString = row.get("arlington_timeout");
+        if ("true".equalsIgnoreCase(timeoutString)) {
+            timeout = true;
+        }
+        String exitString = row.get("arlington_exit_value");
+        if (exitString != null) {
+            exit = Integer.parseInt(exitString);
+        }
+
         if (timeout) {
             storedDocument.addNonBlankField("a_status", "timeout");
             return;
@@ -39,36 +56,36 @@ public class ArlingtonMapper implements FeatureMapper {
             storedDocument.addNonBlankField("a_status", "crash");
             return;
         }
-        String relPath = resultSet.getString(1);
+        String relPath = row.get(FeatureMapper.REL_PATH_KEY);
         try {
-            processFile(relPath, rootDir, storedDocument);
+            processFile(relPath, fetcher, storedDocument);
         } catch (IOException e) {
             LOGGER.warn(relPath, e);
         }
 
     }
 
-    private void processFile(String relPath, Path rootDir, StoredDocument storedDocument)
+    private void processFile(String relPath, Fetcher fetcher, StoredDocument storedDocument)
             throws IOException {
 
-        Path p = rootDir.resolve("arlington/output/" + relPath + ".txt");
-        if (!Files.isRegularFile(p)) {
-            storedDocument.addNonBlankField("a_status", "missing");
-            return;
-        }
-        try {
-            _processFile(p, storedDocument);
-        } catch (IOException e) {
-            storedDocument.addNonBlankField("a_status", "bad_extract");
 
+        try (InputStream is =
+                     fetcher.fetch("arlington/"+relPath+".txt", new Metadata())) {
+            try {
+                _processFile(is, storedDocument);
+            } catch (IOException e) {
+                storedDocument.addNonBlankField("a_status", "bad_extract");
+            }
+        } catch (IOException | TikaException e) {
+            storedDocument.addNonBlankField("a_status", "missing");
         }
     }
 
-    protected void _processFile(Path p, StoredDocument storedDocument) throws IOException {
+    protected void _processFile(InputStream is, StoredDocument storedDocument) throws IOException {
         Matcher error = ERROR_PATTERN.matcher("");
         Matcher cantOpen = FAILED_TO_OPEN.matcher("");
         Set<String> errors = new TreeSet<>();
-        try (BufferedReader reader = Files.newBufferedReader(p, StandardCharsets.US_ASCII)) {
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(is, StandardCharsets.US_ASCII))) {
             String line = reader.readLine();
             //skip first line
             line = reader.readLine();

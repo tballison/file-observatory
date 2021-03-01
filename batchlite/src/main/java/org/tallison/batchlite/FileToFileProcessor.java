@@ -25,9 +25,12 @@ import org.apache.tika.pipes.emitter.Emitter;
 import org.apache.tika.pipes.emitter.StreamEmitter;
 import org.apache.tika.pipes.fetcher.Fetcher;
 import org.apache.tika.pipes.fetchiterator.FetchEmitTuple;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.concurrent.ArrayBlockingQueue;
 
@@ -37,12 +40,15 @@ import java.util.concurrent.ArrayBlockingQueue;
  */
 public abstract class FileToFileProcessor extends AbstractFileProcessor {
 
+    private static Logger LOGGER = LoggerFactory.getLogger(FileToFileProcessor.class);
+
     private final MetadataWriter metadataWriter;
     private final Fetcher fetcher;
     private final StreamEmitter emitter;
 
     public FileToFileProcessor(ArrayBlockingQueue<FetchEmitTuple> queue,
-                               TikaConfig tikaConfig, MetadataWriter metadataWriter)
+                               TikaConfig tikaConfig,
+                               MetadataWriter metadataWriter)
             throws IOException, TikaException {
         super(queue, tikaConfig);
         this.metadataWriter = metadataWriter;
@@ -64,8 +70,13 @@ public abstract class FileToFileProcessor extends AbstractFileProcessor {
                 Path tmpSrcFile = tis.getPath();
                 Path tmpOutFile = tmp.createTempFile();
                 process(relPath, tmpSrcFile, tmpOutFile, metadataWriter);
-                try (InputStream stream = TikaInputStream.get(tmpOutFile)) {
-                    emitter.emit(relPath, stream, new Metadata());
+                if (Files.size(tmpOutFile) > 0) {
+                    try (InputStream stream = TikaInputStream.get(tmpOutFile)) {
+                        String outPath = metadataWriter.getName()+"/"+relPath+"."+getExtension();
+                        emitter.emit(outPath, stream, new Metadata());
+                    }
+                } else {
+                    LOGGER.warn("empty file for: "+relPath);
                 }
             } catch (TikaException e) {
                 throw new IOException(e);

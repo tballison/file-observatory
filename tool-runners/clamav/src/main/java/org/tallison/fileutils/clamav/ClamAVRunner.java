@@ -59,6 +59,10 @@ public class ClamAVRunner extends AbstractDirectoryProcessor {
         super(config);
     }
 
+    public static String getName() {
+        return "clamav";
+    }
+
     @Override
     public List<AbstractFileProcessor> getProcessors(ArrayBlockingQueue<FetchEmitTuple> queue) throws TikaException, IOException {
         List<AbstractFileProcessor> processors = new ArrayList<>();
@@ -127,7 +131,7 @@ public class ClamAVRunner extends AbstractDirectoryProcessor {
 
     public static void main(String[] args) throws Exception {
             ClamAVRunner runner = new ClamAVRunner(
-                    ConfigSrc.build(args, MAX_STDOUT, MAX_STDERR)
+                    ConfigSrc.build(args, getName(), MAX_STDOUT, MAX_STDERR)
             );
             runner.execute();
     }

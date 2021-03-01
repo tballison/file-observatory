@@ -47,6 +47,10 @@ public class PDFCheckerRunner extends AbstractDirectoryProcessor {
         super(config);
     }
 
+    public static String getName() {
+        return "pdfchecker";
+    }
+
     @Override
     public List<AbstractFileProcessor> getProcessors(ArrayBlockingQueue<FetchEmitTuple> queue) throws IOException, TikaException {
         List<AbstractFileProcessor> processors = new ArrayList<>();
@@ -68,7 +72,7 @@ public class PDFCheckerRunner extends AbstractDirectoryProcessor {
 
         @Override
         public String getExtension() {
-            return ".json";
+            return "json";
         }
 
         @Override
@@ -95,7 +99,8 @@ public class PDFCheckerRunner extends AbstractDirectoryProcessor {
 
     public static void main(String[] args) throws Exception {
 
-        PDFCheckerRunner runner = new PDFCheckerRunner(ConfigSrc.build(args, MAX_BUFFER, MAX_BUFFER));
+        PDFCheckerRunner runner = new PDFCheckerRunner(
+                ConfigSrc.build(args, getName(), MAX_BUFFER, MAX_BUFFER));
         //runner.setMaxFiles(100);
         runner.execute();
     }

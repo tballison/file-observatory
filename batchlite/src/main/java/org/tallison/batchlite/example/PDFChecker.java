@@ -98,7 +98,7 @@ public class PDFChecker extends AbstractDirectoryProcessor {
         String pdfcheckerRoot = args[0];
         String[] newArgs = new String[args.length-1];
         System.arraycopy(args, 1, newArgs, 0, newArgs.length);
-        ConfigSrc configSrc = ConfigSrc.build(newArgs, MAX_STDOUT, MAX_STDERR);
+        ConfigSrc configSrc = ConfigSrc.build(newArgs, "pdfchecker", MAX_STDOUT, MAX_STDERR);
         long start = System.currentTimeMillis();
 
         PDFChecker runner = new PDFChecker(pdfcheckerRoot, configSrc);

@@ -30,7 +30,7 @@ public class CSVsToPostgres {
     }
 
     private static void processProject(Path dirs, String project, String jdbc) throws Exception {
-        MetadataWriter writer = MetadataWriterFactory.build(jdbc + ":" + project, -1, -1);
+        MetadataWriter writer = MetadataWriterFactory.build(jdbc, project, false, -1, -1);
         ExecutorService executorService = Executors.newFixedThreadPool(1);
         ExecutorCompletionService completionService = new ExecutorCompletionService(executorService);
         completionService.submit(writer);

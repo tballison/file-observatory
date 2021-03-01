@@ -38,7 +38,9 @@ public class CSVMetadataWriter extends MetadataWriter {
 
     private final CSVPrinter printer;
 
-    CSVMetadataWriter(Path csvFile) throws IOException {
+    CSVMetadataWriter(String name,
+                      Path csvFile) throws IOException {
+        super(name);
         printer = new CSVPrinter(
                 Files.newBufferedWriter(csvFile, StandardCharsets.UTF_8),
                 CSVFormat.EXCEL);
