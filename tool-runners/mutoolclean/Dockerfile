@@ -14,7 +14,7 @@ RUN apk add --no-cache \
         pkgconfig \
         build-base \
         bash \
-	&& git clone -b 1.18.0 git://git.ghostscript.com/mupdf.git \
+	&& git clone -b 1.18.0 https://git.ghostscript.com/mupdf.git \
         && cd mupdf \
         && git submodule update --init \
         && make HAVE_X11=no HAVE_GLUT=no prefix=/usr/local install \
