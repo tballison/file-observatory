@@ -16,6 +16,7 @@
     <packaging>pom</packaging>
 
     <modules>
+        <module>pdfbytes</module>
         <module>arlington</module>
         <module>caradoc</module>
         <module>clamav</module>

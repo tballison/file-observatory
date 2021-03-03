@@ -321,6 +321,21 @@
       "c_status": {
         "type": "keyword"
       },
+      "b_eofs": {
+        "type": "long",
+        "store": true
+      },
+      "b_num_eofs": {
+        "type": "integer",
+        "store": true
+      },
+      "b_preheader": {
+        "type": "text"
+      },
+      "b_header_offset": {
+        "type": "long",
+        "store": true
+      },
       "tools_status": {
         "type": "text",
         "analyzer": "ws_lc",

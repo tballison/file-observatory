@@ -3,6 +3,7 @@ org.tallison.ingest.mappers.CaradocMapper
 org.tallison.ingest.mappers.ClamAVMapper
 org.tallison.ingest.mappers.CPUMapper
 org.tallison.ingest.mappers.MutoolMapper
+org.tallison.ingest.mappers.PDFBytesMapper
 org.tallison.ingest.mappers.PDFCheckerMapper
 org.tallison.ingest.mappers.PDFInfoFeatureMapper
 org.tallison.ingest.mappers.PDFMinerMapper
