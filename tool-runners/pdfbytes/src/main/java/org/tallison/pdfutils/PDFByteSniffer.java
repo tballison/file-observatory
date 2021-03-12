@@ -64,11 +64,8 @@ public class PDFByteSniffer extends AbstractDirectoryProcessor {
     @Override
     public List<AbstractFileProcessor> getProcessors(ArrayBlockingQueue<FetchEmitTuple> queue) throws IOException, TikaException {
         List<AbstractFileProcessor> processors = new ArrayList<>();
-        System.out.println("here2");
 
         for (int i = 0; i < numThreads; i++) {
-            System.out.println("here3 "+i);
-
             ByteProcessor p = new ByteProcessor(queue, tikaConfig, metadataWriter);
             processors.add(p);
         }
@@ -85,8 +82,6 @@ public class PDFByteSniffer extends AbstractDirectoryProcessor {
         @Override
         protected void process(String relPath, Path srcPath, MetadataWriter metadataWriter) throws IOException {
             LOG.info("processing {}", relPath);
-
-
             long start = System.currentTimeMillis();
             FileProcessResult r = new FileProcessResult();
             try {
@@ -138,7 +133,6 @@ public class PDFByteSniffer extends AbstractDirectoryProcessor {
         PDFByteSniffer runner = new PDFByteSniffer(
                 ConfigSrc.build(args, getName(), MAX_STDOUT, MAX_STDERR)
         );
-        System.out.println("here1");
         runner.execute();
     }
 }

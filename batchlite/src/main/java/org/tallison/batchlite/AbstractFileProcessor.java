@@ -87,7 +87,6 @@ public abstract class AbstractFileProcessor implements Callable<Integer> {
             } else {
                 long start = System.currentTimeMillis();
                 try {
-                    System.err.println("about to process "+t);
                     process(t);
                 } catch (IOException e) {
                     LOGGER.warn("problem processing "+t, e);
