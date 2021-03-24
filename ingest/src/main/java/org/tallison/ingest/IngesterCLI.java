@@ -44,7 +44,7 @@ public class IngesterCLI {
                 .getFetcher("file-obs-fetcher");
         CompositeFeatureMapper compositeFeatureMapper = new CompositeFeatureMapper();
         String sql = getSelectStar();
-        int numWorkers = 100;
+        int numWorkers = 10;
         int numEmitters = 10;
         ArrayBlockingQueue<Map<String, String>> rows = new ArrayBlockingQueue<>(1000);
         ArrayBlockingQueue<StoredDocument> docs = new ArrayBlockingQueue<>(500);

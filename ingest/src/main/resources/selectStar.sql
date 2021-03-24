@@ -172,7 +172,17 @@ case
 	when cd.exit_value <> 0 then 'crash'
 	when length(cd.stderr) > 5 then 'warn'
 	else 'success'
-end as cd_status
+end as cd_status,
+pr.stdout pr,
+pr.stderr pr_warn,
+pr.exit_value pr_exit,
+case
+    when pr.path is null then 'missing'
+	when pr.timeout=true then 'timeout'
+	when pr.exit_value <> 0 then 'crash'
+	when length(pr.stderr) > 5 then 'warn'
+	else 'success'
+end as pr_status
 
 --if using itext encrypted: com.itextpdf.text.exceptions.BadPasswordException
 from profiles p
@@ -193,4 +203,5 @@ left join qpdf q on q.path = p.path
 left join tika t on t.path = p.path
 left join clamav c on c.path = p.path
 left join caradoc cd on cd.path = p.path
+left join pdfresurrect pr on pr.path = p.path
 

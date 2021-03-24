@@ -33,6 +33,7 @@
         <module>pdfimages</module>
         <module>pdfminerdump</module>
         <module>pdfminertext</module>
+        <module>pdfresurrect</module>
         <module>pdfid</module>
         <module>pdfcpu</module>
         <module>pdfchecker</module>

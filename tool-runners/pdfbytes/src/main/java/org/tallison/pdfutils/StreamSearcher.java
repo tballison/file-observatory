@@ -4,13 +4,16 @@ import java.io.InputStream;
 import java.util.Arrays;
 
 /**
- * Copied verbatim from: https://github.com/twitter/elephant-bird/blob/master/core/src/main/java/com/twitter/elephantbird/util/StreamSearcher.java
+ * Copied verbatim from:
+ * https://github.com/twitter/elephant-bird/blob/master/core/src/main/java/
+ * com/twitter/elephantbird/util/StreamSearcher.java
  *
  * See: https://blog.didierstevens.com/2021/01/31/
  * And: https://stackoverflow.com/questions/49382535/how-to-revert-incremental-update-in-pdf-using-pdfbox
  *
  * An efficient stream searching class based on the Knuth-Morris-Pratt algorithm.
- * For more on the algorithm works see: https://www.inf.fh-flensburg.de/lang/algorithmen/pattern/kmpen.htm.
+ * For more on the algorithm works see:
+ * https://www.inf.fh-flensburg.de/lang/algorithmen/pattern/kmpen.htm.
  */
 public class StreamSearcher {
 
@@ -60,7 +63,8 @@ public class StreamSearcher {
             ++j;
 
             // If we've matched up to the full pattern length, we found it.  Return,
-            // which will automatically save our position in the InputStream at the point immediately
+            // which will automatically save our position in
+            // the InputStream at the point immediately
             // following the pattern match.
             if (j == pattern_.length) {
                 return bytesRead;

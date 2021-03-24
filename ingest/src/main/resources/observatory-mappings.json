@@ -1,6 +1,6 @@
 {
   "index_patterns": [
-    "file-observatory-202102"
+    "file-observatory-202103"
   ],
   "mappings": {
     "_meta": {
@@ -334,6 +334,10 @@
       },
       "b_header_offset": {
         "type": "long",
+        "store": true
+      },
+      "pr_updates": {
+        "type": "integer",
         "store": true
       },
       "tools_status": {

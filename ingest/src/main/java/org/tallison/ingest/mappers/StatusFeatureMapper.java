@@ -12,6 +12,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -19,7 +20,7 @@ import static org.tallison.ingest.mappers.QPDFFeatureMapper.joinWith;
 
 public class StatusFeatureMapper implements FeatureMapper {
     Pattern toolPattern = Pattern.compile("^([a-zA-Z]+)_status");
-    Map<String, String> labelTools = new HashMap<>();
+    Map<String, String> labelTools = new ConcurrentHashMap<>();
 
     @Override
     public void addFeatures(Map<String, String> row, Fetcher fetcher, StoredDocument storedDocument) throws SQLException {
@@ -53,7 +54,11 @@ public class StatusFeatureMapper implements FeatureMapper {
         storedDocument.addNonBlankField("tools_status", joinWith(" ", overall));
     }
 
-    private void loadLabelTools(Map<String, String> row) throws SQLException {
+    private synchronized void loadLabelTools(Map<String, String> row) throws SQLException {
+        //now check again inside the synchronized block
+        if (labelTools.size() > 0) {
+            return;
+        }
         Matcher m = toolPattern.matcher("");
         for (String label : row.keySet()) {
             if (m.reset(label).find()) {

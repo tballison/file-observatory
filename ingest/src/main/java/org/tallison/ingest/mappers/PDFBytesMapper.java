@@ -40,6 +40,9 @@ public class PDFBytesMapper implements FeatureMapper {
         int exit = -1;
         // {"preheader":"","eofs":[931,1241],"header-offset":0}
         String json = row.get("pdfbytes_stdout");
+        if (json == null) {
+            return;
+        }
         JsonObject root = JsonParser.parseReader(new StringReader(json)).getAsJsonObject();
 
         String preheader = "";
