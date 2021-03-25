@@ -23,7 +23,7 @@ public class PDFInfoFeatureMapper implements FeatureMapper {
 
     private static Logger LOGGER = LoggerFactory.getLogger(PDFInfoFeatureMapper.class);
 
-    Pattern KEY_VALUE = Pattern.compile("^([^:]+):\\s+(.*?)");
+    Pattern KEY_VALUE = Pattern.compile("^([^:]+):\\s+(.*?)\\Z");
 
     private static Map<String, String> KEY_VALUE_MAP = new HashMap<>();
     private static Set<String> BOOLEAN_VALS = new HashSet<>();
@@ -57,7 +57,7 @@ public class PDFInfoFeatureMapper implements FeatureMapper {
                 String v = matcher.group(2);
                 if (KEY_VALUE_MAP.containsKey(k)) {
                     if (BOOLEAN_VALS.contains(k)) {
-                        v = (v.equals("yes")) ? "true" : "false";
+                        v = (v.startsWith("yes")) ? "true" : "false";
                     }
                     storedDocument.addNonBlankField(KEY_VALUE_MAP.get(k), v);
                 }
