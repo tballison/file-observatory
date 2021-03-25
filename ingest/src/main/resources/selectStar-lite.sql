@@ -112,7 +112,16 @@ case
 	when pb.exit_value <> 0 then 'crash'
 	when length(pb.stderr) > 5 then 'warn'
 	else 'success'
-end as pb_status
+end as pb_status,
+xpf.stdout xpdffonts_stdout,
+xpf.stderr xpdffonts_stderr,
+case
+    when xpf.path is null then 'missing'
+	when xpf.timeout=true then 'timeout'
+	when xpf.exit_value <> 0 then 'crash'
+	when length(xpf.stderr) > 5 then 'warn'
+	else 'success'
+end as xpf_status
 --if using itext encrypted: com.itextpdf.text.exceptions.BadPasswordException
 from profiles p
 left join arlington a on a.path = p.path
@@ -134,4 +143,4 @@ left join tika t on t.path = p.path
 left join clamav c on c.path = p.path
 left join caradoc cd on cd.path = p.path
 left join pdfresurrect pr on pr.path = p.path
-
+left join xpdffonts xpf on xpf.path = p.path

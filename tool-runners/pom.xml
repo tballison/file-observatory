@@ -25,6 +25,7 @@
         <module>mutooltext</module>
         <module>qpdf</module>
         <module>polyfile</module>
+        <module>pdffonts</module>
         <module>pdfinfo</module>
         <module>tika</module>
         <module>pdftotext</module>
@@ -37,6 +38,7 @@
         <module>pdfid</module>
         <module>pdfcpu</module>
         <module>pdfchecker</module>
+        <module>xpdffonts</module>
     </modules>
 
     <dependencies>

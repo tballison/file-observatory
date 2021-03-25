@@ -77,7 +77,7 @@ public class ArlingtonMapper implements FeatureMapper {
                 storedDocument.addNonBlankField("a_status", "bad_extract");
             }
         } catch (IOException | TikaException e) {
-            storedDocument.addNonBlankField("a_status", "missing");
+            storedDocument.addNonBlankField("a_status", "missing_extract");
         }
     }
 

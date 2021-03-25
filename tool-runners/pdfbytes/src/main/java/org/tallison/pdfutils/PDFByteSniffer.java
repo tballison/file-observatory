@@ -118,7 +118,7 @@ public class PDFByteSniffer extends AbstractDirectoryProcessor {
         boolean truncated = false;
         if (header != null) {
             data.put("header-offset", header.getKey());
-            data.put("preheader", Base64.encodeBase64(header.getValue()));
+            data.put("preheader", Base64.encodeBase64String(header.getValue()));
             if (header.getKey() > header.getValue().length) {
                 truncated = true;
             }

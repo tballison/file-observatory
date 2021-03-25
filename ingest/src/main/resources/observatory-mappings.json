@@ -196,7 +196,7 @@
         "type": "integer",
         "store": true
       },
-      "pinfo" : {
+      "pinfo": {
         "analyzer": "text_basic",
         "type": "text",
         "store": "true"
@@ -238,7 +238,7 @@
       "pinfo_optimized": {
         "type": "boolean"
       },
-      "pinfo_pages" : {
+      "pinfo_pages": {
         "type": "integer"
       },
       "pc_summary_info": {
@@ -250,6 +250,9 @@
         "type": "keyword"
       },
       "pc_font_errors": {
+        "type": "keyword"
+      },
+      "pc_status": {
         "type": "keyword"
       },
       "mc_status": {
@@ -338,6 +341,32 @@
       },
       "pr_updates": {
         "type": "integer",
+        "store": true
+      },
+      "xpf_stdout": {
+        "analyzer": "text_basic",
+        "type": "text",
+        "store": "true"
+      },
+      "xpf_stderr": {
+        "analyzer": "text_basic",
+        "type": "text",
+        "store": "true"
+      },
+      "xpf_font_names": {
+        "type": "keyword",
+        "store": true
+      },
+      "xpf_font_types": {
+        "type": "keyword",
+        "store": true
+      },
+      "xpf_fonts_embedded": {
+        "type": "keyword",
+        "store": true
+      },
+      "xpf_fonts_uni": {
+        "type": "keyword",
         "store": true
       },
       "tools_status": {

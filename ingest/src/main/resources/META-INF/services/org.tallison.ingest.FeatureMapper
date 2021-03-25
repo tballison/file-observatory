@@ -12,3 +12,5 @@ org.tallison.ingest.mappers.QPDFFeatureMapper
 org.tallison.ingest.mappers.StatusFeatureMapper
 org.tallison.ingest.mappers.TikaFeatureMapper
 org.tallison.ingest.mappers.PDFResurrectMapper
+org.tallison.ingest.mappers.PDFFontsMapper
+org.tallison.ingest.mappers.XPDFFontsMapper

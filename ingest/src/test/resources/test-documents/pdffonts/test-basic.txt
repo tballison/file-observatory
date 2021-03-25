@@ -1,0 +1,107 @@
+name                                 type              encoding         emb sub uni object ID
+------------------------------------ ----------------- ---------------- --- --- --- ---------
+HiddenHorzOCR                        CID Type 0C       Identity-H       yes no  yes   2462  0
+Helvetica                            Type 1            WinAnsi          no  no  no    2467  0
+Times-Roman                          Type 1            WinAnsi          no  no  no    2468  0
+HiddenHorzOCR                        CID Type 0C       Identity-H       yes no  yes   2474  0
+Times-Roman                          Type 1            WinAnsi          no  no  no    2479  0
+HiddenHorzOCR                        CID Type 0C       Identity-H       yes no  yes   2485  0
+Times-Roman                          Type 1            WinAnsi          no  no  no    2491  0
+Helvetica                            Type 1            WinAnsi          no  no  no    2490  0
+HiddenHorzOCR                        CID Type 0C       Identity-H       yes no  yes   2497  0
+Times-Roman                          Type 1            WinAnsi          no  no  no    2503  0
+Helvetica                            Type 1            WinAnsi          no  no  no    2502  0
+HiddenHorzOCR                        CID Type 0C       Identity-H       yes no  yes   2509  0
+Times-Roman                          Type 1            WinAnsi          no  no  no    2515  0
+Helvetica                            Type 1            WinAnsi          no  no  no    2514  0
+HiddenHorzOCR                        CID Type 0C       Identity-H       yes no  yes   2526  0
+HiddenHorzOCR                        CID Type 0C       Identity-H       yes no  yes   2541  0
+Times-Roman                          Type 1            WinAnsi          no  no  no    2548  0
+Helvetica                            Type 1            WinAnsi          no  no  no    2547  0
+Times-Italic                         Type 1            WinAnsi          no  no  no    2546  0
+HiddenHorzOCR                        CID Type 0C       Identity-H       yes no  yes   2554  0
+Times-Roman                          Type 1            WinAnsi          no  no  no    2560  0
+Helvetica                            Type 1            WinAnsi          no  no  no    2559  0
+HiddenHorzOCR                        CID Type 0C       Identity-H       yes no  yes   2566  0
+Times-Roman                          Type 1            WinAnsi          no  no  no    2571  0
+HiddenHorzOCR                        CID Type 0C       Identity-H       yes no  yes   2577  0
+Times-Roman                          Type 1            WinAnsi          no  no  no    2582  0
+HiddenHorzOCR                        CID Type 0C       Identity-H       yes no  yes   2588  0
+Times-Roman                          Type 1            WinAnsi          no  no  no    2594  0
+Helvetica                            Type 1            WinAnsi          no  no  no    2593  0
+HiddenHorzOCR                        CID Type 0C       Identity-H       yes no  yes   2600  0
+Times-Roman                          Type 1            WinAnsi          no  no  no    2605  0
+HiddenHorzOCR                        CID Type 0C       Identity-H       yes no  yes   2611  0
+Times-Roman                          Type 1            WinAnsi          no  no  no    2617  0
+Helvetica                            Type 1            WinAnsi          no  no  no    2616  0
+HiddenHorzOCR                        CID Type 0C       Identity-H       yes no  yes   2623  0
+Times-Roman                          Type 1            WinAnsi          no  no  no    2629  0
+Helvetica                            Type 1            WinAnsi          no  no  no    2628  0
+HiddenHorzOCR                        CID Type 0C       Identity-H       yes no  yes   2635  0
+Times-Bold                           Type 1            WinAnsi          no  no  no    2640  0
+Times-Roman                          Type 1            WinAnsi          no  no  no    2641  0
+HiddenHorzOCR                        CID Type 0C       Identity-H       yes no  yes   2647  0
+Helvetica-Bold                       Type 1            WinAnsi          no  no  no    2652  0
+Times-Roman                          Type 1            WinAnsi          no  no  no    2653  0
+HiddenHorzOCR                        CID Type 0C       Identity-H       yes no  yes   2659  0
+Times-Roman                          Type 1            WinAnsi          no  no  no    2665  0
+Times-Italic                         Type 1            WinAnsi          no  no  no    2664  0
+HiddenHorzOCR                        CID Type 0C       Identity-H       yes no  yes   2671  0
+Times-Roman                          Type 1            WinAnsi          no  no  no    2676  0
+HiddenHorzOCR                        CID Type 0C       Identity-H       yes no  yes   2682  0
+Times-Bold                           Type 1            WinAnsi          no  no  no    2687  0
+Times-Roman                          Type 1            WinAnsi          no  no  no    2688  0
+HiddenHorzOCR                        CID Type 0C       Identity-H       yes no  yes   2694  0
+Times-Bold                           Type 1            WinAnsi          no  no  no    2701  0
+Helvetica-Bold                       Type 1            WinAnsi          no  no  no    2699  0
+Helvetica                            Type 1            WinAnsi          no  no  no    2700  0
+Times-Roman                          Type 1            WinAnsi          no  no  no    2702  0
+HiddenHorzOCR                        CID Type 0C       Identity-H       yes no  yes   2708  0
+Times-Roman                          Type 1            WinAnsi          no  no  no    2713  0
+HiddenHorzOCR                        CID Type 0C       Identity-H       yes no  yes   2719  0
+Times-Bold                           Type 1            WinAnsi          no  no  no    2725  0
+Helvetica-Bold                       Type 1            WinAnsi          no  no  no    2724  0
+Times-Roman                          Type 1            WinAnsi          no  no  no    2726  0
+HiddenHorzOCR                        CID Type 0C       Identity-H       yes no  yes   2732  0
+Times-Roman                          Type 1            WinAnsi          no  no  no    2737  0
+HiddenHorzOCR                        CID Type 0C       Identity-H       yes no  yes   2743  0
+Times-Roman                          Type 1            WinAnsi          no  no  no    2749  0
+Times-Bold                           Type 1            WinAnsi          no  no  no    2748  0
+HiddenHorzOCR                        CID Type 0C       Identity-H       yes no  yes   2755  0
+Helvetica-Bold                       Type 1            WinAnsi          no  no  no    2760  0
+Times-Roman                          Type 1            WinAnsi          no  no  no    2761  0
+HiddenHorzOCR                        CID Type 0C       Identity-H       yes no  yes   2767  0
+Times-Roman                          Type 1            WinAnsi          no  no  no    2773  0
+Helvetica-Bold                       Type 1            WinAnsi          no  no  no    2772  0
+HiddenHorzOCR                        CID Type 0C       Identity-H       yes no  yes   2779  0
+Times-Roman                          Type 1            WinAnsi          no  no  no    2784  0
+HiddenHorzOCR                        CID Type 0C       Identity-H       yes no  yes   2790  0
+Times-Roman                          Type 1            WinAnsi          no  no  no    2796  0
+Times-Bold                           Type 1            WinAnsi          no  no  no    2795  0
+HiddenHorzOCR                        CID Type 0C       Identity-H       yes no  yes   2802  0
+Helvetica                            Type 1            WinAnsi          no  no  no    2807  0
+Times-Roman                          Type 1            WinAnsi          no  no  no    2808  0
+HiddenHorzOCR                        CID Type 0C       Identity-H       yes no  yes   2814  0
+Times-Roman                          Type 1            WinAnsi          no  no  no    2820  0
+Times-Bold                           Type 1            WinAnsi          no  no  no    2819  0
+HiddenHorzOCR                        CID Type 0C       Identity-H       yes no  yes   2826  0
+Times-Bold                           Type 1            WinAnsi          no  no  no    2831  0
+Times-Roman                          Type 1            WinAnsi          no  no  no    2832  0
+HiddenHorzOCR                        CID Type 0C       Identity-H       yes no  yes   2838  0
+Times-Roman                          Type 1            WinAnsi          no  no  no    2843  0
+HiddenHorzOCR                        CID Type 0C       Identity-H       yes no  yes   2849  0
+Times-Roman                          Type 1            WinAnsi          no  no  no    2854  0
+HiddenHorzOCR                        CID Type 0C       Identity-H       yes no  yes   2860  0
+Times-Roman                          Type 1            WinAnsi          no  no  no    2866  0
+Times-Bold                           Type 1            WinAnsi          no  no  no    2865  0
+HiddenHorzOCR                        CID Type 0C       Identity-H       yes no  yes   2872  0
+Times-Roman                          Type 1            WinAnsi          no  no  no    2879  0
+Times-Bold                           Type 1            WinAnsi          no  no  no    2878  0
+Helvetica                            Type 1            WinAnsi          no  no  no    2877  0
+HiddenHorzOCR                        CID Type 0C       Identity-H       yes no  yes   2885  0
+Times-Bold                           Type 1            WinAnsi          no  no  no    2890  0
+Times-Roman                          Type 1            WinAnsi          no  no  no    2891  0
+HiddenHorzOCR                        CID Type 0C       Identity-H       yes no  yes   2897  0
+Times-Roman                          Type 1            WinAnsi          no  no  no    2902  0
+HiddenHorzOCR                        CID Type 0C       Identity-H       yes no  yes   2908  0
+Times-Bold
