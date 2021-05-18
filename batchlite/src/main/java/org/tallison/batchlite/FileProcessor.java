@@ -16,12 +16,10 @@
  */
 package org.tallison.batchlite;
 
-import org.apache.tika.config.TikaConfig;
 import org.apache.tika.exception.TikaException;
 import org.apache.tika.io.TikaInputStream;
 import org.apache.tika.metadata.Metadata;
-import org.apache.tika.pipes.fetcher.Fetcher;
-import org.apache.tika.pipes.fetchiterator.FetchEmitTuple;
+import org.apache.tika.pipes.FetchEmitTuple;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -39,21 +37,20 @@ import java.util.concurrent.ArrayBlockingQueue;
 public abstract class FileProcessor extends AbstractFileProcessor {
 
     private final MetadataWriter metadataWriter;
-    private final Fetcher fetcher;
+
 
     public FileProcessor(ArrayBlockingQueue<FetchEmitTuple> queue,
-                         TikaConfig tikaConfig, MetadataWriter metadataWriter)
+                         ConfigSrc configSrc,
+                         MetadataWriter metadataWriter)
             throws IOException, TikaException {
-        super(queue, tikaConfig);
+        super(queue, configSrc);
         this.metadataWriter = metadataWriter;
-        this.fetcher = tikaConfig.getFetcherManager()
-                .getFetcher(AbstractFileProcessor.FETCHER_NAME);
     }
 
     @Override
     public void process(FetchEmitTuple fetchEmitTuple) throws IOException {
-        String relPath = fetchEmitTuple.getFetchKey().getKey();
-        try (InputStream is = fetcher.fetch(relPath, new Metadata());
+        String relPath = fetchEmitTuple.getFetchKey().getFetchKey();
+        try (InputStream is = configSrc.getFetcher().fetch(relPath, new Metadata());
              TikaInputStream tis = TikaInputStream.get(is)) {
             process(relPath, tis.getPath(), metadataWriter);
         } catch (TikaException e) {

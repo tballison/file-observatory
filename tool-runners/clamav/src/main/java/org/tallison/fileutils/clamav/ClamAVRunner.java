@@ -22,7 +22,7 @@ import io.sensesecure.clamav4j.ClamAVVersion;
 import org.apache.tika.config.TikaConfig;
 import org.apache.tika.exception.TikaConfigException;
 import org.apache.tika.exception.TikaException;
-import org.apache.tika.pipes.fetchiterator.FetchEmitTuple;
+import org.apache.tika.pipes.FetchEmitTuple;
 import org.apache.tika.utils.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -55,7 +55,7 @@ public class ClamAVRunner extends AbstractDirectoryProcessor {
 
     private final long timeoutMillis = 60000;
 
-    public ClamAVRunner(ConfigSrc config) throws TikaConfigException {
+    public ClamAVRunner(ConfigSrc config) throws TikaException, IOException {
         super(config);
     }
 
@@ -67,7 +67,7 @@ public class ClamAVRunner extends AbstractDirectoryProcessor {
     public List<AbstractFileProcessor> getProcessors(ArrayBlockingQueue<FetchEmitTuple> queue) throws TikaException, IOException {
         List<AbstractFileProcessor> processors = new ArrayList<>();
         for (int i = 0; i < numThreads; i++) {
-            ClamAVProcessor p = new ClamAVProcessor(queue, tikaConfig, metadataWriter);
+            ClamAVProcessor p = new ClamAVProcessor(queue, configSrc, metadataWriter);
             p.setFileTimeoutMillis(timeoutMillis);
             processors.add(p);
         }
@@ -83,8 +83,9 @@ public class ClamAVRunner extends AbstractDirectoryProcessor {
                 new InetSocketAddress("localhost",3310), TIMEOUT_MILLIS);
         private final int id;
         public ClamAVProcessor(ArrayBlockingQueue<FetchEmitTuple> queue,
-                               TikaConfig tikaConfig, MetadataWriter metadataWriter) throws TikaException, IOException {
-            super(queue, tikaConfig, metadataWriter);
+                               ConfigSrc configSrc, MetadataWriter metadataWriter) throws TikaException,
+                IOException {
+            super(queue, configSrc, metadataWriter);
             id = COUNTER.getAndIncrement();
             if (id == 0) {
                 ClamAVVersion version = clammer.getVersion();

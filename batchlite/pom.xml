@@ -42,6 +42,12 @@
             <groupId>org.apache.tika</groupId>
             <artifactId>tika-emitter-s3</artifactId>
             <version>${tika.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-api</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.apache.tika</groupId>
@@ -50,12 +56,18 @@
         </dependency>
         <dependency>
             <groupId>org.apache.tika</groupId>
-            <artifactId>tika-fetch-iterator-s3</artifactId>
+            <artifactId>tika-pipes-iterator-s3</artifactId>
             <version>${tika.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-api</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.apache.tika</groupId>
-            <artifactId>tika-fetch-iterator-jdbc</artifactId>
+            <artifactId>tika-pipes-iterator-jdbc</artifactId>
             <version>${tika.version}</version>
         </dependency>
         <!--

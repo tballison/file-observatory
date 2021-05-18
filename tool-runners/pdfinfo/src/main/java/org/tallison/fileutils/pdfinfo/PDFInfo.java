@@ -18,7 +18,7 @@ package org.tallison.fileutils.pdfinfo;
 import org.apache.tika.config.TikaConfig;
 import org.apache.tika.exception.TikaConfigException;
 import org.apache.tika.exception.TikaException;
-import org.apache.tika.pipes.fetchiterator.FetchEmitTuple;
+import org.apache.tika.pipes.FetchEmitTuple;
 import org.apache.tika.utils.ProcessUtils;
 import org.tallison.batchlite.AbstractDirectoryProcessor;
 import org.tallison.batchlite.AbstractFileProcessor;
@@ -40,7 +40,7 @@ public class PDFInfo extends AbstractDirectoryProcessor {
     private static final int MAX_STDERR = 20000;
     private static final long TIMEOUT_MILLIS = 60000;
 
-    public PDFInfo(ConfigSrc config) throws TikaConfigException {
+    public PDFInfo(ConfigSrc config) throws TikaException, IOException {
         super(config);
     }
 
@@ -52,7 +52,7 @@ public class PDFInfo extends AbstractDirectoryProcessor {
     public List<AbstractFileProcessor> getProcessors(ArrayBlockingQueue<FetchEmitTuple> queue) throws IOException, TikaException {
         List<AbstractFileProcessor> processors = new ArrayList<>();
         for (int i = 0; i < numThreads; i++) {
-            PDFInfoProcessor p = new PDFInfoProcessor(queue, tikaConfig, metadataWriter);
+            PDFInfoProcessor p = new PDFInfoProcessor(queue, configSrc, metadataWriter);
             p.setFileTimeoutMillis(TIMEOUT_MILLIS);
             processors.add(p);
         }
@@ -62,8 +62,9 @@ public class PDFInfo extends AbstractDirectoryProcessor {
     private class PDFInfoProcessor extends CommandlineFileProcessor {
 
         public PDFInfoProcessor(ArrayBlockingQueue<FetchEmitTuple> queue,
-                                TikaConfig tikaConfig, MetadataWriter metadataWriter) throws IOException, TikaException {
-            super(queue, tikaConfig, metadataWriter);
+                                ConfigSrc configSrc, MetadataWriter metadataWriter) throws IOException,
+                TikaException {
+            super(queue, configSrc, metadataWriter);
         }
 
         @Override

@@ -3,6 +3,8 @@ package org.tallison.ingest;
 import org.apache.commons.io.IOUtils;
 import org.apache.tika.config.TikaConfig;
 import org.apache.tika.pipes.fetcher.Fetcher;
+import org.apache.tika.pipes.fetcher.FetcherManager;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tallison.quaerite.connectors.ESClient;
@@ -40,8 +42,7 @@ public class IngesterCLI {
     public static void main(String[] args) throws Exception {
         Connection pg = DriverManager.getConnection(args[0]);
         String esConnectionString = args[1];
-        Fetcher fetcher = new TikaConfig(Paths.get(args[2])).getFetcherManager()
-                .getFetcher("file-obs-fetcher");
+        Fetcher fetcher = FetcherManager.load(Paths.get(args[2])).getFetcher("file-obs-fetcher");
         CompositeFeatureMapper compositeFeatureMapper = new CompositeFeatureMapper();
         String sql = getSelectStar();
         int numWorkers = 10;

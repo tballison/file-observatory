@@ -19,7 +19,7 @@ package org.tallison.fileutils.mutool;
 import org.apache.tika.config.TikaConfig;
 import org.apache.tika.exception.TikaConfigException;
 import org.apache.tika.exception.TikaException;
-import org.apache.tika.pipes.fetchiterator.FetchEmitTuple;
+import org.apache.tika.pipes.FetchEmitTuple;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tallison.batchlite.AbstractDirectoryProcessor;
@@ -45,8 +45,8 @@ public class MutoolTextRunner extends AbstractDirectoryProcessor {
 
     private final long timeoutMillis = 120000;
 
-    public MutoolTextRunner(ConfigSrc config) throws TikaConfigException {
-        super(config);
+    public MutoolTextRunner(ConfigSrc configSrc) throws TikaException, IOException {
+        super(configSrc);
     }
 
     public static String getName() {
@@ -58,7 +58,7 @@ public class MutoolTextRunner extends AbstractDirectoryProcessor {
             throws IOException, TikaException {
         List<AbstractFileProcessor> processors = new ArrayList<>();
         for (int i = 0; i < numThreads; i++) {
-            MutoolTextProcessor p = new MutoolTextProcessor(queue, tikaConfig, metadataWriter);
+            MutoolTextProcessor p = new MutoolTextProcessor(queue, configSrc, metadataWriter);
             p.setFileTimeoutMillis(timeoutMillis);
             processors.add(p);
         }
@@ -67,8 +67,9 @@ public class MutoolTextRunner extends AbstractDirectoryProcessor {
 
     private class MutoolTextProcessor extends FileToFileProcessor {
 
-        public MutoolTextProcessor(ArrayBlockingQueue<FetchEmitTuple> queue, TikaConfig tikaConfig, MetadataWriter metadataWriter) throws IOException, TikaException {
-            super(queue, tikaConfig, metadataWriter);
+        public MutoolTextProcessor(ArrayBlockingQueue<FetchEmitTuple> queue, ConfigSrc configSrc,
+                                   MetadataWriter metadataWriter) throws IOException, TikaException {
+            super(queue, configSrc, metadataWriter);
         }
 
         @Override

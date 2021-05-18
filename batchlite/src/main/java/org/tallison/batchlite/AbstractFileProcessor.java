@@ -17,7 +17,6 @@
 package org.tallison.batchlite;
 
 import java.io.IOException;
-import java.nio.file.Path;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
@@ -25,8 +24,9 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.tika.config.TikaConfig;
-import org.apache.tika.pipes.fetchiterator.FetchEmitTuple;
-import org.apache.tika.pipes.fetchiterator.FetchIterator;
+import org.apache.tika.pipes.FetchEmitTuple;
+import org.apache.tika.pipes.pipesiterator.PipesIterator;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,15 +42,15 @@ public abstract class AbstractFileProcessor implements Callable<Integer> {
 
     private static Logger LOGGER = LoggerFactory.getLogger(AbstractFileProcessor.class);
     private final ArrayBlockingQueue<FetchEmitTuple> queue;
-    protected final TikaConfig tikaConfig;
+    protected final ConfigSrc configSrc;
     private final int id;
     private long timeoutMillis = DEFAULT_TIMEOUT_MILLIS;
 
     private long fileTimeoutMillis = DEFAULT_TIMEOUT_MILLIS;
 
-    public AbstractFileProcessor(ArrayBlockingQueue<FetchEmitTuple> queue, TikaConfig tikaConfig) {
+    public AbstractFileProcessor(ArrayBlockingQueue<FetchEmitTuple> queue, ConfigSrc configSrc) {
         id = THREAD_COUNT.getAndIncrement();
-        this.tikaConfig = tikaConfig;
+        this.configSrc = configSrc;
         this.queue = queue;
     }
 
@@ -82,7 +82,7 @@ public abstract class AbstractFileProcessor implements Callable<Integer> {
             }
             if (t == null) {
                 throw new TimeoutException("timed out");
-            } else if (t == FetchIterator.COMPLETED_SEMAPHORE) {
+            } else if (t == PipesIterator.COMPLETED_SEMAPHORE) {
                 return 1;
             } else {
                 long start = System.currentTimeMillis();

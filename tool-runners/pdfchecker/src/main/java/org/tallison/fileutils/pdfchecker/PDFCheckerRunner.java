@@ -19,7 +19,7 @@ package org.tallison.fileutils.pdfchecker;
 import org.apache.tika.config.TikaConfig;
 import org.apache.tika.exception.TikaConfigException;
 import org.apache.tika.exception.TikaException;
-import org.apache.tika.pipes.fetchiterator.FetchEmitTuple;
+import org.apache.tika.pipes.FetchEmitTuple;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tallison.batchlite.AbstractDirectoryProcessor;
@@ -43,7 +43,7 @@ public class PDFCheckerRunner extends AbstractDirectoryProcessor {
     private static final int MAX_BUFFER = 20000;
     private final long timeoutMillis = 60000;
 
-    public PDFCheckerRunner(ConfigSrc config) throws TikaConfigException {
+    public PDFCheckerRunner(ConfigSrc config) throws TikaException, IOException {
         super(config);
     }
 
@@ -55,7 +55,7 @@ public class PDFCheckerRunner extends AbstractDirectoryProcessor {
     public List<AbstractFileProcessor> getProcessors(ArrayBlockingQueue<FetchEmitTuple> queue) throws IOException, TikaException {
         List<AbstractFileProcessor> processors = new ArrayList<>();
         for (int i = 0; i < numThreads; i++) {
-            PDFCheckerProcessor p = new PDFCheckerProcessor(queue, tikaConfig, metadataWriter);
+            PDFCheckerProcessor p = new PDFCheckerProcessor(queue, configSrc, metadataWriter);
             p.setFileTimeoutMillis(timeoutMillis);
             processors.add(p);
         }
@@ -65,8 +65,9 @@ public class PDFCheckerRunner extends AbstractDirectoryProcessor {
     private class PDFCheckerProcessor extends FileToFileProcessor {
 
         public PDFCheckerProcessor(ArrayBlockingQueue<FetchEmitTuple> queue,
-                                   TikaConfig tikaConfig, MetadataWriter metadataWriter) throws IOException, TikaException {
-            super(queue, tikaConfig, metadataWriter);
+                                   ConfigSrc configSrc, MetadataWriter metadataWriter) throws IOException,
+                TikaException {
+            super(queue, configSrc, metadataWriter);
         }
 
 

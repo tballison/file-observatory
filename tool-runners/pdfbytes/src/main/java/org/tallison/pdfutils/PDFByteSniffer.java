@@ -22,7 +22,7 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.apache.tika.config.TikaConfig;
 import org.apache.tika.exception.TikaConfigException;
 import org.apache.tika.exception.TikaException;
-import org.apache.tika.pipes.fetchiterator.FetchEmitTuple;
+import org.apache.tika.pipes.FetchEmitTuple;
 import org.apache.tika.utils.ExceptionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,7 +53,7 @@ public class PDFByteSniffer extends AbstractDirectoryProcessor {
     private static final int MAX_STDERR = 10000;
 
 
-    public PDFByteSniffer(ConfigSrc config) throws TikaConfigException {
+    public PDFByteSniffer(ConfigSrc config) throws TikaException, IOException {
         super(config);
     }
 
@@ -66,7 +66,7 @@ public class PDFByteSniffer extends AbstractDirectoryProcessor {
         List<AbstractFileProcessor> processors = new ArrayList<>();
 
         for (int i = 0; i < numThreads; i++) {
-            ByteProcessor p = new ByteProcessor(queue, tikaConfig, metadataWriter);
+            ByteProcessor p = new ByteProcessor(queue, configSrc, metadataWriter);
             processors.add(p);
         }
         return processors;
@@ -75,8 +75,9 @@ public class PDFByteSniffer extends AbstractDirectoryProcessor {
     private class ByteProcessor extends FileProcessor {
 
         public ByteProcessor(ArrayBlockingQueue<FetchEmitTuple> queue,
-                               TikaConfig tikaConfig, MetadataWriter metadataWriter) throws IOException, TikaException {
-            super(queue, tikaConfig, metadataWriter);
+                               ConfigSrc configSrc, MetadataWriter metadataWriter) throws IOException,
+                TikaException {
+            super(queue, configSrc, metadataWriter);
         }
 
         @Override

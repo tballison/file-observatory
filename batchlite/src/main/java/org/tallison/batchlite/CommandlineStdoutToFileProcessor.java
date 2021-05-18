@@ -18,7 +18,9 @@ package org.tallison.batchlite;
 
 import org.apache.tika.config.TikaConfig;
 import org.apache.tika.exception.TikaException;
-import org.apache.tika.pipes.fetchiterator.FetchEmitTuple;
+import org.apache.tika.pipes.FetchEmitTuple;
+import org.apache.tika.pipes.emitter.Emitter;
+import org.apache.tika.pipes.fetcher.Fetcher;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -26,10 +28,10 @@ import java.util.concurrent.ArrayBlockingQueue;
 
 public abstract class CommandlineStdoutToFileProcessor extends FileToFileProcessor {
     public CommandlineStdoutToFileProcessor(ArrayBlockingQueue<FetchEmitTuple> queue,
-                                            TikaConfig tikaConfig,
+                                            ConfigSrc configSrc,
                                             MetadataWriter metadataWriter)
             throws IOException, TikaException {
-        super(queue, tikaConfig, metadataWriter);
+        super(queue, configSrc, metadataWriter);
     }
 
     @Override

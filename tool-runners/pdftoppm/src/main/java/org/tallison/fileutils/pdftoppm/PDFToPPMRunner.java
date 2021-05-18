@@ -19,7 +19,7 @@ package org.tallison.fileutils.pdftoppm;
 import org.apache.tika.config.TikaConfig;
 import org.apache.tika.exception.TikaConfigException;
 import org.apache.tika.exception.TikaException;
-import org.apache.tika.pipes.fetchiterator.FetchEmitTuple;
+import org.apache.tika.pipes.FetchEmitTuple;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tallison.batchlite.AbstractDirectoryProcessor;
@@ -46,7 +46,7 @@ public class PDFToPPMRunner extends AbstractDirectoryProcessor {
     private static final int MAX_BUFFER = 20000;
     private final long timeoutMillis = 60000;
 
-    public PDFToPPMRunner(ConfigSrc config) throws TikaConfigException {
+    public PDFToPPMRunner(ConfigSrc config) throws TikaException, IOException {
         super(config);
     }
 
@@ -58,7 +58,7 @@ public class PDFToPPMRunner extends AbstractDirectoryProcessor {
         List<AbstractFileProcessor> processors = new ArrayList<>();
         for (int i = 0; i < numThreads; i++) {
             PDFToPPMProcessor p = new PDFToPPMProcessor(queue,
-                    tikaConfig, metadataWriter);
+                    configSrc, metadataWriter);
             p.setFileTimeoutMillis(timeoutMillis);
             processors.add(p);
         }
@@ -68,8 +68,9 @@ public class PDFToPPMRunner extends AbstractDirectoryProcessor {
     private class PDFToPPMProcessor extends FileProcessor {
 
         public PDFToPPMProcessor(ArrayBlockingQueue<FetchEmitTuple> queue,
-                                 TikaConfig tikaConfig, MetadataWriter metadataWriter) throws IOException, TikaException {
-            super(queue, tikaConfig, metadataWriter);
+                                 ConfigSrc configSrc, MetadataWriter metadataWriter) throws IOException,
+                TikaException {
+            super(queue, configSrc, metadataWriter);
         }
 
 

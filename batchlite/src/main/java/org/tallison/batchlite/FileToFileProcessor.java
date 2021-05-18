@@ -24,7 +24,7 @@ import org.apache.tika.metadata.Metadata;
 import org.apache.tika.pipes.emitter.Emitter;
 import org.apache.tika.pipes.emitter.StreamEmitter;
 import org.apache.tika.pipes.fetcher.Fetcher;
-import org.apache.tika.pipes.fetchiterator.FetchEmitTuple;
+import org.apache.tika.pipes.FetchEmitTuple;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,29 +43,26 @@ public abstract class FileToFileProcessor extends AbstractFileProcessor {
     private static Logger LOGGER = LoggerFactory.getLogger(FileToFileProcessor.class);
 
     private final MetadataWriter metadataWriter;
-    private final Fetcher fetcher;
     private final StreamEmitter emitter;
-
     public FileToFileProcessor(ArrayBlockingQueue<FetchEmitTuple> queue,
-                               TikaConfig tikaConfig,
+                               ConfigSrc configSrc,
                                MetadataWriter metadataWriter)
             throws IOException, TikaException {
-        super(queue, tikaConfig);
+        super(queue, configSrc);
         this.metadataWriter = metadataWriter;
-        this.fetcher = tikaConfig.getFetcherManager().getFetcher(AbstractFileProcessor.FETCHER_NAME);
-        Emitter tmp = tikaConfig.getEmitterManager().getEmitter(AbstractFileProcessor.EMITTER_NAME);
+
+        Emitter tmp = configSrc.getEmitter();
         if (!(tmp instanceof StreamEmitter)) {
             throw new IllegalArgumentException("only supports stream emitter for now");
         }
-        emitter = (StreamEmitter) tmp;
-
+        this.emitter = (StreamEmitter) tmp;
     }
 
     @Override
     public void process(FetchEmitTuple tuple) throws IOException {
-        String relPath = tuple.getFetchKey().getKey();
+        String relPath = tuple.getFetchKey().getFetchKey();
         try (TemporaryResources tmp = new TemporaryResources()) {
-            try (InputStream is = fetcher.fetch(relPath, new Metadata());
+            try (InputStream is = configSrc.getFetcher().fetch(relPath, new Metadata());
                  TikaInputStream tis = TikaInputStream.get(is)) {
                 Path tmpSrcFile = tis.getPath();
                 Path tmpOutFile = tmp.createTempFile();

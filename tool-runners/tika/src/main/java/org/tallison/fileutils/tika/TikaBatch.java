@@ -23,7 +23,7 @@ import org.apache.tika.io.TikaInputStream;
 import org.apache.tika.metadata.Metadata;
 import org.apache.tika.metadata.TikaCoreProperties;
 import org.apache.tika.metadata.serialization.JsonMetadataList;
-import org.apache.tika.pipes.fetchiterator.FetchEmitTuple;
+import org.apache.tika.pipes.FetchEmitTuple;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tallison.batchlite.AbstractDirectoryProcessor;
@@ -57,7 +57,7 @@ public class TikaBatch extends AbstractDirectoryProcessor {
     private final String[] tikaServerUrls;
 
     public TikaBatch(ConfigSrc config,
-                     String tikaServerHost, int[] ports) throws TikaConfigException {
+                     String tikaServerHost, int[] ports) throws TikaException, IOException {
         super(config);
         this.tikaServerUrls = new String[ports.length];
         for (int i = 0; i < ports.length; i++) {
@@ -70,7 +70,7 @@ public class TikaBatch extends AbstractDirectoryProcessor {
         setMaxFiles(1000);
         List<AbstractFileProcessor> processors = new ArrayList<>();
         for (int i = 0; i < numThreads; i++) {
-            processors.add(new TikaProcessor(queue, tikaConfig, metadataWriter, tikaServerUrls));
+            processors.add(new TikaProcessor(queue, configSrc, metadataWriter, tikaServerUrls));
         }
         return processors;
     }
@@ -79,9 +79,10 @@ public class TikaBatch extends AbstractDirectoryProcessor {
 
         private final TikaServerClient tikaClient;
 
-        public TikaProcessor(ArrayBlockingQueue<FetchEmitTuple> queue, TikaConfig tikaConfig, MetadataWriter metadataWriter,
+        public TikaProcessor(ArrayBlockingQueue<FetchEmitTuple> queue, ConfigSrc configSrc,
+                             MetadataWriter metadataWriter,
                              String[] tikaServerUrls) throws IOException, TikaException {
-            super(queue, tikaConfig, metadataWriter);
+            super(queue, configSrc, metadataWriter);
             tikaClient = new TikaServerClient(TikaServerClient.INPUT_METHOD.INPUTSTREAM,
                     tikaServerUrls);
         }

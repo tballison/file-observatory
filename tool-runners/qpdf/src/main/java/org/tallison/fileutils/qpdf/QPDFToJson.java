@@ -19,7 +19,7 @@ package org.tallison.fileutils.qpdf;
 import org.apache.tika.config.TikaConfig;
 import org.apache.tika.exception.TikaConfigException;
 import org.apache.tika.exception.TikaException;
-import org.apache.tika.pipes.fetchiterator.FetchEmitTuple;
+import org.apache.tika.pipes.FetchEmitTuple;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tallison.batchlite.AbstractDirectoryProcessor;
@@ -46,7 +46,7 @@ public class QPDFToJson extends AbstractDirectoryProcessor {
     private static final int MAX_STDERR = 10000;
     private static final long TIMEOUT_MILLIS = 30000;
 
-    public QPDFToJson(ConfigSrc config) throws TikaConfigException {
+    public QPDFToJson(ConfigSrc config) throws TikaException, IOException {
         super(config);
     }
 
@@ -58,7 +58,7 @@ public class QPDFToJson extends AbstractDirectoryProcessor {
         List<AbstractFileProcessor> processors = new ArrayList<>();
         for (int i = 0; i < numThreads; i++) {
             QPDFJsonProcessor processor = new QPDFJsonProcessor(queue,
-                    tikaConfig, metadataWriter);
+                    configSrc, metadataWriter);
             processor.setFileTimeoutMillis(TIMEOUT_MILLIS);
             processors.add(processor);
         }
@@ -68,8 +68,9 @@ public class QPDFToJson extends AbstractDirectoryProcessor {
     private class QPDFJsonProcessor extends FileToFileProcessor {
 
         public QPDFJsonProcessor(ArrayBlockingQueue<FetchEmitTuple> queue,
-                                 TikaConfig tikaConfig, MetadataWriter metadataWriter) throws IOException, TikaException {
-            super(queue, tikaConfig, metadataWriter);
+                                 ConfigSrc configSrc, MetadataWriter metadataWriter) throws IOException,
+                TikaException {
+            super(queue, configSrc, metadataWriter);
         }
 
         @Override

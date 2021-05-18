@@ -509,8 +509,8 @@ public class CCFileFetcher {
         if (line.hasOption("c")) {
             cleanStart = true;
         }
-        TikaConfig config = new TikaConfig(Paths.get(line.getOptionValue("t")));
-        EmitterManager emitterManager = config.getEmitterManager();
+        EmitterManager emitterManager =
+                EmitterManager.load(Paths.get(line.getOptionValue("t")));
         Set<String> emitters = emitterManager.getSupported();
         String emitterName = "";
         if (emitters.size() == 1) {

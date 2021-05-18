@@ -5,6 +5,8 @@ import org.apache.commons.csv.CSVPrinter;
 import org.apache.commons.io.IOUtils;
 import org.apache.tika.config.TikaConfig;
 import org.apache.tika.pipes.fetcher.Fetcher;
+import org.apache.tika.pipes.fetcher.FetcherManager;
+
 import org.tallison.ingest.mappers.ProfileFeatureMapper;
 import org.tallison.ingest.mappers.QPDFFeatureMapper;
 import org.tallison.ingest.mappers.TikaFeatureMapper;
@@ -31,7 +33,7 @@ public class IngesterToCSVCLI {
     public static void main(String[] args) throws Exception {
         Connection pg = DriverManager.getConnection(args[0]);
         ESClient esClient = null;//(ESClient) SearchClientFactory.getClient(args[1]);
-        Fetcher fetcher = new TikaConfig(Paths.get(args[2])).getFetcherManager().getFetcher(
+        Fetcher fetcher = FetcherManager.load(Paths.get(args[2])).getFetcher(
                 "file-obs-fetcher");
         Path outPath = Paths.get(args[3]);
 

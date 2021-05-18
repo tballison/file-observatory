@@ -19,7 +19,7 @@ package org.tallison.fileutils.caradoc;
 import org.apache.tika.config.TikaConfig;
 import org.apache.tika.exception.TikaConfigException;
 import org.apache.tika.exception.TikaException;
-import org.apache.tika.pipes.fetchiterator.FetchEmitTuple;
+import org.apache.tika.pipes.FetchEmitTuple;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tallison.batchlite.AbstractDirectoryProcessor;
@@ -46,7 +46,7 @@ public class Caradoc extends AbstractDirectoryProcessor {
     private final long timeoutMillis = 60000;
 
 
-    public Caradoc(ConfigSrc config) throws TikaConfigException {
+    public Caradoc(ConfigSrc config) throws TikaException, IOException {
         super(config);
     }
 
@@ -59,7 +59,7 @@ public class Caradoc extends AbstractDirectoryProcessor {
             throws IOException, TikaException {
         List<AbstractFileProcessor> processors = new ArrayList<>();
         for (int i = 0; i < numThreads; i++) {
-            CaradocProcessor p = new CaradocProcessor(queue, tikaConfig, metadataWriter);
+            CaradocProcessor p = new CaradocProcessor(queue, configSrc, metadataWriter);
             p.setFileTimeoutMillis(timeoutMillis);
             processors.add(p);
         }
@@ -69,9 +69,9 @@ public class Caradoc extends AbstractDirectoryProcessor {
     private class CaradocProcessor extends FileProcessor {
 
         public CaradocProcessor(ArrayBlockingQueue<FetchEmitTuple> queue,
-                                TikaConfig tikaConfig, MetadataWriter metadataWriter)
+                                ConfigSrc configSrc, MetadataWriter metadataWriter)
                 throws IOException, TikaException {
-            super(queue, tikaConfig, metadataWriter);
+            super(queue, configSrc, metadataWriter);
         }
 
         @Override

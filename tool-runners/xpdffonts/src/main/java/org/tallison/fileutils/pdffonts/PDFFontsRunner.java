@@ -19,7 +19,7 @@ package org.tallison.fileutils.pdffonts;
 import org.apache.tika.config.TikaConfig;
 import org.apache.tika.exception.TikaConfigException;
 import org.apache.tika.exception.TikaException;
-import org.apache.tika.pipes.fetchiterator.FetchEmitTuple;
+import org.apache.tika.pipes.FetchEmitTuple;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tallison.batchlite.AbstractDirectoryProcessor;
@@ -44,7 +44,7 @@ public class PDFFontsRunner extends AbstractDirectoryProcessor {
     private static final int MAX_BUFFER = 20000;
     private final long timeoutMillis = 60000;
 
-    public PDFFontsRunner(ConfigSrc config) throws TikaConfigException {
+    public PDFFontsRunner(ConfigSrc config) throws TikaException, IOException {
         super(config);
     }
 
@@ -57,7 +57,7 @@ public class PDFFontsRunner extends AbstractDirectoryProcessor {
         List<AbstractFileProcessor> processors = new ArrayList<>();
         for (int i = 0; i < numThreads; i++) {
             PDFFontsProcessor p = new PDFFontsProcessor(queue,
-                    tikaConfig, metadataWriter);
+                    configSrc, metadataWriter);
             p.setFileTimeoutMillis(timeoutMillis);
             processors.add(p);
         }
@@ -67,8 +67,9 @@ public class PDFFontsRunner extends AbstractDirectoryProcessor {
     private class PDFFontsProcessor extends FileProcessor {
 
         public PDFFontsProcessor(ArrayBlockingQueue<FetchEmitTuple> queue,
-                                  TikaConfig tikaConfig, MetadataWriter metadataWriter) throws IOException, TikaException {
-            super(queue, tikaConfig, metadataWriter);
+                                  ConfigSrc configSrc, MetadataWriter metadataWriter) throws IOException,
+                TikaException {
+            super(queue, configSrc, metadataWriter);
         }
 
         @Override

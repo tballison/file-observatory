@@ -19,7 +19,7 @@ package org.tallison.fileutils.pdfminer;
 import org.apache.tika.config.TikaConfig;
 import org.apache.tika.exception.TikaConfigException;
 import org.apache.tika.exception.TikaException;
-import org.apache.tika.pipes.fetchiterator.FetchEmitTuple;
+import org.apache.tika.pipes.FetchEmitTuple;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tallison.batchlite.AbstractDirectoryProcessor;
@@ -44,7 +44,7 @@ public class PDFMinerDump extends AbstractDirectoryProcessor {
 
     private final long timeoutMillis = 60000;
 
-    public PDFMinerDump(ConfigSrc config) throws TikaConfigException {
+    public PDFMinerDump(ConfigSrc config) throws TikaException, IOException {
         super(config);
     }
 
@@ -56,7 +56,7 @@ public class PDFMinerDump extends AbstractDirectoryProcessor {
     public List<AbstractFileProcessor> getProcessors(ArrayBlockingQueue<FetchEmitTuple> queue) throws IOException, TikaException {
         List<AbstractFileProcessor> processors = new ArrayList<>();
         for (int i = 0; i < numThreads; i++) {
-            PDFMinerDumpProcessor p = new PDFMinerDumpProcessor(queue, tikaConfig, metadataWriter);
+            PDFMinerDumpProcessor p = new PDFMinerDumpProcessor(queue, configSrc, metadataWriter);
             p.setFileTimeoutMillis(timeoutMillis);
             processors.add(p);
         }
@@ -66,9 +66,9 @@ public class PDFMinerDump extends AbstractDirectoryProcessor {
     private class PDFMinerDumpProcessor extends FileToFileProcessor {
 
         public PDFMinerDumpProcessor(ArrayBlockingQueue<FetchEmitTuple> queue,
-                                     TikaConfig tikaConfig,
+                                     ConfigSrc configSrc,
                                      MetadataWriter metadataWriter) throws IOException, TikaException {
-            super(queue, tikaConfig, metadataWriter);
+            super(queue, configSrc, metadataWriter);
         }
 
         @Override

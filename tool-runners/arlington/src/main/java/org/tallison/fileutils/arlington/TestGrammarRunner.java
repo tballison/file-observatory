@@ -19,7 +19,7 @@ package org.tallison.fileutils.arlington;
 import org.apache.tika.config.TikaConfig;
 import org.apache.tika.exception.TikaConfigException;
 import org.apache.tika.exception.TikaException;
-import org.apache.tika.pipes.fetchiterator.FetchEmitTuple;
+import org.apache.tika.pipes.FetchEmitTuple;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tallison.batchlite.AbstractDirectoryProcessor;
@@ -50,7 +50,7 @@ public class TestGrammarRunner extends AbstractDirectoryProcessor {
         return "arlington";
     }
 
-    public TestGrammarRunner(ConfigSrc config) throws TikaConfigException {
+    public TestGrammarRunner(ConfigSrc config) throws IOException, TikaException {
         super(config);
     }
 
@@ -58,7 +58,7 @@ public class TestGrammarRunner extends AbstractDirectoryProcessor {
     public List<AbstractFileProcessor> getProcessors(ArrayBlockingQueue<FetchEmitTuple> queue) throws IOException, TikaException {
         List<AbstractFileProcessor> processors = new ArrayList<>();
         for (int i = 0; i < numThreads; i++) {
-            TestGrammarProcessor p = new TestGrammarProcessor(queue, tikaConfig, metadataWriter);
+            TestGrammarProcessor p = new TestGrammarProcessor(queue, configSrc, metadataWriter);
             p.setFileTimeoutMillis(timeoutMillis);
             processors.add(p);
         }
@@ -68,8 +68,9 @@ public class TestGrammarRunner extends AbstractDirectoryProcessor {
     private class TestGrammarProcessor extends FileToFileProcessor {
 
         public TestGrammarProcessor(ArrayBlockingQueue<FetchEmitTuple> queue,
-                                    TikaConfig tikaConfig, MetadataWriter metadataWriter) throws IOException, TikaException {
-            super(queue, tikaConfig, metadataWriter);
+                                    ConfigSrc configSrc, MetadataWriter metadataWriter) throws IOException,
+                TikaException {
+            super(queue, configSrc, metadataWriter);
         }
 
         @Override

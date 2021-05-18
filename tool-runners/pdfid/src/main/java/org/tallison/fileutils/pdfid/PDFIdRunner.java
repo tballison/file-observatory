@@ -19,7 +19,7 @@ package org.tallison.fileutils.pdfid;
 import org.apache.tika.config.TikaConfig;
 import org.apache.tika.exception.TikaConfigException;
 import org.apache.tika.exception.TikaException;
-import org.apache.tika.pipes.fetchiterator.FetchEmitTuple;
+import org.apache.tika.pipes.FetchEmitTuple;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tallison.batchlite.AbstractDirectoryProcessor;
@@ -43,7 +43,7 @@ public class PDFIdRunner extends AbstractDirectoryProcessor {
 
     private final long timeoutMillis = 60000;
 
-    public PDFIdRunner(ConfigSrc config) throws TikaConfigException {
+    public PDFIdRunner(ConfigSrc config) throws TikaException, IOException {
         super(config);
     }
 
@@ -55,7 +55,7 @@ public class PDFIdRunner extends AbstractDirectoryProcessor {
     public List<AbstractFileProcessor> getProcessors(ArrayBlockingQueue<FetchEmitTuple> queue) throws IOException, TikaException {
         List<AbstractFileProcessor> processors = new ArrayList<>();
         for (int i = 0; i < numThreads; i++) {
-            PDFIdProcessor p = new PDFIdProcessor(queue, tikaConfig, metadataWriter);
+            PDFIdProcessor p = new PDFIdProcessor(queue, configSrc, metadataWriter);
             p.setFileTimeoutMillis(timeoutMillis);
             processors.add(p);
         }
@@ -65,9 +65,9 @@ public class PDFIdRunner extends AbstractDirectoryProcessor {
     private class PDFIdProcessor extends FileProcessor {
 
         public PDFIdProcessor(ArrayBlockingQueue<FetchEmitTuple> queue,
-                                     TikaConfig tikaConfig,
+                                     ConfigSrc configSrc,
                                      MetadataWriter metadataWriter) throws IOException, TikaException {
-            super(queue, tikaConfig, metadataWriter);
+            super(queue, configSrc, metadataWriter);
         }
 
         @Override

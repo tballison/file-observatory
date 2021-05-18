@@ -18,7 +18,7 @@ package org.tallison.batchlite.example;
 
 import org.apache.tika.config.TikaConfig;
 import org.apache.tika.exception.TikaException;
-import org.apache.tika.pipes.fetchiterator.FetchEmitTuple;
+import org.apache.tika.pipes.FetchEmitTuple;
 import org.apache.tika.utils.ProcessUtils;
 import org.tallison.batchlite.AbstractDirectoryProcessor;
 import org.tallison.batchlite.AbstractFileProcessor;
@@ -51,16 +51,16 @@ public class FileCommandExample extends AbstractDirectoryProcessor {
             throws IOException, TikaException {
         List<AbstractFileProcessor> processors = new ArrayList<>();
         for (int i = 0; i < numThreads; i++) {
-            processors.add(new FileCommandProcessor(queue, tikaConfig, metadataWriter));
+            processors.add(new FileCommandProcessor(queue, configSrc, metadataWriter));
         }
         return processors;
     }
 
     private class FileCommandProcessor extends CommandlineFileProcessor {
         public FileCommandProcessor(ArrayBlockingQueue<FetchEmitTuple> queue,
-                                    TikaConfig tikaConfig,
+                                    ConfigSrc configSrc,
                                     MetadataWriter metadataWriter) throws IOException, TikaException {
-            super(queue, tikaConfig, metadataWriter);
+            super(queue, configSrc, metadataWriter);
         }
 
         @Override

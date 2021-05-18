@@ -55,13 +55,14 @@
         <commons.csv.version>1.8</commons.csv.version>
         <httpclient.version>4.5.13</httpclient.version>
         <httpcore.version>4.4.14</httpcore.version>
-        <cxf.version>3.4.1</cxf.version>
+        <cxf.version>3.4.3</cxf.version>
         <commons.compress.version>1.20</commons.compress.version>
         <commons.codec.version>1.15</commons.codec.version>
     </properties>
 
     <modules>
         <module>batchlite</module>
+        <module>pdf-utils</module>
         <module>tool-runners</module>
         <module>ingest</module>
         <module>commoncrawl-fetcher</module>

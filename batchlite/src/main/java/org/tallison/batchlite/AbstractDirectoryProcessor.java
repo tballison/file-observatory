@@ -19,21 +19,18 @@ package org.tallison.batchlite;
 import org.apache.tika.config.TikaConfig;
 import org.apache.tika.exception.TikaConfigException;
 import org.apache.tika.exception.TikaException;
-import org.apache.tika.pipes.fetchiterator.FetchEmitTuple;
-import org.apache.tika.pipes.fetchiterator.FetchIterator;
-import org.apache.tika.pipes.fetchiterator.jdbc.JDBCFetchIterator;
+import org.apache.tika.pipes.FetchEmitTuple;
+import org.apache.tika.pipes.fetcher.Fetcher;
+import org.apache.tika.pipes.pipesiterator.jdbc.JDBCPipesIterator;
+import org.apache.tika.pipes.pipesiterator.PipesIterator;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.tallison.batchlite.writer.JDBCMetadataWriter;
 import org.xml.sax.SAXException;
 
 import java.io.IOException;
-import java.nio.file.FileVisitResult;
-import java.nio.file.FileVisitor;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.attribute.BasicFileAttributes;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -55,15 +52,20 @@ public abstract class AbstractDirectoryProcessor {
     static Path POISON = Paths.get("");
     private static long TIMEOUT_MILLIS = 720000;
     private static int QUEUE_SIZE = 1000;
+    protected final ConfigSrc configSrc;
     protected final Path tikaConfigPath;
     protected final TikaConfig tikaConfig;
+    protected final PipesIterator pipesIterator;
+    protected final Fetcher fetcher;
     private int maxFiles = -1;
     protected int numThreads;
     protected final MetadataWriter metadataWriter;
 
-    public AbstractDirectoryProcessor(ConfigSrc configSrc)
-            throws TikaConfigException {
-        this.tikaConfigPath = configSrc.getTikaConfig();
+    public AbstractDirectoryProcessor(ConfigSrc configSrc) throws TikaException, IOException {
+        this.configSrc = configSrc;
+        this.tikaConfigPath = configSrc.getTikaConfigPath();
+        this.fetcher = configSrc.getFetcher();
+        this.pipesIterator = PipesIterator.build(tikaConfigPath);
         try {
             this.tikaConfig = new TikaConfig(tikaConfigPath);
         } catch (TikaException|IOException|SAXException e) {
@@ -74,12 +76,12 @@ public abstract class AbstractDirectoryProcessor {
     }
 
     public void execute() throws SQLException, IOException, TikaException {
-        FetchIterator fetchIterator = tikaConfig.getFetchIterator();
-        if (fetchIterator instanceof JDBCFetchIterator) {
-            String select = ((JDBCFetchIterator) fetchIterator).getSelect();
+
+        if (pipesIterator instanceof JDBCPipesIterator) {
+            String select = ((JDBCPipesIterator) pipesIterator).getSelect();
             if (select.contains("${name}")) {
                 select = select.replaceAll("\\$\\{name\\}", metadataWriter.getName());
-                ((JDBCFetchIterator)fetchIterator).setSelect(select);
+                ((JDBCPipesIterator)pipesIterator).setSelect(select);
             }
         }
         ArrayBlockingQueue<FetchEmitTuple> queue = new ArrayBlockingQueue<>(1000);
@@ -92,7 +94,8 @@ public abstract class AbstractDirectoryProcessor {
                 = new ExecutorCompletionService<>(executorService);
 
         long start = System.currentTimeMillis();
-        executorCompletionService.submit(new FetchIteratorWrapper(queue, fetchIterator, processors.size()));
+        executorCompletionService.submit(new FetchIteratorWrapper(queue, pipesIterator,
+                processors.size()));
         executorCompletionService.submit(metadataWriter);
 
         for (int i = 0; i < processors.size(); i++) {
@@ -148,17 +151,17 @@ public abstract class AbstractDirectoryProcessor {
 
     private static class FetchIteratorWrapper implements Callable<Integer> {
         private final ArrayBlockingQueue<FetchEmitTuple> queue;
-        private final FetchIterator fetchIterator;
+        private final PipesIterator pipesIterator;
         private final int numWorkers;
         private FetchIteratorWrapper(ArrayBlockingQueue<FetchEmitTuple> queue,
-                                     FetchIterator fetchIterator, int numWorkers) {
+                                     PipesIterator pipesIterator, int numWorkers) {
             this.queue = queue;
-            this.fetchIterator = fetchIterator;
+            this.pipesIterator = pipesIterator;
             this.numWorkers = numWorkers;
         }
         @Override
         public Integer call() throws Exception {
-            for (FetchEmitTuple t : fetchIterator) {
+            for (FetchEmitTuple t : pipesIterator) {
                 boolean offered = queue.offer(t, TIMEOUT_MILLIS,
                         TimeUnit.MILLISECONDS);
                 if (offered == false) {
@@ -166,7 +169,7 @@ public abstract class AbstractDirectoryProcessor {
                 }
             }
             for (int i = 0; i < numWorkers; i++) {
-                boolean offered = queue.offer(FetchIterator.COMPLETED_SEMAPHORE,
+                boolean offered = queue.offer(PipesIterator.COMPLETED_SEMAPHORE,
                         TIMEOUT_MILLIS, TimeUnit.MILLISECONDS);
                 if (offered == false) {
                     throw new TimeoutException();
