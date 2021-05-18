@@ -10,35 +10,77 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorCompletionService;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.tallison.batchlite.StreamEater;
 
 public class PDFSplitter {
-
+    static AtomicInteger PROCESSED = new AtomicInteger(0);
+    static int MAX_TO_PROCESS = 0;
+    int numThreads = 10;
     public static void main(String[] args) throws Exception {
         Path srcDir = Paths.get(args[0]);
         Path targDir = Paths.get(args[1]);
-        int totalPages = Integer.parseInt(args[2]);
+        MAX_TO_PROCESS = Integer.parseInt(args[2]);
         PDFSplitter splitter = new PDFSplitter();
-        splitter.execute(srcDir, targDir, totalPages);
+        splitter.execute(srcDir, targDir);
     }
 
-    private void execute(Path srcDir, Path targDir, int totalPages) {
-        int processed = 0;
-        while (processed < totalPages) {
-            boolean success = processOne(srcDir, targDir);
-            if (success) {
-                processed++;
+    private void execute(Path srcDir, Path targDir) throws Exception {
+        ExecutorService executor = Executors.newFixedThreadPool(numThreads);
+        ExecutorCompletionService executorCompletionService =
+                new ExecutorCompletionService(executor);
+        for (int i = 0; i < numThreads; i++) {
+            executorCompletionService.submit(new Worker(srcDir, targDir));
+        }
+
+        int completed = 0;
+        try {
+            while (completed < numThreads) {
+                //blocking
+                Future<Integer> future = executorCompletionService.take();
+                future.get();
+                completed++;
             }
+        } finally {
+            executor.shutdownNow();
         }
     }
 
-    private boolean processOne(Path srcDir, Path targDir) {
+    private static class Worker implements Callable<Integer> {
+
+        private final Path srcDir;
+        private final Path targDir;
+
+        private Worker(Path srcDir, Path targDir) {
+            this.srcDir = srcDir;
+            this.targDir = targDir;
+        }
+        @Override
+        public Integer call() throws Exception {
+            while (true) {
+                int proc = PROCESSED.get();
+                if (proc >= MAX_TO_PROCESS) {
+                    return 1;
+                }
+                boolean success = processOne(srcDir, targDir);
+                if (success) {
+                    PROCESSED.incrementAndGet();
+                }
+            }
+        }
+    }
+    private static boolean processOne(Path srcDir, Path targDir) {
         return processDir(srcDir, srcDir, targDir);
     }
 
-    private boolean processDir(Path currDir, Path srcRoot, Path targRoot) {
+    private static boolean processDir(Path currDir, Path srcRoot, Path targRoot) {
         File[] files = currDir.toFile().listFiles();
         List<File> fileList = Arrays.asList(files);
         Collections.shuffle(fileList);
