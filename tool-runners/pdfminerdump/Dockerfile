@@ -1,6 +1,6 @@
 FROM python:3.9.1-slim-buster
 
-RUN pip install pdfminer.six==20191125
+RUN pip install pdfminer.six==20201018
 
 RUN mkdir -p /usr/share/man/man1 /usr/share/man/man2
 
