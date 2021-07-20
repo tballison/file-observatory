@@ -10,6 +10,7 @@ import org.tallison.util.MapUtil;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -54,6 +55,9 @@ public class MimeCounter {
         options.addOption("f", "filterFile",
                 true,
                 "json file that describes filters");
+        options.addOption("o", "outputDir",
+                true,
+                "outputdir to write results to.");
         return options;
     }
 
@@ -72,11 +76,17 @@ public class MimeCounter {
         if (line.hasOption("f")) {
             filterFile = Paths.get(line.getOptionValue("f"));
         }
+        Path outputDir = null;
+        if (line.hasOption("o")) {
+            outputDir = Paths.get(line.getOptionValue("o"));
+        } else {
+            throw new RuntimeException("must specify output directory");
+        }
         MimeCounter counter = new MimeCounter();
-        counter.execute(indexDirectory, filterFile, numThreads);
+        counter.execute(indexDirectory, outputDir, filterFile, numThreads);
     }
 
-    private void execute(Path indexDirectory,
+    private void execute(Path indexDirectory, Path outputDir,
                          Path filterFile, int numThreads)
             throws SQLException, IOException {
 
@@ -111,10 +121,10 @@ public class MimeCounter {
         long elapsed = System.currentTimeMillis()-start;
         LOGGER.info("processed " + totalProcessed.get() + " records "+
                 " and indexed " + PGIndexer.getAdded() + " in " +elapsed+" ms");
-        report(mimeCounts);
+        report(mimeCounts, outputDir);
     }
 
-    private void report(List<MimeCounts> mimeCounts) {
+    private void report(List<MimeCounts> mimeCounts, Path outputDir) throws IOException {
         Map<String, Long> mimes = new HashMap<>();
         Map<String, Long> detectedMimes = new HashMap<>();
         Map<String, Long> detectedToMime = new HashMap<>();
@@ -123,18 +133,24 @@ public class MimeCounter {
             update(m.detectedMimes, detectedMimes);
             update(m.detectedToMime, detectedToMime);
         }
-        dump("mimes", mimes);
+        Files.createDirectories(outputDir);
+        dump("mimes", mimes, outputDir);
         System.out.println("\n\n");
-        dump("detected_mimes", detectedMimes);
+        dump("detected_mimes", detectedMimes, outputDir);
         System.out.println("\n\n");
-        dump("detected->mime", detectedToMime);
+        dump("detected->mime", detectedToMime, outputDir);
 
     }
 
-    private void dump(String title, Map<String, Long> mimes) {
-        System.out.println(title);
-        for (Map.Entry<String, Long> e : MapUtil.sortByDescendingValue(mimes).entrySet()) {
-            System.out.println("\t"+e.getKey() + "\t"+e.getValue());
+    private void dump(String title, Map<String, Long> mimes, Path outputDir) throws IOException {
+        try (BufferedWriter writer = Files.newBufferedWriter(outputDir.resolve(title+".txt"),
+                StandardCharsets.UTF_8)) {
+            System.out.println(title);
+            for (Map.Entry<String, Long> e : MapUtil.sortByDescendingValue(mimes).entrySet()) {
+                System.out.println("\t" + e.getKey() + "\t" + e.getValue());
+                writer.write(e.getKey()+"\t"+e.getValue());
+                writer.write("\n");
+            }
         }
     }
 
