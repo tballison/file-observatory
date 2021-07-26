@@ -9,26 +9,22 @@ import org.apache.tika.pipes.fetcher.Fetcher;
 import org.apache.tika.pipes.FetchEmitTuple;
 import org.apache.tika.pipes.fetcher.FetcherManager;
 import org.apache.tika.pipes.pipesiterator.PipesIterator;
-import org.tallison.batchlite.AbstractDirectoryProcessor;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.tallison.batchlite.AbstractFileProcessor;
 import org.tallison.batchlite.ConfigSrc;
-import org.tallison.batchlite.writer.MetadataWriterFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.file.FileVisitResult;
-import java.nio.file.FileVisitor;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.attribute.BasicFileAttributes;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorCompletionService;
@@ -41,6 +37,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 
 public class FileProfiler {
+
+    private static final Logger LOG = LoggerFactory.getLogger(FileProfiler.class);
+    private static final AtomicInteger COUNTER = new AtomicInteger(0);
 
     private static long TIMEOUT_MILLIS = 600000;
     private final Connection connection;
@@ -61,7 +60,8 @@ public class FileProfiler {
         PipesIterator pipesIterator = PipesIterator.build(tikaConfig);
         ArrayBlockingQueue<FetchEmitTuple> queue = new ArrayBlockingQueue<>(1000);
 
-        executorCompletionService.submit(new FetchIteratorWrapper(queue, pipesIterator));
+        executorCompletionService.submit(new FetchIteratorWrapper(numThreads, queue,
+                pipesIterator));
         Fetcher fetcher = FetcherManager.load(tikaConfig).getFetcher(pipesIterator.getFetcherName());
         for (int i = 0; i < numThreads; i++) {
             executorCompletionService.submit(new PrimaryProfiler(queue, fetcher, connection));
@@ -70,7 +70,8 @@ public class FileProfiler {
         int completed = 0;
         while (completed < numThreads+1) {
             Future<Integer> future = executorCompletionService.take();
-            future.get();
+            Integer i = future.get();
+            LOG.info("finished {}", i);
             completed++;
         }
         executorService.shutdownNow();
@@ -104,7 +105,7 @@ public class FileProfiler {
 
         @Override
         public void process(FetchEmitTuple fetchEmitTuple) throws IOException {
-
+            long start = System.currentTimeMillis();
             try (InputStream is =
                          fetcher.fetch(fetchEmitTuple.getFetchKey().getFetchKey(),
                     new Metadata());
@@ -126,21 +127,28 @@ public class FileProfiler {
                     insert.setLong(3, sz);
                     insert.setString(4, digest);
                     insert.execute();
+                    long elapsed = System.currentTimeMillis() - start;
+                    LOG.info("added {}, length {}, digest {}, for {} docs total in {} ms",
+                            path, sz, COUNTER.getAndIncrement(), elapsed);
                 } catch (SQLException e) {
+                    LOG.error("sql exception ", e);
                     throw new IOException(e);
                 }
             } catch (TikaException e) {
                 e.printStackTrace();
+                LOG.warn("tika exception", e);
             }
         }
 
     }
 
     private static class FetchIteratorWrapper implements Callable<Integer> {
+        private final int numThreads;
         private final ArrayBlockingQueue<FetchEmitTuple> queue;
         private final PipesIterator pipesIterator;
-        private FetchIteratorWrapper(ArrayBlockingQueue<FetchEmitTuple> queue,
+        private FetchIteratorWrapper(int numThreads, ArrayBlockingQueue<FetchEmitTuple> queue,
                                      PipesIterator pipesIterator) {
+            this.numThreads = numThreads;
             this.queue = queue;
             this.pipesIterator = pipesIterator;
         }
@@ -152,13 +160,22 @@ public class FileProfiler {
                     throw new TimeoutException();
                 }
             }
-            return 1;
+            for (int i = 0; i < numThreads; i++) {
+                boolean offered = queue.offer(PipesIterator.COMPLETED_SEMAPHORE, TIMEOUT_MILLIS,
+                        TimeUnit.MILLISECONDS);
+                LOG.info("adding completed semaphore "+ i);
+                if (offered == false) {
+                    throw new TimeoutException();
+                }
+            }
+            LOG.info("finished adding files and completed semaphore for processing");
+            return 2;
         }
     }
 
     public static void main(String[] args) throws Exception {
         String cString = System.getenv(ConfigSrc.METADATA_WRITER_STRING);
-        System.out.println("CString: "+ cString);
+        LOG.debug("CString: "+ cString);
         Connection connection = DriverManager.getConnection(
                 cString);
         Path tikaConfigPath = Paths.get(System.getenv(ConfigSrc.TIKA_CONFIG));
