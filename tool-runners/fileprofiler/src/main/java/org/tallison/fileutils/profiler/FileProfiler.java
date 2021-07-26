@@ -129,7 +129,7 @@ public class FileProfiler {
                     insert.execute();
                     long elapsed = System.currentTimeMillis() - start;
                     LOG.info("added {}, length {}, digest {}, for {} docs total in {} ms",
-                            path, sz, COUNTER.getAndIncrement(), elapsed);
+                            path, sz, digest, COUNTER.getAndIncrement(), elapsed);
                 } catch (SQLException e) {
                     LOG.error("sql exception ", e);
                     throw new IOException(e);
