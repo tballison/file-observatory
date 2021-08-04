@@ -20,13 +20,13 @@ public class FileProcessResult {
 
     String stderr = "";
     String stdout = "";
-    int exitValue;
+    int exitValue = -1;
     long processTimeMillis = -1;
     boolean isTimeout = false;
     long stdoutLength = -1;
     long stderrLength = -1;
-    boolean stderrTruncated;
-    boolean stdoutTruncated;
+    boolean stderrTruncated = false;
+    boolean stdoutTruncated = false;
 
     public String getStderr() {
         return stderr;

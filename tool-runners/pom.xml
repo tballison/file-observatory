@@ -39,6 +39,7 @@
         <module>pdfcpu</module>
         <module>pdfchecker</module>
         <module>xpdffonts</module>
+      <module>tika-client</module>
     </modules>
 
     <dependencies>

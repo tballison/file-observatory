@@ -16,6 +16,8 @@
  */
 package org.tallison.fileutils.tika;
 
+import static org.apache.tika.pipes.PipesServer.OOM;
+
 import org.apache.tika.config.TikaConfig;
 import org.apache.tika.exception.TikaConfigException;
 import org.apache.tika.exception.TikaException;
@@ -24,6 +26,17 @@ import org.apache.tika.metadata.Metadata;
 import org.apache.tika.metadata.TikaCoreProperties;
 import org.apache.tika.metadata.serialization.JsonMetadataList;
 import org.apache.tika.pipes.FetchEmitTuple;
+import org.apache.tika.pipes.PipesConfig;
+import org.apache.tika.pipes.PipesParser;
+import org.apache.tika.pipes.PipesResult;
+import org.apache.tika.pipes.async.AsyncConfig;
+import org.apache.tika.pipes.emitter.EmitData;
+import org.apache.tika.pipes.emitter.Emitter;
+import org.apache.tika.pipes.emitter.EmitterManager;
+import org.apache.tika.pipes.emitter.TikaEmitterException;
+import org.apache.tika.pipes.pipesiterator.PipesIterator;
+
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tallison.batchlite.AbstractDirectoryProcessor;
@@ -44,92 +57,176 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorCompletionService;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class TikaBatch extends AbstractDirectoryProcessor {
+public class TikaBatch {
 
 
     private static final Logger LOG = LoggerFactory.getLogger(TikaBatch.class);
     private static int MAX_STDOUT = 10000;
     private static int MAX_STDERR = 10000;
 
-    private final String[] tikaServerUrls;
+    private final ConfigSrc configSrc;
+    public TikaBatch(ConfigSrc configSrc) {
+        this.configSrc = configSrc;
+    }
 
-    public TikaBatch(ConfigSrc config,
-                     String tikaServerHost, int[] ports) throws TikaException, IOException {
-        super(config);
-        this.tikaServerUrls = new String[ports.length];
-        for (int i = 0; i < ports.length; i++) {
-            tikaServerUrls[i] = tikaServerHost+":"+ports[i];
+    public void execute() throws Exception {
+        AsyncConfig config = AsyncConfig.load(configSrc.getTikaConfigPath());
+        ArrayBlockingQueue<FetchEmitTuple> tuples = new ArrayBlockingQueue<>(1000);
+        PipesIterator pipesIterator = PipesIterator.build(configSrc.getTikaConfigPath());
+        String emitterName = pipesIterator.getEmitterName();
+        PipesIteratorWrapper pipesIteratorWrapper = new PipesIteratorWrapper(
+                pipesIterator, tuples,
+                config.getNumClients());
+
+
+        ExecutorService executorService = Executors.newFixedThreadPool(config.getNumEmitters() + 1);
+        ExecutorCompletionService executorCompletionService =
+                new ExecutorCompletionService(executorService);
+
+        executorCompletionService.submit(pipesIteratorWrapper);
+        PipesConfig pipesConfig = PipesConfig.load(configSrc.getTikaConfigPath());
+        PipesParser pipesParser = new PipesParser(pipesConfig);
+
+        for (int i = 0; i < config.getNumClients(); i++) {
+            executorCompletionService.submit(new TikaWorker(configSrc, tuples, pipesParser,
+                    emitterName));
+        }
+
+        int finished = 0;
+        try {
+            while (finished < config.getNumClients() + 1) {
+                //blocking
+                Future<Integer> future = executorCompletionService.take();
+                Integer val = future.get();
+                LOG.info("finished: " + val);
+                finished++;
+            }
+        } finally {
+            executorService.shutdownNow();
         }
     }
 
-    @Override
-    public List<AbstractFileProcessor> getProcessors(ArrayBlockingQueue<FetchEmitTuple> queue) throws IOException, TikaException {
-        setMaxFiles(1000);
-        List<AbstractFileProcessor> processors = new ArrayList<>();
-        for (int i = 0; i < numThreads; i++) {
-            processors.add(new TikaProcessor(queue, configSrc, metadataWriter, tikaServerUrls));
+    private static class PipesIteratorWrapper implements Callable<Integer> {
+        private final PipesIterator pipesIterator;
+        private final ArrayBlockingQueue<FetchEmitTuple> queue;
+        private final int numThreads;
+
+        public PipesIteratorWrapper(PipesIterator pipesIterator,
+                                    ArrayBlockingQueue<FetchEmitTuple> queue,
+                                    int numThreads) {
+            this.pipesIterator = pipesIterator;
+            this.queue = queue;
+            this.numThreads = numThreads;
+
         }
-        return processors;
+
+        @Override
+        public Integer call() throws Exception {
+            for (FetchEmitTuple t : pipesIterator) {
+                //potentially blocks forever
+                queue.put(t);
+            }
+            LOG.info("iterator wrapper has finished adding tuples");
+            for (int i = 0; i < numThreads; i ++) {
+                queue.put(PipesIterator.COMPLETED_SEMAPHORE);
+            }
+            LOG.info("iterator wrapper has finished adding completed semaphores");
+            return 1;
+        }
     }
 
-    private class TikaProcessor extends FileToFileProcessor {
+    private class TikaWorker implements Callable<Integer> {
 
-        private final TikaServerClient tikaClient;
-
-        public TikaProcessor(ArrayBlockingQueue<FetchEmitTuple> queue, ConfigSrc configSrc,
-                             MetadataWriter metadataWriter,
-                             String[] tikaServerUrls) throws IOException, TikaException {
-            super(queue, configSrc, metadataWriter);
-            tikaClient = new TikaServerClient(TikaServerClient.INPUT_METHOD.INPUTSTREAM,
-                    tikaServerUrls);
+        private final PipesParser pipesParser;
+        private final MetadataWriter metadataWriter;
+        private final Emitter emitter;
+        private final ArrayBlockingQueue<FetchEmitTuple> tuples;
+        public TikaWorker(ConfigSrc configSrc,
+                      ArrayBlockingQueue<FetchEmitTuple> tuples,
+                          PipesParser pipesParser,
+                          String emitterName) throws Exception {
+            this.metadataWriter = configSrc.getMetadataWriter();
+            this.pipesParser = pipesParser;
+            this.tuples = tuples;
+            this.emitter =
+                    EmitterManager.load(configSrc.getTikaConfigPath()).getEmitter(emitterName);
         }
 
         @Override
-        public String getExtension() {
-            return "json";
+        public Integer call() throws Exception {
+
+            while (true) {
+                //hang forever
+                FetchEmitTuple t = tuples.take();
+                if (t == PipesIterator.COMPLETED_SEMAPHORE) {
+                    return 2;
+                }
+                PipesResult result = pipesParser.parse(t);
+
+                FileProcessResult fileProcessResult = new FileProcessResult();
+                switch (result.getStatus()) {
+                    case PARSE_SUCCESS:
+                        emit(result.getEmitData(), fileProcessResult);
+                        break;
+                    case OOM:
+                        fileProcessResult.setExitValue(1);
+                    case TIMEOUT:
+                        fileProcessResult.setExitValue(2);
+                        fileProcessResult.setTimeout(true);
+                    case UNSPECIFIED_CRASH:
+                        fileProcessResult.setExitValue(3);
+                    case INTERRUPTED_EXCEPTION:
+                        fileProcessResult.setExitValue(4);
+                    case CLIENT_UNAVAILABLE_WITHIN_MS:
+                        fileProcessResult.setExitValue(5);
+                    case EMIT_SUCCESS:
+                        fileProcessResult.setExitValue(7);
+                    case EMIT_SUCCESS_PARSE_EXCEPTION:
+                        fileProcessResult.setExitValue(8);
+                    case EMIT_EXCEPTION:
+                        fileProcessResult.setExitValue(9);
+                    case PARSE_EXCEPTION_NO_EMIT:
+                        //this shouldn't happen
+                    case PARSE_EXCEPTION_EMIT:
+                        fileProcessResult.setExitValue(10);
+                        fileProcessResult.setStderr(result.getStatus().name());
+                        fileProcessResult.setStderrLength(result.getStatus().name().length());
+                        break;
+                    case NO_EMITTER_FOUND:
+                        throw new RuntimeException("emitter not found" + result.getMessage());
+                }
+                metadataWriter.write(t.getFetchKey().getFetchKey(), fileProcessResult);
+            }
         }
 
-        @Override
-        public void process(String relPath, Path srcPath,
-                            Path outputPath, MetadataWriter metadataWriter)
-                throws IOException {
-
-            int exitValue = 0;
-            long start = System.currentTimeMillis();
-            List<Metadata> metadataList = null;
-            try (TikaInputStream tis = TikaInputStream.get(srcPath)) {
-                metadataList = tikaClient.parse(relPath, tis);
-            } catch (IOException | TikaClientException e) {
-                LOG.error("error on {}", relPath, e);
-                exitValue = 1;
-            }
-
-            if (exitValue == 0) {
-                if (!Files.isDirectory(outputPath.getParent())) {
-                    Files.createDirectories(outputPath.getParent());
-                }
-                try (Writer writer = Files.newBufferedWriter(outputPath, StandardCharsets.UTF_8)) {
-                    JsonMetadataList.toJson(metadataList, writer);
-                } catch (IOException e) {
-                    LOG.warn("problem writing json", e);
+        private void emit(EmitData emitData, FileProcessResult fileProcessResult) {
+            try {
+                emitter.emit(emitData.getEmitKey().getEmitKey(), emitData.getMetadataList());
+            } catch (TikaEmitterException|IOException e) {
+                LOG.warn("emit exception for " + emitData.getEmitKey().getEmitKey(),
+                        e);
+                fileProcessResult.setExitValue(7);
+                fileProcessResult.setStderr("emit exception");
+            } finally {
+                String trace = getStackTrace(emitData.getMetadataList());
+                if (!StringUtils.isAllBlank(trace)) {
+                    int traceLength = trace.length();
+                    if (trace.length() > MAX_STDERR) {
+                        trace = trace.substring(0, MAX_STDERR-10);
+                        fileProcessResult.setStderrTruncated(true);
+                    }
+                    fileProcessResult.setStderr(trace);
+                    fileProcessResult.setStderrLength(traceLength);
                 }
             }
-
-
-            long elapsed = System.currentTimeMillis() - start;
-            String stackTrace = getStackTrace(metadataList);
-            FileProcessResult r = new FileProcessResult();
-            r.setExitValue(exitValue);
-            r.setProcessTimeMillis(elapsed);
-            r.setStderr(stackTrace);
-            r.setStderrLength(stackTrace.length());
-            r.setStdout("");
-            r.setStdoutLength(0);
-            r.setTimeout(false);//fix this
-            metadataWriter.write(relPath, r);
         }
 
         private String getStackTrace(List<Metadata> metadataList) {
@@ -145,24 +242,9 @@ public class TikaBatch extends AbstractDirectoryProcessor {
     }
 
     public static void main(String[] args) throws Exception {
-        String tikaServerUrl = args[3];
-        String portString = args[4];
-        Matcher m = Pattern.compile("\\A(\\d+)-(\\d+)\\Z").matcher(portString);
-        int[] ports;
         long begin = System.currentTimeMillis();
-        if (m.find()) {
-            int start = Integer.parseInt(m.group(1));
-            int end = Integer.parseInt(m.group(2));
-            ports = new int[end-start+1];
-            for (int p = start, i = 0; p <= end; p++, i++) {
-                ports[i] = p;
-            }
-        } else {
-            ports = new int[1];
-            ports[0] = Integer.parseInt(portString);
-        }
         TikaBatch runner = new TikaBatch(ConfigSrc.build(args, "tika",
-                MAX_STDOUT, MAX_STDERR), tikaServerUrl, ports);
+                MAX_STDOUT, MAX_STDERR));
         //runner.setMaxFiles(100);
         runner.execute();
         System.out.println("finished in "+(System.currentTimeMillis()-begin) + " ms");
