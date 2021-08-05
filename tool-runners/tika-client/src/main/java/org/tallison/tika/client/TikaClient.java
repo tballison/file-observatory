@@ -23,9 +23,17 @@ import org.apache.http.client.methods.HttpPut;
 import org.apache.http.entity.FileEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.tallison.batchlite.AbstractDirectoryProcessor;
 
 public class TikaClient {
+
+    private static Logger LOGGER = LoggerFactory.getLogger(TikaClient.class);
+
     private static final int TIMEOUT_SECONDS = 120;
+    private static final int SLEEP_ON_FAILURE_SECONDS = 30;
+    private static final int MAX_RETRIES = 3;
 
     public static void main(String[] args) throws Exception {
         Path baseDir = Paths.get(args[0]);
@@ -41,7 +49,13 @@ public class TikaClient {
                 Path in = baseDir.resolve(line);
                 Path out = targDir.resolve(line + ".json");
                 try {
-                    boolean success = extract(webClient, tikaUrl, executorService, in, out);
+                    boolean shouldProcess = shouldProcess(in, out);
+                    if (! shouldProcess) {
+                        line = r.readLine();
+                        continue;
+                    }
+                    boolean success =
+                            extract(webClient, tikaUrl, executorService, in, out, MAX_RETRIES);
                     if (!success) {
                         if (webClient instanceof CloseableHttpClient) {
                             ((CloseableHttpClient) webClient).close();
@@ -49,14 +63,26 @@ public class TikaClient {
                         webClient = getNewClient();
                     }
                 } catch (Exception e) {
-                    System.err.println(in);
-                    e.printStackTrace();
+                    LOGGER.error("catastrophe: {}",
+                            in.toAbsolutePath(), e);
                 }
                 line = r.readLine();
             }
         } finally {
             executorService.shutdownNow();
         }
+    }
+
+    private static boolean shouldProcess(Path in, Path out) {
+        if (!Files.exists(in)) {
+            LOGGER.debug("Input file does not exist: {}", in.toAbsolutePath());
+            return false;
+        }
+        if (Files.exists(out)) {
+            LOGGER.debug("Output file already exists: {}", out.toAbsolutePath());
+            return false;
+        }
+        return true;
     }
 
     public static HttpClient getNewClient() {
@@ -67,19 +93,62 @@ public class TikaClient {
     }
 
     public static boolean extract(HttpClient webClient, String tikaUrl,
+                                  ExecutorService executorService, Path in, Path out, int retries) {
+
+        int tries = 0;
+        //retry on IOException, not timeout or other failure
+        long overallStart = System.currentTimeMillis();
+        while (tries++ < retries) {
+            try {
+                long tryStart = System.currentTimeMillis();
+                boolean success = extract(webClient, tikaUrl, executorService, in, out);
+                if (success) {
+                    long now = System.currentTimeMillis();
+                    LOGGER.info("success: {} retry={} tryElapsedMs={} totalElapsed={}",
+                            in.toAbsolutePath(), tries,
+                            now-tryStart,
+                            now-overallStart);
+                    return success;
+                }
+            } catch (IOException e) {
+                LOGGER.warn("IO: {}", in.toAbsolutePath());
+                LOGGER.debug("starting sleep on retry {}", tries);
+                try {
+                    Thread.sleep(SLEEP_ON_FAILURE_SECONDS * 1000);
+                } catch (InterruptedException ex) {
+                    LOGGER.warn("interrupted");
+                    break;
+                }
+                LOGGER.debug("waking up after retry {}", tries);
+            } catch (InterruptedException e) {
+                LOGGER.warn("interrupted: {}", in.toAbsolutePath());
+                break;
+            } catch (ExecutionException e) {
+                LOGGER.warn("failed: {}", in.toAbsolutePath(), e);
+                break;
+            } catch (TimeoutException e) {
+                LOGGER.warn("timeout: {}", in.toAbsolutePath());
+                break;
+            } catch (Exception e) {
+                LOGGER.warn("unknown: {}", in.toAbsolutePath(), e);
+                break;
+            }
+        }
+        long now = System.currentTimeMillis();
+
+        LOGGER.warn("fail: {}, tries={} overallElapsed={}",
+                in.toAbsolutePath(), tries, now-overallStart);
+        return false;
+    }
+
+
+    public static boolean extract(HttpClient webClient, String tikaUrl,
                                    ExecutorService executorService, Path in, Path out)
-            throws IOException {
-        if (!Files.exists(in)) {
-            System.err.println("File does not exist: " + in.toAbsolutePath());
-            return true;
-        }
-        if (Files.exists(out)) {
-            System.err.println("Output file already exists: " + out.toAbsolutePath());
-            return true;
-        }
+            throws Exception {
+
         Files.createDirectories(out.getParent());
         Files.write(out, new byte[]{});
-        FutureTask<Integer> futureTask = new FutureTask<>(() -> {
+        FutureTask<Boolean> futureTask = new FutureTask<>(() -> {
             long start = System.currentTimeMillis();
             HttpPut put = new HttpPut(tikaUrl);
             put.setEntity(new FileEntity(in.toFile()));
@@ -87,36 +156,36 @@ public class TikaClient {
             try {
                 response = webClient.execute(put);
                 long elapsed = System.currentTimeMillis() - start;
-                System.out.println(in.toAbsolutePath() + " : " + elapsed + " " +
-                        response.getStatusLine().getStatusCode());
                 if (response.getStatusLine().getStatusCode() == 200) {
                     Files.copy(response.getEntity().getContent(), out, StandardCopyOption.REPLACE_EXISTING);
+                    LOGGER.debug("local success: {} elapsed={} ms status={}",
+                            in.toAbsolutePath(), elapsed,
+                            response.getStatusLine().getStatusCode());
+                    return true;
                 } else {
-                    System.out.println("bad result " + response.getStatusLine().getStatusCode());
+                    LOGGER.debug("local fail: {} {}",
+                            in.toAbsolutePath(),
+                            response.getStatusLine().getStatusCode());
+                    return false;
                 }
             } finally {
                 if (response != null && (response instanceof CloseableHttpResponse)) {
                     ((CloseableHttpResponse)response).close();
                 }
             }
-
-            return 1;
         });
+
         executorService.submit(futureTask);
         try {
-            futureTask.get(60, TimeUnit.SECONDS);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-            return false;
+            return futureTask.get(TIMEOUT_SECONDS, TimeUnit.SECONDS);
         } catch (ExecutionException e) {
-            e.printStackTrace();
-            return false;
-        } catch (TimeoutException e) {
-            System.err.println("timeout: " + in.toAbsolutePath() + " " + Files.size(in));
-            return false;
+            //unwrap IOException
+            if (e.getCause() instanceof IOException) {
+                throw (IOException) e.getCause();
+            }
+            throw e;
         } finally {
             futureTask.cancel(true);
         }
-        return true;
     }
 }
