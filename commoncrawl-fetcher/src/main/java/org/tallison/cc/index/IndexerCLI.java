@@ -30,6 +30,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.zip.GZIPInputStream;
 
 import org.apache.tika.exception.TikaException;
@@ -101,7 +102,7 @@ public class IndexerCLI {
         RecordFilter filter = CompositeRecordFilter.load(filterFile);
 
         long start = System.currentTimeMillis();
-        AtomicInteger totalProcessed = new AtomicInteger(0);
+        AtomicLong totalProcessed = new AtomicLong(0);
         PipesIterator pipesIterator = PipesIterator.build(tikaConfigPath);
         Fetcher fetcher = FetcherManager.load(tikaConfigPath).getFetcher("fetcher");
 
@@ -148,11 +149,12 @@ public class IndexerCLI {
         private final ArrayBlockingQueue<FetchEmitTuple> paths;
         private final AbstractRecordProcessor recordProcessor;
         private final int max;
-        private final AtomicInteger totalProcessed;
+        private final AtomicLong totalProcessed;
         private final Fetcher fetcher;
 
         CallableIndexer(ArrayBlockingQueue<FetchEmitTuple> paths, Fetcher fetcher,
-                        AbstractRecordProcessor recordProcessor, int max, AtomicInteger processed) {
+                        AbstractRecordProcessor recordProcessor, int max,
+                        AtomicLong processed) {
             this.paths = paths;
             this.fetcher = fetcher;
             this.recordProcessor = recordProcessor;
@@ -178,7 +180,7 @@ public class IndexerCLI {
         }
 
         private void processFile(FetchEmitTuple fetchEmitTuple, AbstractRecordProcessor recordProcessor) {
-            int processed = totalProcessed.incrementAndGet();
+            long processed = totalProcessed.incrementAndGet();
             LOGGER.info("processing " + fetchEmitTuple.getFetchKey().getFetchKey());
             if (max > 0 && processed >= max) {
                 return;
