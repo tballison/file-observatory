@@ -2,6 +2,7 @@ package org.tallison.ingest.mappers;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonParseException;
 import com.google.gson.JsonParser;
 import com.google.gson.JsonPrimitive;
 import org.apache.commons.codec.binary.Base64;
@@ -23,10 +24,6 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.TreeSet;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public class PDFBytesMapper implements FeatureMapper {
 
@@ -41,9 +38,20 @@ public class PDFBytesMapper implements FeatureMapper {
         // {"preheader":"","eofs":[931,1241],"header-offset":0}
         String json = row.get("pdfbytes_stdout");
         if (json == null) {
+            String key = row.get("fname");
+            key = (key == null) ? "" : key;
+            LOGGER.warn("empty json: " + key);
             return;
         }
-        JsonObject root = JsonParser.parseReader(new StringReader(json)).getAsJsonObject();
+        JsonObject root = null;
+        try {
+            root = JsonParser.parseReader(new StringReader(json)).getAsJsonObject();
+        } catch (JsonParseException e) {
+            String key = row.get("fname");
+            key = (key == null) ? "" : key;
+            LOGGER.warn("bad json: " + key);
+            return;
+        }
 
         String preheader = "";
         if (root.has("preheader")) {

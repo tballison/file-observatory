@@ -4,7 +4,8 @@ import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.Options;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
@@ -31,9 +32,16 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.zip.GZIPInputStream;
 
+import org.apache.tika.exception.TikaException;
+import org.apache.tika.metadata.Metadata;
+import org.apache.tika.pipes.FetchEmitTuple;
+import org.apache.tika.pipes.fetcher.Fetcher;
+import org.apache.tika.pipes.fetcher.FetcherManager;
+import org.apache.tika.pipes.pipesiterator.PipesIterator;
+
 public class IndexerCLI {
 
-    static Logger LOGGER = Logger.getLogger(IndexerCLI.class);
+    static Logger LOGGER = LoggerFactory.getLogger(IndexerCLI.class);
 
     private static int DEFAULT_NUM_THREADS = 10;
     private static Path POISON = Paths.get("");
@@ -41,8 +49,9 @@ public class IndexerCLI {
 
         Options options = new Options();
 
-        options.addRequiredOption("i", "indexDirectory", true,
-                "directory with the gz index files");
+        options.addRequiredOption("c", "tikaConfig", true,
+                "tika config file with a pipesiterator for the gz files and a fetcher" +
+                        " (name='fetcher') for getting the bytes for the files");
         options.addRequiredOption("j", "jdbc", true,
                 "jdbc connection string to the pg db");
         options.addOption("m", "max", true,
@@ -59,7 +68,7 @@ public class IndexerCLI {
         CommandLineParser cliParser = new DefaultParser();
         CommandLine line = cliParser.parse(getOptions(), args);
 
-        Path indexDirectory = Paths.get(line.getOptionValue("i"));
+        Path tikaConfigPath = Paths.get(line.getOptionValue("c"));
         String jdbc = line.getOptionValue("j");
 
         int numThreads = DEFAULT_NUM_THREADS;
@@ -77,30 +86,40 @@ public class IndexerCLI {
         IndexerCLI indexer = new IndexerCLI();
         Connection connection = DriverManager.getConnection(jdbc);
         try {
-            indexer.execute(indexDirectory, connection, filterFile, numThreads, max);
+            indexer.execute(tikaConfigPath, connection, filterFile, numThreads, max);
         } finally {
             connection.commit();
             connection.close();
         }
     }
 
-    private void execute(Path indexDirectory, Connection connection,
+    private void execute(Path tikaConfigPath, Connection connection,
                          Path filterFile, int numThreads, int max)
-            throws SQLException, IOException {
+            throws Exception {
         PGIndexer.init(connection);
 
         RecordFilter filter = CompositeRecordFilter.load(filterFile);
 
         long start = System.currentTimeMillis();
         AtomicInteger totalProcessed = new AtomicInteger(0);
+        PipesIterator pipesIterator = PipesIterator.build(tikaConfigPath);
+        Fetcher fetcher = FetcherManager.load(tikaConfigPath).getFetcher("fetcher");
+
         try {
             ExecutorService executorService = Executors.newFixedThreadPool(numThreads);
             ExecutorCompletionService completionService = new ExecutorCompletionService(executorService);
-            ArrayBlockingQueue<Path> paths = new ArrayBlockingQueue<>(300+numThreads);
-            addPaths(indexDirectory, paths, numThreads);
-
+            ArrayBlockingQueue<FetchEmitTuple> paths = new ArrayBlockingQueue<>(300+numThreads);
+            for (FetchEmitTuple fetchEmitTuple : pipesIterator) {
+                if (fetchEmitTuple.getFetchKey().getFetchKey().endsWith(".gz")) {
+                    paths.offer(fetchEmitTuple);
+                }
+            }
             for (int i = 0; i < numThreads; i++) {
-                completionService.submit(new CallableIndexer(paths,
+                paths.offer(PipesIterator.COMPLETED_SEMAPHORE);
+            }
+            LOGGER.info("added index paths");
+            for (int i = 0; i < numThreads; i++) {
+                completionService.submit(new CallableIndexer(paths, fetcher,
                                 new PGIndexer(connection, filter),
                         max, totalProcessed));
             }
@@ -120,37 +139,22 @@ public class IndexerCLI {
             PGIndexer.shutDown();
         }
         long elapsed = System.currentTimeMillis()-start;
-        LOGGER.info("processed " + totalProcessed.get() + " records "+
+        LOGGER.info("processed " + totalProcessed.get() + " records"+
                 " and indexed " + PGIndexer.getAdded() + " in " +elapsed+" ms");
-    }
-
-    private void addPaths(Path indexDirectory,
-                            ArrayBlockingQueue<Path> paths,
-                            int numThreads) throws InterruptedException {
-
-        for (File f : indexDirectory.toFile().listFiles()) {
-            if (! POISON.equals(f.toPath())) {
-                paths.offer(f.toPath(), 3, TimeUnit.MINUTES);
-            }
-        }
-
-        LOGGER.trace("about to add poison");
-        for (int i = 0; i < numThreads; i++) {
-            paths.offer(POISON, 3, TimeUnit.MINUTES);
-        }
-        LOGGER.trace("finished adding poison");
     }
 
     private static class CallableIndexer implements Callable<Integer> {
 
-        private final ArrayBlockingQueue<Path> paths;
+        private final ArrayBlockingQueue<FetchEmitTuple> paths;
         private final AbstractRecordProcessor recordProcessor;
         private final int max;
         private final AtomicInteger totalProcessed;
+        private final Fetcher fetcher;
 
-        CallableIndexer(ArrayBlockingQueue<Path> paths,
+        CallableIndexer(ArrayBlockingQueue<FetchEmitTuple> paths, Fetcher fetcher,
                         AbstractRecordProcessor recordProcessor, int max, AtomicInteger processed) {
             this.paths = paths;
+            this.fetcher = fetcher;
             this.recordProcessor = recordProcessor;
             this.max = max;
             this.totalProcessed = processed;
@@ -159,26 +163,29 @@ public class IndexerCLI {
         @Override
         public Integer call() throws Exception {
             while (true) {
-                Path path = paths.poll(3, TimeUnit.MINUTES);
-                if (path == null) {
+                FetchEmitTuple fetchEmitTuple = paths.poll(3, TimeUnit.MINUTES);
+                if (fetchEmitTuple == null) {
                     throw new TimeoutException("waited 3 minutes for a new record");
                 }
 
-                if (path == POISON) {
+                if (fetchEmitTuple == PipesIterator.COMPLETED_SEMAPHORE) {
                     recordProcessor.close();
                     return 1;
                 }
-                LOGGER.trace(path);
-                processFile(path, recordProcessor);
+                LOGGER.trace(fetchEmitTuple.getFetchKey().getFetchKey());
+                processFile(fetchEmitTuple, recordProcessor);
             }
         }
 
-        private void processFile(Path path, AbstractRecordProcessor recordProcessor) {
+        private void processFile(FetchEmitTuple fetchEmitTuple, AbstractRecordProcessor recordProcessor) {
             int processed = totalProcessed.incrementAndGet();
+            LOGGER.info("processing " + fetchEmitTuple.getFetchKey().getFetchKey());
             if (max > 0 && processed >= max) {
                 return;
             }
-            try (InputStream is = new BufferedInputStream(new GZIPInputStream(Files.newInputStream(path)))) {
+            try (InputStream is =
+                         new BufferedInputStream(new GZIPInputStream(
+                                 fetcher.fetch(fetchEmitTuple.getFetchKey().getFetchKey(), new Metadata())))) {
                 try (BufferedReader reader = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
                     String line = reader.readLine();
                     int lines = 0;
@@ -204,7 +211,7 @@ public class IndexerCLI {
                     }
 
                 }
-            } catch (IOException e) {
+            } catch (IOException | TikaException e) {
                 throw new RuntimeException(e);
             }
         }

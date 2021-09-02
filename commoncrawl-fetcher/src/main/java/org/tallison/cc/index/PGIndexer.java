@@ -16,16 +16,13 @@
  */
 package org.tallison.cc.index;
 
-import org.apache.commons.lang3.StringUtils;
-import org.apache.log4j.Logger;
+import static org.apache.commons.lang3.StringUtils.truncate;
 
 import java.io.IOException;
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -34,73 +31,106 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import static org.apache.commons.lang3.StringUtils.truncate;
+import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.tallison.util.HostUpsert;
 
 public class PGIndexer extends AbstractRecordProcessor {
-    private static final int MAX_URL_LENGTH = 10000;
-    static Logger LOGGER = Logger.getLogger(PGIndexer.class);
+    public static final int MAX_URL_LENGTH = 10000;
 
+    public static final int MAX_HOST_LENGTH = 256;
     private static final AtomicLong ADDED = new AtomicLong(0);
     private static final AtomicLong CONSIDERED = new AtomicLong(0);
-    static AtomicInteger THREAD_COUNTER = new AtomicInteger(-1);
-    static AtomicInteger THREAD_CLOSED = new AtomicInteger(-1);
-
     private static final StringCache MIME_CACHE = new StringCache("cc_mimes", 2000);
-    private static final StringCache DETECTED_MIME_CACHE = new StringCache("cc_detected_mimes", 2000);
+    private static final StringCache DETECTED_MIME_CACHE =
+            new StringCache("cc_detected_mimes", 2000);
     private static final StringCache LANGUAGE_CACHE = new StringCache("cc_languages", 2000);
     private static final StringCache TRUNCATED_CACHE = new StringCache("cc_truncated", 12);
     private static final StringCache WARC_FILENAME_CACHE =
             new StringCache("cc_warc_file_name", 200);
-
     private static final long STARTED = System.currentTimeMillis();
-
-    private long added = 0;
+    static Logger LOGGER = LoggerFactory.getLogger(PGIndexer.class);
+    static AtomicInteger THREAD_COUNTER = new AtomicInteger(-1);
+    static AtomicInteger THREAD_CLOSED = new AtomicInteger(-1);
     private final PreparedStatement insert;
     private final Connection connection;
     private final RecordFilter recordFilter;
+    private final HostUpsert hostCache;
+    private long added = 0;
+
+    public PGIndexer(Connection connection, RecordFilter recordFilter) throws SQLException {
+        this.connection = connection;
+        this.recordFilter = recordFilter;
+        this.insert = connection.prepareStatement(
+                "insert into cc_urls (" +
+                        "url, host, digest, mime, detected_mime,"+
+                        " charset, languages, status, truncated, warc_file_name, "+
+                        "warc_offset, warc_length) values" +
+                        " (" +
+                        "?,?,?,?,?,"+
+                        "?,?,?,?,?,"+
+                        "?,?)");
+        this.hostCache = new HostUpsert(connection,
+                "cc_hosts", "host", MAX_HOST_LENGTH);
+    }
 
     public static void init(Connection connection) throws SQLException {
         connection.setAutoCommit(false);
-        initTables(connection, MIME_CACHE, DETECTED_MIME_CACHE, LANGUAGE_CACHE, TRUNCATED_CACHE, WARC_FILENAME_CACHE);
+        initTables(connection, MIME_CACHE, DETECTED_MIME_CACHE, LANGUAGE_CACHE, TRUNCATED_CACHE,
+                WARC_FILENAME_CACHE);
     }
 
     public static void shutDown() throws SQLException {
-        for (StringCache cache : new StringCache[]{MIME_CACHE, DETECTED_MIME_CACHE, TRUNCATED_CACHE, LANGUAGE_CACHE}) {
+        for (StringCache cache : new StringCache[]{MIME_CACHE, DETECTED_MIME_CACHE, TRUNCATED_CACHE,
+                LANGUAGE_CACHE}) {
             cache.close();
         }
     }
 
-    private static void initTables(Connection connection, StringCache ... caches) throws SQLException {
-            connection.createStatement().execute("drop table if exists cc_urls");
+    private static void initTables(Connection connection, StringCache... caches)
+            throws SQLException {
+        connection.createStatement().execute("drop table if exists cc_urls");
+        connection.createStatement().execute(
+                "create table cc_urls " + "(" +
+                        "id serial primary key," +
+                        " url varchar(" + MAX_URL_LENGTH + ")," +
+                        " host integer," +
+                        " digest varchar(64)," +
+                        " mime integer," +
+                        " detected_mime integer," +
+                        " charset varchar(64)," +
+                        " languages integer," +
+                        " status integer," +
+                        " truncated integer," +
+                        " warc_file_name integer," +
+                        " warc_offset bigint," +
+                        " warc_length bigint);");
+
+        connection.createStatement().execute("drop table if exists cc_hosts");
+        connection.createStatement().execute(
+                "create table cc_hosts " +
+                        "(" +
+                        "id serial primary key," +
+                        "host varchar(" + MAX_HOST_LENGTH + ") UNIQUE," +
+                        "tld varchar(32)," +
+                        "ip_address varchar(20)," +
+                        "country varchar(20)," +
+                        "latitude float, longitude float)");
+
+        for (StringCache cache : caches) {
+            connection.createStatement().execute("drop table if exists " + cache.getTableName());
             connection.createStatement().execute(
+                    "create table " + cache.getTableName() +
+                            "(id integer primary key," +
+                            "name varchar(" + cache.getMaxLength() + "))");
+            cache.prepareStatement(connection);
+        }
 
-                    "create table cc_urls " +
-                    "(" +
-                            "id serial primary key,"+
-                    " url varchar("+MAX_URL_LENGTH+")," +
-                    " digest varchar(64)," +
-                    " mime integer," +
-                    " detected_mime integer," +
-                    " charset varchar(64)," +
-                    " languages integer,"+
-                    " status integer,"+
-                    " truncated integer," +
-                    " warc_file_name integer," +
-                    " warc_offset bigint," +
-                    " warc_length bigint);");
 
-            for (StringCache cache : caches) {
-                connection.createStatement().execute("drop table if exists "+cache.getTableName());
-                connection.createStatement().execute("create table "+cache.getTableName()+
-                        "(id integer primary key," +
-                        "name varchar("+cache.getMaxLength()+"))");
-                cache.prepareStatement(connection);
-            }
-
-            connection.commit();
+        connection.commit();
 
     }
-
 
     public static int getConsidered() {
         return CONSIDERED.intValue();
@@ -110,17 +140,6 @@ public class PGIndexer extends AbstractRecordProcessor {
         return ADDED.intValue();
     }
 
-    public PGIndexer(Connection connection, RecordFilter recordFilter) throws SQLException {
-        this.connection = connection;
-        this.recordFilter = recordFilter;
-        this.insert = connection.prepareStatement("insert into cc_urls (" +
-                "url,"+
-                "digest, mime, detected_mime, charset, " +
-                "languages, status, truncated, warc_file_name, warc_offset, warc_length) values" +
-                " (" +
-                "?," +
-                "?,?,?,?,?,?,?,?,?,?)");
-    }
     @Override
     void usage() {
 
@@ -130,26 +149,27 @@ public class PGIndexer extends AbstractRecordProcessor {
     public void process(String json) throws IOException {
         List<CCIndexRecord> records = CCIndexRecord.parseRecords(json);
         for (CCIndexRecord r : records) {
-            if (! recordFilter.accept(r)) {
+            if (!recordFilter.accept(r)) {
                 continue;
             }
             CONSIDERED.incrementAndGet();
 
             try {
-                long total= ADDED.getAndIncrement();
-                if (++added % 10000 == 0) {
+                long total = ADDED.getAndIncrement();
+                if (++added % 100 == 0) {
                     insert.executeBatch();
                     connection.commit();
-                    long elapsed = System.currentTimeMillis()-STARTED;
-                    double elapsedSec = (double)elapsed/(double)1000;
-                    double per = (double)total/elapsedSec;
-                    LOGGER.debug("considered: "+CONSIDERED.get());
-                    LOGGER.info("committing "+added+ " ("+
-                            total+") in "+elapsed +
-                            " ms " + per + " recs/per second");
+                    long elapsed = System.currentTimeMillis() - STARTED;
+                    double elapsedSec = (double) elapsed / (double) 1000;
+                    double per = (double) total / elapsedSec;
+                    LOGGER.debug("considered: " + CONSIDERED.get());
+                    LOGGER.info("committing " + added + " (" + total + ") in " + elapsed + " ms " +
+                            per + " recs/per second");
                 }
+                int hostId = hostCache.upsert(r.getHost());
                 int i = 0;
                 insert.setString(++i, truncate(r.getUrl(), MAX_URL_LENGTH));
+                insert.setInt(++i, hostId);
                 insert.setString(++i, r.getDigest());
                 insert.setInt(++i, MIME_CACHE.getInt(r.getNormalizedMime()));
                 insert.setInt(++i, DETECTED_MIME_CACHE.getInt(r.getNormalizedDetectedMime()));
@@ -166,11 +186,8 @@ public class PGIndexer extends AbstractRecordProcessor {
                 insert.setInt(++i, r.getLength());
                 insert.addBatch();
                 LOGGER.trace(
-                        StringUtils.joinWith("\t",
-                                r.getUrl(),
-                                r.getDigest(),
-                                r.getNormalizedMime(), r.getNormalizedDetectedMime())
-                );
+                        StringUtils.joinWith("\t", r.getUrl(), r.getDigest(), r.getNormalizedMime(),
+                                r.getNormalizedDetectedMime()));
             } catch (SQLException e) {
                 throw new RuntimeException(e);
             }
@@ -193,6 +210,7 @@ public class PGIndexer extends AbstractRecordProcessor {
     @Override
     public void close() throws IOException {
         try {
+            hostCache.close();
             if (added > 0) {
                 LOGGER.debug("in close about to execute batch");
 
@@ -210,19 +228,19 @@ public class PGIndexer extends AbstractRecordProcessor {
 
         private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
         private final Map<String, Integer> map = new HashMap<>();
-
-        private PreparedStatement insert;
         private final String tableName;
         private final int maxLength;
+        private PreparedStatement insert;
 
         StringCache(String tableName, int maxLength) {
             this.tableName = tableName;
             this.maxLength = maxLength;
 
         }
+
         private void prepareStatement(Connection connection) throws SQLException {
             insert = connection.prepareStatement(
-                    "insert into "+tableName+" (id, name) values (?,?)");
+                    "insert into " + tableName + " (id, name) values (?,?)");
         }
 
 
@@ -257,6 +275,7 @@ public class PGIndexer extends AbstractRecordProcessor {
                     insert.setInt(1, index);
                     insert.setString(2, key);
                     insert.execute();
+                    insert.getConnection().commit();
                 }
             } finally {
                 lock.writeLock().unlock();

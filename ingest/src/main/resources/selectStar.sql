@@ -1,5 +1,5 @@
 select
-'s3://safedocs-dev/' || p.path as fname,
+'s3://S3_BUCKET_HERE/' || p.path as fname,
 p.path as relpath,
 p.size,
 p.shasum256 as shasum_256,

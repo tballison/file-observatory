@@ -42,6 +42,3 @@ COPY target/pdffonts-1.0.0-SNAPSHOT.jar /pdffonts-1.0.0-SNAPSHOT.jar
 ENTRYPOINT ["java","-jar","/pdffonts-1.0.0-SNAPSHOT.jar"]
 #WORKDIR /work
 
-#e.g.
-#docker build -t pdftotext-container .
-#docker run --name pdftotext-runner -v ~/data/safedocs/evalTwo/tim-staging2/docs:/input:ro -v ~/Desktop/output:/output pdftotext-container

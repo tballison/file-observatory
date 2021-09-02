@@ -24,7 +24,7 @@ public class PDFInfoFeatureMapper implements FeatureMapper {
     private static Logger LOGGER = LoggerFactory.getLogger(PDFInfoFeatureMapper.class);
 
     Pattern KEY_VALUE = Pattern.compile("^([^:]+):\\s+(.*?)\\Z");
-
+    Pattern INTEGER = Pattern.compile("^\\s*(\\d+)");
     private static Map<String, String> KEY_VALUE_MAP = new HashMap<>();
     private static Set<String> BOOLEAN_VALS = new HashSet<>();
 
@@ -58,6 +58,15 @@ public class PDFInfoFeatureMapper implements FeatureMapper {
                 if (KEY_VALUE_MAP.containsKey(k)) {
                     if (BOOLEAN_VALS.contains(k)) {
                         v = (v.startsWith("yes")) ? "true" : "false";
+                    }
+                    if (k.equals("Pages")) {
+                        //very rarely, this can be: "24 (including covers)"
+                        //which doesn't make elastic happy because
+                        //it expects an integer
+                        Matcher p = INTEGER.matcher(v);
+                        if (p.find()) {
+                            v = p.group(1);
+                        }
                     }
                     storedDocument.addNonBlankField(KEY_VALUE_MAP.get(k), v);
                 }

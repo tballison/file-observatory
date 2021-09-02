@@ -25,7 +25,6 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.tallison.batchlite.AbstractDirectoryProcessor;
 
 public class TikaClient {
 

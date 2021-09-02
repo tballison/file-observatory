@@ -32,7 +32,7 @@ public class S3Compare {
         try (Writer writer = Files.newBufferedWriter(pwd.resolve("s3-files.txt"))) {
             Set<String> evalThree = load(oneMillion);
             Set<String> s3 = new HashSet<>();
-            String bucket = "safedocs-eval-three";
+            String bucket = "S3_BUCKET";
             AWSCredentialsProvider provider = new ProfileCredentialsProvider("");
             AmazonS3 s3Client = AmazonS3ClientBuilder.standard().withRegion("").withCredentials(provider).build();
             String prefix = "";

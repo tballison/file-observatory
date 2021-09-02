@@ -4,9 +4,8 @@ import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.Options;
-import org.apache.commons.lang3.mutable.MutableInt;
-import org.apache.log4j.Logger;
-import org.tallison.util.MapUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
@@ -38,7 +37,7 @@ import java.util.zip.GZIPInputStream;
 
 public class IndexFileChecker {
 
-    static Logger LOGGER = Logger.getLogger(IndexFileChecker.class);
+    static Logger LOGGER = LoggerFactory.getLogger(IndexFileChecker.class);
 
     private static int DEFAULT_NUM_THREADS = 10;
     private static Path POISON = Paths.get("");
@@ -148,7 +147,7 @@ public class IndexFileChecker {
 
                     return 1;
                 }
-                LOGGER.trace(path);
+                LOGGER.trace(path.getFileName().toString());
                 processFile(path);
             }
         }

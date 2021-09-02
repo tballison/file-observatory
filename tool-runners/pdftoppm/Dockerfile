@@ -41,7 +41,3 @@ COPY target/pdftoppm-1.0.0-SNAPSHOT.jar /pdftoppm-1.0.0-SNAPSHOT.jar
 
 ENTRYPOINT ["java","-jar","/pdftoppm-1.0.0-SNAPSHOT.jar"]
 #WORKDIR /work
-
-#e.g.
-#docker build -t pdftops-container .
-#docker run --name pdftops-runner -v ~/data/safedocs/evalTwo/tim-staging2/docs:/input:ro -v ~/Desktop/output:/output pdftops-container

@@ -5,7 +5,8 @@ import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.Options;
 import org.apache.commons.lang3.mutable.MutableLong;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.tallison.util.MapUtil;
 
 import java.io.BufferedInputStream;
@@ -40,7 +41,7 @@ import java.util.zip.GZIPInputStream;
 
 public class MimeCounter {
 
-    static Logger LOGGER = Logger.getLogger(MimeCounter.class);
+    static Logger LOGGER = LoggerFactory.getLogger(MimeCounter.class);
 
     private static int DEFAULT_NUM_THREADS = 10;
     private static Path POISON = Paths.get("");
@@ -208,7 +209,7 @@ public class MimeCounter {
                     mimeProcessor.close();
                     return mimeProcessor.getMimeCounts();
                 }
-                LOGGER.trace(path);
+                LOGGER.trace(path.getFileName().toString());
                 processFile(path, mimeProcessor);
             }
         }

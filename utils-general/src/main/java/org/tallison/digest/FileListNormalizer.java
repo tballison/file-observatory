@@ -13,7 +13,7 @@ import java.util.regex.Pattern;
 public class FileListNormalizer {
 
     public static void main(String[] args) throws Exception {
-        Path dir = Paths.get("/Users/allison/data/safedocs/eval3/text-challenges");
+        Path dir = Paths.get("PATH");
         for (File f : dir.toFile().listFiles()) {
             if (f.getName().endsWith("-normed.txt")) {
                 continue;

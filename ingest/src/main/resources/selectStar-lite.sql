@@ -1,9 +1,11 @@
 select
-'s3://safedocs-dev/' || p.path as fname,
+'s3://S3_BUCKET_HERE/' || p.path as fname,
 p.path as relpath,
 p.size,
 p.shasum256 as shasum_256,
 p.collection,
+u.universe,
+u.validity as universe_validity,
 a.timeout as arlington_timeout,
 a.exit_value as arlington_exit_value,
 mc.stderr mc_warn,
@@ -127,7 +129,7 @@ from profiles p
 left join arlington a on a.path = p.path
 left join mutoolclean mc on mc.path=p.path
 left join pdfbytes pb on pb.path = p.path
---left join mutooltext mt on mt.path = p.path
+left join mutooltext mt on mt.path = p.path
 left join pdfchecker pc on pc.path = p.path
 left join pdfcpu cpu on cpu.path = p.path
 left join pdfid pid on pid.path = p.path
@@ -137,10 +139,11 @@ left join pdfinfo pinfo on pinfo.path = p.path
 --left join pdfminertext pmt on pmt.path = p.path
 --left join pdftoppm ppm on ppm.path = p.path
 --left join pdftops ps on ps.path = p.path
---left join pdftotext ptt on ptt.path = p.path
+left join pdftotext ptt on ptt.path = p.path
 left join qpdf q on q.path = p.path
 left join tika t on t.path = p.path
 left join clamav c on c.path = p.path
 left join caradoc cd on cd.path = p.path
 left join pdfresurrect pr on pr.path = p.path
 left join xpdffonts xpf on xpf.path = p.path
+left join universes u on u.path = p.path

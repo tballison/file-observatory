@@ -8,8 +8,12 @@ import org.apache.tika.pipes.fetcher.FetcherManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tallison.quaerite.connectors.ESClient;
+import org.tallison.quaerite.connectors.QueryRequest;
+import org.tallison.quaerite.connectors.SearchClientException;
 import org.tallison.quaerite.connectors.SearchClientFactory;
+import org.tallison.quaerite.core.SearchResultSet;
 import org.tallison.quaerite.core.StoredDocument;
+import org.tallison.quaerite.core.queries.TermQuery;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -31,26 +35,37 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class IngesterCLI {
 
     private static StoredDocument STOP_SEMAPHORE = new StoredDocument(null);
     private static Map<String, String> STOP_SEMAPHORE_MAP = new HashMap<>();
-    private static final long MAX_WAIT_MS = 300000;
+    private static final long MAX_WAIT_MS = 1200000;
     private static final Logger LOGGER = LoggerFactory.getLogger(IngesterCLI.class);
+    private static final AtomicInteger CONSIDERED = new AtomicInteger(0);
+    private static AtomicInteger EMITTED = new AtomicInteger(0);
+    private static final int MAX_ES_RETRIES = 3;
+
+    private static final int WORKER_CODE = 0;
+    private static final int EMITTER_CODE = 1;
+    private static final int PIPES_ITERATOR_CODE = 2;
+    private static final int REPORTER_CODE = 2;
 
     public static void main(String[] args) throws Exception {
+
         Connection pg = DriverManager.getConnection(args[0]);
+        pg.setAutoCommit(false);//necessary for select pagination
         String esConnectionString = args[1];
         Fetcher fetcher = FetcherManager.load(Paths.get(args[2])).getFetcher("file-obs-fetcher");
         CompositeFeatureMapper compositeFeatureMapper = new CompositeFeatureMapper();
         String sql = getSelectStar();
-        int numWorkers = 10;
+        int numWorkers = 50;
         int numEmitters = 10;
         ArrayBlockingQueue<Map<String, String>> rows = new ArrayBlockingQueue<>(1000);
         ArrayBlockingQueue<StoredDocument> docs = new ArrayBlockingQueue<>(500);
 
-        ExecutorService executorService = Executors.newFixedThreadPool(numWorkers+numEmitters+1);
+        ExecutorService executorService = Executors.newFixedThreadPool(numWorkers+numEmitters+2);
         ExecutorCompletionService<Integer> executorCompletionService = new ExecutorCompletionService<>(executorService);
 
         for (int i = 0; i < numWorkers; i++) {
@@ -63,13 +78,24 @@ public class IngesterCLI {
         executorCompletionService.submit(new Callable<Integer>() {
             @Override
             public Integer call() throws Exception {
+                ESClient esClient = (ESClient)SearchClientFactory.getClient(esConnectionString);
                 try (Statement st = pg.createStatement()) {
+                    st.setFetchSize(100);
+                    LOGGER.info("pg created statement");
                     try (ResultSet rs = st.executeQuery(sql)) {
+                        LOGGER.info("pg executed query");
+                        int cnt = 0;
                         while (rs.next()) {
                             Map<String, String> row = mapify(rs);
-                            boolean offered = rows.offer(row, MAX_WAIT_MS, TimeUnit.MILLISECONDS);
-                            if (! offered) {
-                                throw new TimeoutException();
+                            String k = row.get("fname");
+                            CONSIDERED.incrementAndGet();
+                            if (! esContains(k, esClient)) {
+                                LOGGER.info("About to add: {}", k);
+                                boolean offered = rows.offer(row, MAX_WAIT_MS, TimeUnit.MILLISECONDS);
+                                if (!offered) {
+                                    throw new TimeoutException();
+                                }
+                                cnt++;
                             }
                         }
                     }
@@ -77,28 +103,84 @@ public class IngesterCLI {
                 for (int i = 0; i < numWorkers; i++) {
                     rows.offer(STOP_SEMAPHORE_MAP, MAX_WAIT_MS, TimeUnit.MILLISECONDS);
                 }
-                return 1;
+                return PIPES_ITERATOR_CODE;
             }
         });
+        Callable<Integer> reporter = new Callable<Integer>() {
+            @Override
+            public Integer call() throws Exception {
+                long start = System.currentTimeMillis();
+               try {
+                   while (true) {
+                       long elapsed = System.currentTimeMillis() - start;
+                       LOGGER.info("considered {}, emitted {} docs in {}ms",
+                               CONSIDERED.get(), EMITTED.get(), elapsed);
+                       Thread.sleep(1000);
+                       if (Thread.currentThread().isInterrupted()) {
+                           return REPORTER_CODE;
+                       }
+                   }
+               } catch (InterruptedException e) {
+                   return REPORTER_CODE;
+               }
+            }
+        };
+        executorCompletionService.submit(reporter);
 
-        int finished = 0;
+        int finishedWorkers = 0;
+        boolean pipesIteratorFinished = false;
+        long start = System.currentTimeMillis();
         try {
-            while (finished < numWorkers + 1) {
+            while (finishedWorkers < numWorkers || pipesIteratorFinished == false) {
                 Future<Integer> future = executorCompletionService.take();
                 if (future != null) {
-                    future.get();
-                    finished++;
-                }
-                if (finished == numWorkers) {
-                    for (int i = 0; i < numEmitters; i++) {
-                        docs.offer(STOP_SEMAPHORE, MAX_WAIT_MS, TimeUnit.MILLISECONDS);
+                    int workerCode = future.get();
+                    if (workerCode == PIPES_ITERATOR_CODE) {
+                        pipesIteratorFinished = true;
+                    } else if (workerCode == WORKER_CODE) {
+                        finishedWorkers++;
+                    } else if (workerCode == REPORTER_CODE) {
+                        //ignore
+                    } else {
+                        throw new IllegalArgumentException("shouldn't have finished: " + workerCode);
                     }
                 }
             }
+            for (int i = 0; i < numEmitters; i++) {
+                docs.offer(STOP_SEMAPHORE, MAX_WAIT_MS, TimeUnit.MILLISECONDS);
+            }
+
+            int finished = 0;
+            while (finished < numEmitters) {
+                LOGGER.info("waiting for emitters");
+                Future<Integer> future = executorCompletionService.take();
+                if (future != null) {
+                    int emitterCode = future.get();
+                    if (emitterCode == EMITTER_CODE) {
+                        finished++;
+                    }
+                }
+            }
+            long elapsed = System.currentTimeMillis() - start;
+            LOGGER.info("finished indexing {} in {}ms",
+                    EMITTED.get(), elapsed);
         } finally {
             executorService.shutdownNow();
         }
 
+    }
+
+    private static boolean esContains(String k, ESClient esClient) {
+        QueryRequest request = new QueryRequest(new TermQuery("_id", k));
+        SearchResultSet searchResultSet = null;
+        try {
+            searchResultSet = esClient.search(request);
+            LOGGER.debug("exists? {}, {}", k, searchResultSet.size());
+            return searchResultSet.size() > 0;
+        } catch (SearchClientException|IOException e) {
+            LOGGER.warn("problem with es {}", k, e);
+        }
+        return false;
     }
 
     protected static Map<String, String> mapify(ResultSet rs) throws SQLException {
@@ -130,17 +212,42 @@ public class IngesterCLI {
             while (true) {
                 StoredDocument sd = docs.poll(MAX_WAIT_MS, TimeUnit.MILLISECONDS);
                 if (sd == STOP_SEMAPHORE) {
-                    esClient.addDocuments(documentList);
-                    return 1;
+                    if (documentList.size() > 0) {
+                        emit(documentList);
+                    }
+                    return EMITTER_CODE;
                 } else if (sd != null) {
                     documentList.add(sd);
                 }
                 if (documentList.size() >= 100) {
-                    LOGGER.info("sending {} docs to es",documentList.size());
-                    esClient.addDocuments(documentList);
-                    documentList.clear();
+                    emit(documentList);
                 }
             }
+        }
+
+        private void emit(List<StoredDocument> documentList) {
+            int sz = documentList.size();
+            LOGGER.info("sending {} docs to es", sz);
+            int tries = 0;
+            Exception ex = null;
+            while (tries++ < MAX_ES_RETRIES) {
+                try {
+                    esClient.addDocuments(documentList);
+                    EMITTED.addAndGet(sz);
+                    documentList.clear();
+                    return;
+                } catch (IOException|SearchClientException e) {
+                    LOGGER.warn("failed to send to elastic " + tries, e);
+                    ex = e;
+                    try {
+                        Thread.sleep(30000);
+                    } catch (InterruptedException exc) {
+                        return;
+                    }
+                    LOGGER.info("waking up after failing to send to elastic");
+                }
+            }
+            LOGGER.warn("failed to upload docs", ex);
         }
     }
 
@@ -165,7 +272,7 @@ public class IngesterCLI {
             while (true) {
                 Map<String, String> row = rows.poll(MAX_WAIT_MS, TimeUnit.MILLISECONDS);
                 if (row == STOP_SEMAPHORE_MAP) {
-                    return 1;
+                    return WORKER_CODE;
                 } else if (row != null) {
                     StoredDocument sd = new StoredDocument(row.get(FeatureMapper.ID_KEY));
                     featureMapper.addFeatures(row, fetcher, sd);

@@ -42,6 +42,3 @@ COPY target/pdftotext-1.0.0-SNAPSHOT.jar /pdftotext-1.0.0-SNAPSHOT.jar
 ENTRYPOINT ["java","-jar","/pdftotext-1.0.0-SNAPSHOT.jar"]
 #WORKDIR /work
 
-#e.g.
-#docker build -t pdftotext-container .
-#docker run --name pdftotext-runner -v ~/data/safedocs/evalTwo/tim-staging2/docs:/input:ro -v ~/Desktop/output:/output pdftotext-container

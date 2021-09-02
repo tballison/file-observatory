@@ -44,7 +44,7 @@ public class CompositeRecordFilter implements RecordFilter {
             rootEl = JsonParser.parseReader(reader);
         }
         if (! rootEl.isJsonObject()) {
-            throw new IOException("Exepected json object as root object");
+            throw new IOException("Expected json object as root object");
         }
         JsonObject root = rootEl.getAsJsonObject();
         boolean caseSensitive = DEFAULT_CASE_SENSITIVE;

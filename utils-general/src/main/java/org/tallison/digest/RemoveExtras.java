@@ -28,7 +28,7 @@ public class RemoveExtras {
         AWSCredentialsProvider provider = new ProfileCredentialsProvider("saml-pub");
         AmazonS3 s3Client =
                 AmazonS3ClientBuilder.standard().withRegion("us-east-1").withCredentials(provider).build();
-        String bucket = "safedocs-eval-three";
+        String bucket = "S3_BUCKET";
         String prefix = "staging2";
         int good = 0;
         int total = 0;

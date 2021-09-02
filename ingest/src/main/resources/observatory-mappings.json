@@ -1,6 +1,6 @@
 {
   "index_patterns": [
-    "file-observatory-202103"
+    "file-observatory-eval-three"
   ],
   "mappings": {
     "_meta": {
@@ -23,6 +23,12 @@
       "size": {
         "type": "long",
         "store": true
+      },
+      "universe" :{
+        "type": "keyword"
+      },
+      "universe_validity" :{
+        "type": "keyword"
       },
       "tk_shasum_256": {
         "type": "keyword"

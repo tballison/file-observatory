@@ -14,3 +14,4 @@ org.tallison.ingest.mappers.TikaFeatureMapper
 org.tallison.ingest.mappers.PDFResurrectMapper
 org.tallison.ingest.mappers.PDFFontsMapper
 org.tallison.ingest.mappers.XPDFFontsMapper
+org.tallison.ingest.mappers.UniverseMapper

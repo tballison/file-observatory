@@ -18,40 +18,11 @@
 package org.tallison.cc;
 
 
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.CommandLineParser;
-import org.apache.commons.cli.DefaultParser;
-import org.apache.commons.cli.Options;
-import org.apache.commons.codec.binary.Base32;
-import org.apache.commons.codec.digest.DigestUtils;
-import org.apache.commons.io.IOUtils;
-import org.apache.http.HttpHost;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.HttpClient;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.HttpClients;
-import org.apache.http.protocol.HttpCoreContext;
-
-import org.apache.tika.config.TikaConfig;
-import org.apache.tika.metadata.Metadata;
-import org.apache.tika.pipes.emitter.Emitter;
-import org.apache.tika.pipes.emitter.EmitterManager;
-import org.apache.tika.pipes.emitter.StreamEmitter;
-import org.apache.tika.pipes.emitter.TikaEmitterException;
-import org.netpreserve.jwarc.MediaType;
-import org.netpreserve.jwarc.WarcPayload;
-import org.netpreserve.jwarc.WarcReader;
-import org.netpreserve.jwarc.WarcRecord;
-import org.netpreserve.jwarc.WarcResponse;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.tallison.cc.index.CCIndexRecord;
-
-
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URI;
-import java.net.URISyntaxException;
+import java.net.InetAddress;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -64,9 +35,10 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Types;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorCompletionService;
@@ -78,47 +50,129 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.zip.GZIPInputStream;
 
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.DefaultParser;
+import org.apache.commons.cli.Options;
+import org.apache.commons.codec.binary.Base32;
+import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.commons.io.IOUtils;
+import org.netpreserve.jwarc.MediaType;
+import org.netpreserve.jwarc.WarcPayload;
+import org.netpreserve.jwarc.WarcReader;
+import org.netpreserve.jwarc.WarcRecord;
+import org.netpreserve.jwarc.WarcResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.tallison.cc.index.CCIndexRecord;
+
+import org.apache.tika.exception.TikaException;
+import org.apache.tika.io.TikaInputStream;
+import org.apache.tika.metadata.Metadata;
+import org.apache.tika.pipes.FetchEmitTuple;
+import org.apache.tika.pipes.emitter.EmitterManager;
+import org.apache.tika.pipes.emitter.StreamEmitter;
+import org.apache.tika.pipes.emitter.TikaEmitterException;
+import org.apache.tika.pipes.fetcher.FetchKey;
+import org.apache.tika.pipes.fetcher.Fetcher;
+import org.apache.tika.pipes.fetcher.FetcherManager;
+import org.apache.tika.pipes.fetcher.RangeFetcher;
+import org.apache.tika.pipes.pipesiterator.PipesIterator;
+import org.apache.tika.utils.StringUtils;
+
 /**
  * Class to read in an index file or a subset of an index file
  * and to "get" those files from cc to a local directory
- *
+ * <p>
  * This relies heavily on centic9's CommonCrawlDocumenDownload.
  * Thank you, Dominik!!!
  */
 public class CCFileFetcher {
 
-    enum FETCH_STATUS {
-        BAD_URL, //0
-        FETCHED_IO_EXCEPTION,//1
-        FETCHED_NOT_200,//2
-        FETCHED_IO_EXCEPTION_READING_ENTITY,//3
-        FETCHED_IO_EXCEPTION_DIGESTING,//4
-        ALREADY_IN_REPOSITORY,//5
-        FETCHED_EXCEPTION_EMITTING,//6
-        ADDED_TO_REPOSITORY; //7
-    }
-
     private final static String AWS_BASE = "https://commoncrawl.s3.amazonaws.com/";
     static Logger LOGGER = LoggerFactory.getLogger(CCFileFetcher.class);
-
     private Base32 base32 = new Base32();
+    private int batchTupleListSize = 500;
+
+    static String clean(String s) {
+        //make sure that the string doesn't contain \t or new line
+        if (s == null) {
+            return "";
+        }
+
+        if (s.startsWith("\"")) {
+            s = s.substring(1);
+        }
+        if (s.endsWith("\"")) {
+            s = s.substring(0, s.length() - 1);
+        }
+        if (s.contains("\"")) {
+            s = "\"" + s.replaceAll("\"", "\"\"") + "\"";
+        }
+        return s.replaceAll("\\s", " ");
+    }
+
+    private static void deleteTmp(Path tmp) {
+        try {
+            Files.delete(tmp);
+        } catch (IOException e1) {
+            LOGGER.error("Couldn't delete tmp file: " + tmp.toAbsolutePath());
+        }
+    }
 
 
-    private void execute(Connection connection,
-                         StreamEmitter emitter, int numThreads,
-                         boolean cleanStart, int max)
-            throws Exception {
+    private static Options getOptions() {
+        Options options = new Options();
+
+        options.addRequiredOption("j", "jdbc", true, "jdbc connection string");
+        options.addRequiredOption("c", "tikaConfig", true,
+                "tikaConfig file from which to load the emitter");
+        options.addOption("n", "numThreads", true, "number of threads");
+        options.addOption("m", "max", true, "max files to retrieve");
+        options.addOption("f", "freshStart", false, "whether or not to delete the cc_fetch and " +
+                "cc_fetch_status tables (default = false)");
+        return options;
+    }
+
+    public static void main(String[] args) throws Exception {
+        CommandLineParser cliParser = new DefaultParser();
+        CommandLine line = cliParser.parse(getOptions(), args);
+        Connection connection = DriverManager.getConnection(line.getOptionValue("j"));
+
+        int max = -1;
+        if (line.hasOption("m")) {
+            max = Integer.parseInt(line.getOptionValue("m"));
+        }
+        CCFileFetcher ccFileFetcher = new CCFileFetcher();
+        boolean freshStart = false;
+        if (line.hasOption("f")) {
+            freshStart = true;
+        }
+        Path tikaConfigPath = Paths.get(line.getOptionValue("c"));
+        int numThreads = (line.hasOption("n")) ? Integer.parseInt(line.getOptionValue("n")) : 5;
+        ccFileFetcher.execute(connection, tikaConfigPath, numThreads, freshStart, max);
+    }
+
+    private void execute(Connection connection, Path tikaConfigPath, int numThreads,
+                         boolean cleanStart, int max) throws Exception {
         connection.setAutoCommit(false);
         createFetchTable(connection, cleanStart);
-        HttpClient httpClient = HttpClients.createDefault();
+        PipesIterator pipesIterator = PipesIterator.build(tikaConfigPath);
 
-        ExecutorService es = Executors.newFixedThreadPool(numThreads+1);
+        ExecutorService es = Executors.newFixedThreadPool(numThreads + 1);
         ExecutorCompletionService<Integer> completionService = new ExecutorCompletionService<>(es);
-        IdIterator idIterator = new IdIterator(connection, numThreads);
+
+        FetchEmitIterator idIterator = new FetchEmitIterator(pipesIterator, numThreads);
         completionService.submit(idIterator);
+        RangeFetcher fetcher =
+                (RangeFetcher)FetcherManager.load(tikaConfigPath).getFetcher(pipesIterator.getFetcherName());
+        StreamEmitter emitter =
+                (StreamEmitter) EmitterManager.load(tikaConfigPath).getEmitter(pipesIterator.getEmitterName());
+
         for (int i = 0; i < numThreads; i++) {
-            completionService.submit(new WarcFileFetcher(connection, httpClient,
-                    idIterator.getQueue(), emitter, max));
+            completionService.submit(new WarcFileFetcher(connection, fetcher,
+                    idIterator.getQueue(), emitter,
+                    max));
         }
 
         int finished = 0;
@@ -130,269 +184,15 @@ public class CCFileFetcher {
             }
         } finally {
             es.shutdownNow();
+            connection.commit();
         }
 
     }
 
-    private class IdIterator implements Callable<Integer> {
-        private final int numThreads;
-        private final Connection connection;
-        ArrayBlockingQueue q = new ArrayBlockingQueue(1000);
-
-        private IdIterator(Connection connection, int numThreads) {
-            this.connection = connection;
-            this.numThreads = numThreads;
-        }
-        ArrayBlockingQueue<Integer> getQueue() {
-            return q;
-        }
-        @Override
-        public Integer call() throws Exception {
-            String sql = getSql("selectWarcFileIdsToFetchFromCC.sql");
-            int idCount = 0;
-            try (Statement st = connection.createStatement()) {
-                try (ResultSet rs = st.executeQuery(sql)) {
-                    while (rs.next()) {
-                        Integer id = rs.getInt(1);
-                        idCount++;
-                        System.out.println("added "+idCount);
-                        boolean offered = q.offer(id, 10, TimeUnit.MINUTES);
-                        if (!offered) {
-                            throw new TimeoutException("timed out after 10 minutes");
-                        }
-                    }
-                }
-            }
-            for (int i = 0; i < numThreads; i++) {
-                boolean offered = q.offer(-1, 10, TimeUnit.MINUTES);
-                if (! offered) {
-                    throw new TimeoutException("timed out after 10 minutes");
-                }
-            }
-            return idCount;
-        }
-    }
-
-    private static class WarcFileFetcher implements Callable<Integer> {
-
-        private static final AtomicInteger COUNT = new AtomicInteger(0);
-        private final HttpClient httpClient;
-        private final ArrayBlockingQueue<Integer> q;
-        private final StreamEmitter emitter;
-        private final int max;
-        private final PreparedStatement insert;
-        private final PreparedStatement select;
-
-        private WarcFileFetcher(Connection connection,
-                                HttpClient httpClient,
-                                ArrayBlockingQueue<Integer> queue,
-                                StreamEmitter emitter, int max) throws IOException, SQLException {
-            this.httpClient = httpClient;
-            this.q = queue;
-            this.emitter = emitter;
-            insert = prepareInsert(connection);
-            select = prepareSelect(connection);
-            this.max = max;
-        }
-
-        @Override
-        public Integer call() throws Exception {
-            int fetched = 0;
-            while (true) {
-                Integer warcId = q.poll(5, TimeUnit.MINUTES);
-                if (warcId < 0) {
-                    insert.close();
-                    select.close();
-                    return fetched;
-                }
-                fetched = fetchFilesInWarcFileId(warcId, fetched);
-            }
-        }
-
-        private int fetchFilesInWarcFileId(Integer warcId, int fetched) throws SQLException, IOException {
-
-            select.clearParameters();
-            select.setInt(1, warcId);
-            int localFetched = 0;
-            try (ResultSet rs = select.executeQuery()) {
-                while (rs.next()) {
-                    processRow(httpClient, rs, insert, emitter);
-                    fetched++;
-                    localFetched++;
-                    if (fetched % 100 == 0) {
-                        insert.executeBatch();
-                    }
-                    if (fetched % 100 == 0) {
-                        LOGGER.info("fetched " + fetched + " files");
-                    }
-                    //should add limit command to sql
-                    if (COUNT.incrementAndGet() > max) {
-                        break;
-                    }
-                }
-            }
-            insert.executeBatch();
-            LOGGER.debug("fetched ({}) for warcId: ({})",
-                    localFetched,
-                    warcId);
-            return fetched;
-        }
-
-
-        private PreparedStatement prepareSelect(Connection connection)
-                throws SQLException, IOException {
-            String sql = getSql("selectFilesToFetchPerWarcId.sql");
-            return connection.prepareStatement(sql);
-        }
-
-
-        private PreparedStatement prepareInsert(Connection connection) throws SQLException {
-            String sql = "insert into cc_fetch values (?, ?, ?, ?)";
-            return connection.prepareStatement(sql);
-        }
-        private void processRow(HttpClient httpClient, ResultSet rs,
-                                PreparedStatement insert, StreamEmitter emitter)
-                throws IOException, SQLException {
-            CCIndexRecord record = new CCIndexRecord();
-            int id = rs.getInt("id");
-            record.setDigest(rs.getString("cc_index_digest"));
-            record.setFilename(rs.getString("warc_file_name"));
-            record.setOffset(rs.getInt("warc_offset"));
-            record.setLength(rs.getInt("warc_length"));
-
-            fetch(id, record, httpClient, insert, emitter);
-        }
-
-        private void fetch(int id, CCIndexRecord r,
-                           HttpClient httpClient, PreparedStatement insert,
-                           StreamEmitter emitter)
-                throws SQLException, IOException {
-
-            String url = AWS_BASE+r.getFilename();
-            URI uri = null;
-            try {
-                uri = new URI(url);
-            } catch (URISyntaxException e) {
-                LOGGER.warn("Bad url: " + url);
-                writeStatus(id, FETCH_STATUS.BAD_URL, insert);
-                return;
-            }
-            HttpHost target = new HttpHost(uri.getHost());
-            String urlPath = uri.getRawPath();
-            if (uri.getRawQuery() != null) {
-                urlPath += "?" + uri.getRawQuery();
-            }
-            HttpGet httpGet = null;
-            try {
-                httpGet = new HttpGet(urlPath);
-            } catch (Exception e) {
-                LOGGER.warn("bad path " + uri.toString(), e);
-                writeStatus(id, FETCH_STATUS.BAD_URL, insert);
-                return;
-            }
-            httpGet.addHeader("Range", r.getOffsetHeader());
-            HttpCoreContext coreContext = new HttpCoreContext();
-            HttpResponse httpResponse = null;
-            try {
-                httpResponse = httpClient.execute(target, httpGet, coreContext);
-            } catch (IOException e) {
-                LOGGER.warn("IOException for " + uri.toString(), e);
-                writeStatus(id, FETCH_STATUS.FETCHED_IO_EXCEPTION, insert);
-                return;
-            }
-
-            if (httpResponse.getStatusLine().getStatusCode() != 200 && httpResponse.getStatusLine().getStatusCode() != 206) {
-                LOGGER.warn("Bad status for " + uri.toString() + " : " + httpResponse.getStatusLine().getStatusCode());
-                writeStatus(id, FETCH_STATUS.FETCHED_NOT_200, insert);
-                return;
-            }
-            Path tmp = null;
-            boolean isTruncated = false;
-            try {
-                //this among other parts is plagiarized from centic9's CommonCrawlDocumentDownload
-                //probably saved me hours.  Thank you, Dominik!
-                tmp = Files.createTempFile("cc-getter", "");
-                try (InputStream is = new GZIPInputStream(httpResponse.getEntity().getContent())) {
-                    WarcReader warcreader = new WarcReader(is);
-                    int i = 0;
-                    //should be a single warc per file
-                    for (WarcRecord record : warcreader) {
-                        if (i++ == 0) {
-                            if (record instanceof WarcResponse && record.contentType().base().equals(MediaType.HTTP)) {
-                                Optional<WarcPayload> payload = ((WarcResponse) record).payload();
-                                if (payload.isPresent()) {
-                                    Files.copy(payload.get().body().stream(),
-                                            tmp,
-                                            StandardCopyOption.REPLACE_EXISTING);
-                                } else {
-                                    LOGGER.warn("payload not present ?! id=" + id);
-                                }
-                            } else {
-                                LOGGER.warn("not a warc response ?! id=" + id);
-                            }
-                        } else {
-                            LOGGER.warn("more than one record ?! id=" + id);
-                        }
-
-                    }
-                }
-            } catch (IOException e) {
-                LOGGER.warn("problem parsing warc file", e);
-                writeStatus(id, FETCH_STATUS.FETCHED_IO_EXCEPTION_READING_ENTITY, insert);
-                deleteTmp(tmp);
-                return;
-            }
-
-            String targetDigest = null;
-            long tmpLength = 0l;
-            try (InputStream is = Files.newInputStream(tmp)) {
-//            digest = base32.encodeAsString(DigestUtils.sha1(is));
-                targetDigest = DigestUtils.sha256Hex(is);
-                tmpLength = Files.size(tmp);
-            } catch (IOException e) {
-                writeStatus(id,FETCH_STATUS.FETCHED_IO_EXCEPTION_DIGESTING, insert);
-                LOGGER.warn("IOException during digesting: " + tmp.toAbsolutePath());
-                deleteTmp(tmp);
-                return;
-            }
-
-            String targetPath = targetDigest.substring(0, 2) + "/" +
-                    targetDigest.substring(2,4)+"/"+targetDigest;
-            System.out.println(targetPath);
-            try (InputStream is = Files.newInputStream(tmp)) {
-                emitter.emit(targetPath, is, new Metadata());
-            } catch (TikaEmitterException|IOException e) {
-                writeStatus(id, FETCH_STATUS.FETCHED_EXCEPTION_EMITTING,
-                        targetDigest, tmpLength, insert);
-                deleteTmp(tmp);
-                return;
-            }
-            writeStatus(id, FETCH_STATUS.ADDED_TO_REPOSITORY,
-                    targetDigest, tmpLength, insert);
-            deleteTmp(tmp);
-        }
-
-        private void writeStatus(int id, FETCH_STATUS status, String digest, long length, PreparedStatement insert) throws SQLException {
-            insert.setInt(1, id);
-            insert.setInt(2, status.ordinal());
-            insert.setString(3, digest);
-            insert.setLong(4, length);
-            insert.addBatch();
-        }
-
-        private void writeStatus(int id, FETCH_STATUS status, PreparedStatement insert) throws SQLException {
-            insert.setInt(1, id);
-            insert.setInt(2, status.ordinal());
-            insert.setNull(3, Types.VARCHAR);
-            insert.setNull(4, Types.BIGINT);
-            insert.addBatch();
-        }
-    }
-
-    private void createFetchTable(Connection connection, boolean cleanStart) throws SQLException  {
+    private void createFetchTable(Connection connection, boolean cleanStart) throws SQLException {
 
         String sql = "select * from cc_fetch limit 1";
-        if (! cleanStart) {
+        if (!cleanStart) {
             //test to see if the table already exists
             boolean createTable = false;
             try (Statement st = connection.createStatement()) {
@@ -413,119 +213,332 @@ public class CCFileFetcher {
             sql = "drop table if exists cc_fetch";
             st.execute(sql);
 
-            sql = "create table cc_fetch (" +
-                    "id integer, " +
-                    "status_id int, "+
-                    "fetched_digest varchar(64), " +
-                    "fetched_length bigint);";
+            sql = "create table cc_fetch (" + "id integer, " + "status_id int, " +
+                    "fetched_digest varchar(64), " + "fetched_length bigint," +
+                    "http_length bigint,"+
+                    "warc_ip_address varchar(64));";
             st.execute(sql);
 
             sql = "drop table if exists cc_fetch_status";
             st.execute(sql);
 
-            sql = "create table cc_fetch_status " +
-                    "(id integer primary key, status varchar(64));";
+            sql = "create table cc_fetch_status " + "(id integer primary key, status varchar(64));";
             st.execute(sql);
 
 
             for (FETCH_STATUS status : FETCH_STATUS.values()) {
 
-                sql = "insert into cc_fetch_status values (" +
-                        status.ordinal() + ",'" + status.name() + "');";
+                sql = "insert into cc_fetch_status values (" + status.ordinal() + ",'" +
+                        status.name() + "');";
                 st.execute(sql);
             }
         }
         connection.commit();
     }
 
-
-
-
-    static String clean(String s) {
-        //make sure that the string doesn't contain \t or new line
-        if (s == null) {
-            return "";
-        }
-
-        if (s.startsWith("\"")) {
-            s = s.substring(1);
-        }
-        if (s.endsWith("\"")) {
-            s = s.substring(0,s.length()-1);
-        }
-        if (s.contains("\"")) {
-            s = "\""+s.replaceAll("\"", "\"\"")+"\"";
-        }
-        return s.replaceAll("\\s", " ");
+    enum FETCH_STATUS {
+        BAD_URL, //0
+        FETCHED_IO_EXCEPTION,//1
+        FETCHED_NOT_200,//2
+        FETCHED_IO_EXCEPTION_READING_ENTITY,//3
+        FETCHED_IO_EXCEPTION_DIGESTING,//4
+        ALREADY_IN_REPOSITORY,//5
+        FETCHED_EXCEPTION_EMITTING,//6
+        ADDED_TO_REPOSITORY,//7
+        TRUNCATED,//8
+        REFETCHED_SUCCESS,//9
+        REFETCHED_BAD_STATUS,//10
+        REFETCHED_CONNECTION_SHUTDOWN,//11
+        REFETCH_UNHAPPY_HOST,//12
+        REFETCHED_TIMEOUT,//13
+        REFETCHED_IO_EXCEPTION,//14
+        REFETCHED_NOT_200,//15
+        REFETCHED_IO_EXCEPTION_READING_ENTITY,//16
+        REFETCHED_IO_EXCEPTION_FILE_LENGTH,//17
+        REFETCHED_IO_EXCEPTION_DIGESTING,//18
+        REFETCHED_EXCEPTION_EMITTING,//19
+        REFETCHED_TRUNCATED,//20
     }
 
-    private static void deleteTmp(Path tmp) {
-        try {
-            Files.delete(tmp);
-        } catch (IOException e1) {
-            LOGGER.error("Couldn't delete tmp file: " + tmp.toAbsolutePath());
-        }
-    }
-    private static String getSql(String sqlFile) throws IOException {
+    private static class WarcFileFetcher implements Callable<Integer> {
 
-        List<String> lines = IOUtils.readLines(
-                CCFileFetcher.class.getResourceAsStream(
-                        "/" + sqlFile),
-                StandardCharsets.UTF_8);
-        StringBuilder sb = new StringBuilder();
-        for (String line : lines) {
-            sb.append(line);
-            sb.append("\n");
-        }
-        return sb.toString();
-    }
-    private static Options getOptions() {
-        Options options = new Options();
+        private static final AtomicInteger COUNT = new AtomicInteger(0);
+        private final RangeFetcher fetcher;
+        private final ArrayBlockingQueue<List<FetchEmitTuple>> q;
+        private final StreamEmitter emitter;
+        private final int max;
+        private final PreparedStatement insert;
 
-        options.addRequiredOption("j", "jdbc", true,
-                "jdbc connection string");
-        options.addRequiredOption("t", "tikaConfig", true,
-                "tikaConfig file from which to load the emitter");
-        options.addOption("n", "numThreads",
-                true, "number of threads");
-        options.addOption("m", "max", true, "max files to retrieve");
-        options.addOption("c", "cleanStart", false,
-                "whether or not to delete the cc_fetch and " +
-                        "cc_fetch_status tables (default = false)");
-        return options;
-    }
-
-    public static void main(String[] args) throws Exception {
-        CommandLineParser cliParser = new DefaultParser();
-        CommandLine line = cliParser.parse(getOptions(), args);
-        Connection connection = DriverManager.getConnection(line.getOptionValue("j"));
-
-        int max = -1;
-        if (line.hasOption("m")) {
-            max = Integer.parseInt(line.getOptionValue("m"));
+        private WarcFileFetcher(Connection connection, RangeFetcher fetcher,
+                                ArrayBlockingQueue<List<FetchEmitTuple>> queue,
+                                StreamEmitter emitter, int max) throws IOException, SQLException {
+            this.fetcher = fetcher;
+            this.q = queue;
+            this.emitter = emitter;
+            insert = prepareInsert(connection);
+            this.max = max;
         }
-        CCFileFetcher ccFileFetcher = new CCFileFetcher();
-        boolean cleanStart = false;
-        if (line.hasOption("c")) {
-            cleanStart = true;
-        }
-        EmitterManager emitterManager =
-                EmitterManager.load(Paths.get(line.getOptionValue("t")));
-        Set<String> emitters = emitterManager.getSupported();
-        String emitterName = "";
-        if (emitters.size() == 1) {
-            for (String n : emitters) {
-                emitterName = n;
+
+        @Override
+        public Integer call() throws Exception {
+            int fetched = 0;
+            while (true) {
+                List<FetchEmitTuple> tuples = q.poll(5, TimeUnit.MINUTES);
+                if (tuples.size() == 0) {
+                    insert.close();
+                    return fetched;
+                }
+                fetched = fetchFiles(tuples, fetched);
             }
         }
-        Emitter emitter = emitterManager.getEmitter(emitterName);
-        if (! (emitter instanceof StreamEmitter)) {
-            throw new IllegalArgumentException("emitter must be a StreamEmitter");
+
+        private int fetchFiles(List<FetchEmitTuple> tuples, int fetched)
+                throws SQLException, TikaException, IOException {
+            for (FetchEmitTuple t : tuples) {
+                processTuple(t);
+                fetched++;
+                if (fetched % 100 == 0) {
+                    insert.executeBatch();
+                    insert.getConnection().commit();
+                }
+                //should add limit command to sql
+                int cnt = COUNT.incrementAndGet();
+                if (cnt > max && max > -1) {
+                    break;
+                }
+                if (cnt % 1000 == 0) {
+                    LOGGER.info("processed {} files", cnt);
+                }
+            }
+
+            insert.executeBatch();
+            insert.getConnection().commit();
+            return fetched;
         }
-        int numThreads = (line.hasOption("n")) ?
-                Integer.parseInt(line.getOptionValue("n")) : 5;
-        ccFileFetcher.execute(connection, (StreamEmitter)emitter,
-                numThreads, cleanStart, max);
+
+
+        private PreparedStatement prepareInsert(Connection connection) throws SQLException {
+            String sql = "insert into cc_fetch values (?, ?, ?, ?, ?, ?)";
+            return connection.prepareStatement(sql);
+        }
+
+        private void processTuple(FetchEmitTuple t) throws IOException, TikaException,
+                SQLException {
+
+            byte[] warcRecordGZBytes = fetch(t);
+            try {
+                parseWarc(t, warcRecordGZBytes);
+            } catch (IOException e) {
+                LOGGER.warn("problem parsing warc file", e);
+                writeStatus(t.getId(), FETCH_STATUS.FETCHED_IO_EXCEPTION_READING_ENTITY, insert);
+                return;
+            }
+        }
+
+        private void processRecord(FetchEmitTuple t, WarcRecord record) throws SQLException,
+                IOException {
+
+            if (!((record instanceof WarcResponse) &&
+                    record.contentType().base().equals(MediaType.HTTP))) {
+                return;
+            }
+            String truncated = t.getMetadata().get("cc_truncated");
+            String ipAddress = "";
+
+            Optional<InetAddress> inetAddress = ((WarcResponse) record).ipAddress();
+
+            if (inetAddress.isPresent()) {
+                ipAddress = inetAddress.get().getHostAddress();
+            }
+
+            Optional<String> httpContentLengthString =
+                    ((WarcResponse) record).http().headers().first(
+                    "Content-Length");
+
+            long httpContentLength = -1;
+            if (httpContentLengthString.isPresent()) {
+                try {
+                    httpContentLength = Long.parseLong(httpContentLengthString.get());
+                } catch (NumberFormatException e) {
+
+                }
+            }
+            if (!StringUtils.isBlank(truncated)) {
+                writeStatus(t.getId(), FETCH_STATUS.TRUNCATED, httpContentLength, ipAddress,
+                        insert);
+            } else {
+                fetchPayload(t, httpContentLength, ipAddress, record);
+            }
+        }
+
+        private void fetchPayload(FetchEmitTuple t, long httpContentLength,
+                                  String ipAddress,
+                                  WarcRecord record)
+                throws IOException, SQLException {
+            Optional<WarcPayload> payload = ((WarcResponse) record).payload();
+            if (!payload.isPresent()) {
+                LOGGER.warn("no payload {}", t.getId());
+                return;
+            }
+            if (payload.get().body().size() == 0) {
+                LOGGER.warn("empty payload id={}", t.getId());
+                return;
+            }
+
+            Path tmp = Files.createTempFile("ccfile-fetcher-", "");
+            try {
+
+                Files.copy(payload.get().body().stream(), tmp, StandardCopyOption.REPLACE_EXISTING);
+                String targetDigest = null;
+                long tmpLength = 0l;
+                try (InputStream is = Files.newInputStream(tmp)) {
+//            digest = base32.encodeAsString(DigestUtils.sha1(is));
+                    targetDigest = DigestUtils.sha256Hex(is);
+                    tmpLength = Files.size(tmp);
+                } catch (IOException e) {
+                    writeStatus(t.getId(), FETCH_STATUS.FETCHED_IO_EXCEPTION_DIGESTING,
+                            httpContentLength,
+                            ipAddress, insert);
+                    LOGGER.warn("IOException during digesting: " + tmp.toAbsolutePath());
+                    return;
+                }
+
+                String targetPath =
+                        targetDigest.substring(0, 2) + "/" + targetDigest.substring(2, 4) + "/" +
+                                targetDigest;
+                Metadata metadata = new Metadata();
+                try (InputStream is = TikaInputStream.get(tmp, metadata)) {
+                    emitter.emit(targetPath, is, metadata);
+                } catch (TikaEmitterException | IOException e) {
+                    writeStatus(t.getId(), FETCH_STATUS.FETCHED_EXCEPTION_EMITTING, targetDigest,
+                            tmpLength, httpContentLength, ipAddress, insert);
+                    LOGGER.warn("problem emitting id={}", t.getId(), e);
+                    return;
+                }
+                writeStatus(t.getId(), FETCH_STATUS.ADDED_TO_REPOSITORY, targetDigest, tmpLength,
+                        httpContentLength,
+                        ipAddress, insert);
+            } finally {
+                deleteTmp(tmp);
+            }
+        }
+
+        private void parseWarc(FetchEmitTuple t, byte[] warcRecordGZBytes) throws SQLException,
+                IOException {
+            //need to leave initial inputstream open while parsing warcrecord
+            //can't just parse record and return
+            try (InputStream is = new GZIPInputStream(
+                    new ByteArrayInputStream(warcRecordGZBytes))) {
+                try (WarcReader warcreader = new WarcReader(is)) {
+
+                    //should be a single warc per file
+                    //return the first
+                    for (WarcRecord record : warcreader) {
+                        processRecord(t, record);
+                        return;
+                    }
+                }
+            }
+        }
+
+        private byte[] fetch(FetchEmitTuple t) throws TikaException, IOException {
+
+            ByteArrayOutputStream bos = new ByteArrayOutputStream();
+            FetchKey fetchKey = t.getFetchKey();
+            try (InputStream is = fetcher.fetch(fetchKey.getFetchKey(), fetchKey.getRangeStart(),
+                    fetchKey.getRangeEnd(), new Metadata())) {
+                IOUtils.copy(is, bos);
+            }
+            return bos.toByteArray();
+        }
+
+        private void writeStatus(String id, FETCH_STATUS status, String digest, long length,
+                                 long httpLength,
+                                 String ipAddress, PreparedStatement insert) throws SQLException {
+            insert.setInt(1, Integer.parseInt(id));
+            insert.setInt(2, status.ordinal());
+            insert.setString(3, digest);
+            insert.setLong(4, length);
+            if (httpLength > -1) {
+                insert.setLong(5, httpLength);
+            } else {
+                insert.setNull(5, Types.BIGINT);
+            }
+            insert.setString(6, ipAddress);
+            insert.addBatch();
+        }
+
+        private void writeStatus(String id, FETCH_STATUS status, long httpLength,
+                                 String ipAddress,
+                                 PreparedStatement insert) throws SQLException {
+            insert.setInt(1, Integer.parseInt(id));
+            insert.setInt(2, status.ordinal());
+            insert.setNull(3, Types.VARCHAR);//retrieved digest
+            insert.setNull(4, Types.BIGINT);//retrived file length
+            if (httpLength > -1) {
+                insert.setLong(5, httpLength);
+            } else {
+                insert.setNull(5, Types.BIGINT);
+            }
+            insert.setString(6, ipAddress);
+            insert.addBatch();
+        }
+        private void writeStatus(String id, FETCH_STATUS status, PreparedStatement insert)
+                throws SQLException {
+            insert.setInt(1, Integer.parseInt(id));
+            insert.setInt(2, status.ordinal());
+            insert.setNull(3, Types.VARCHAR);
+            insert.setNull(4, Types.BIGINT);
+            insert.setNull(5, Types.BIGINT);
+            insert.setNull(6, Types.VARCHAR);
+            insert.addBatch();
+        }
+    }
+
+    private class FetchEmitIterator implements Callable<Integer> {
+        private final int numThreads;
+        private final PipesIterator pipesIterator;
+        private ArrayBlockingQueue q = new ArrayBlockingQueue<List<FetchEmitTuple>>(1000);
+
+        private FetchEmitIterator(PipesIterator pipesIterator, int numThreads) {
+            this.pipesIterator = pipesIterator;
+            this.numThreads = numThreads;
+        }
+
+        ArrayBlockingQueue<List<FetchEmitTuple>> getQueue() {
+            return q;
+        }
+
+        @Override
+        public Integer call() throws Exception {
+            int added = 0;
+            List<FetchEmitTuple> list = new ArrayList<>();
+            for (FetchEmitTuple t : pipesIterator) {
+                if (list.size() >= batchTupleListSize) {
+                    boolean offered = q.offer(list, 30, TimeUnit.MINUTES);
+                    if (!offered) {
+                        throw new TimeoutException("failed to add after 30 minutes");
+                    }
+                    list = new ArrayList<>();
+                }
+                list.add(t);
+                added++;
+            }
+            if (list.size() > 0) {
+                boolean offered = q.offer(list, 10, TimeUnit.MINUTES);
+                if (!offered) {
+                    throw new TimeoutException("failed to add after 30 minutes");
+                }
+            }
+            for (int i = 0; i < numThreads; i++) {
+                boolean offered = q.offer(Collections.EMPTY_LIST, 10, TimeUnit.MINUTES);
+                if (!offered) {
+                    throw new TimeoutException("timed out after 10 minutes");
+                }
+            }
+            LOGGER.info("added {} fetchEmitTuples for processing", added);
+            return added;
+        }
     }
 }
 

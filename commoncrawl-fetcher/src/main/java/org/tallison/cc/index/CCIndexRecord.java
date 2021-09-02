@@ -22,8 +22,10 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonSyntaxException;
 
+import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -53,6 +55,15 @@ public class CCIndexRecord {
 
     public String getUrl() {
         return url;
+    }
+
+    public String getHost() {
+        try {
+            URL u = new URL(url);
+            return u.getHost();
+        } catch (MalformedURLException e) {
+            return "";
+        }
     }
 
     public String getMime() {
@@ -103,6 +114,9 @@ public class CCIndexRecord {
         return truncated;
     }
 
+    public void setTruncated(String truncated) {
+        this.truncated = truncated;
+    }
     public static String normalizeMime(String s) {
         if (s == null) {
             return null;
