@@ -27,6 +27,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -114,7 +115,7 @@ public class PGIndexer extends AbstractRecordProcessor {
                         "id serial primary key," +
                         "host varchar(" + MAX_HOST_LENGTH + ") UNIQUE," +
                         "tld varchar(32)," +
-                        "ip_address varchar(20)," +
+                        "ip_address varchar(64)," +
                         "country varchar(20)," +
                         "latitude float, longitude float)");
 
@@ -153,10 +154,13 @@ public class PGIndexer extends AbstractRecordProcessor {
                 continue;
             }
             CONSIDERED.incrementAndGet();
-
+            if (r.getUrl().equals("http://mesclassesdeneige.be/telecharge" +
+                    ".php?pdf=fichiers/Pages%2050-51%20Ch%C3%A2tel%20(Clos%20Savoyard).pdf")) {
+                System.out.println(r);
+            }
             try {
                 long total = ADDED.getAndIncrement();
-                if (++added % 100 == 0) {
+                if (++added % 1000 == 0) {
                     insert.executeBatch();
                     connection.commit();
                     long elapsed = System.currentTimeMillis() - STARTED;
@@ -168,15 +172,16 @@ public class PGIndexer extends AbstractRecordProcessor {
                 }
                 int hostId = hostCache.upsert(r.getHost());
                 int i = 0;
-                insert.setString(++i, truncate(r.getUrl(), MAX_URL_LENGTH));
+                insert.clearParameters();
+                insert.setString(++i, pgsafe(truncate(r.getUrl(), MAX_URL_LENGTH)));
                 insert.setInt(++i, hostId);
-                insert.setString(++i, r.getDigest());
+                insert.setString(++i, pgsafe(r.getDigest()));
                 insert.setInt(++i, MIME_CACHE.getInt(r.getNormalizedMime()));
                 insert.setInt(++i, DETECTED_MIME_CACHE.getInt(r.getNormalizedDetectedMime()));
                 if (StringUtils.isEmpty(r.getCharset())) {
                     insert.setString(++i, "");
                 } else {
-                    insert.setString(++i, truncate(r.getCharset(), 64));
+                    insert.setString(++i, pgsafe(truncate(r.getCharset(), 64)));
                 }
                 insert.setInt(++i, LANGUAGE_CACHE.getInt(getPrimaryLanguage(r.getLanguages())));
                 insert.setInt(++i, r.getStatus());
@@ -193,6 +198,13 @@ public class PGIndexer extends AbstractRecordProcessor {
             }
         }
         //}
+    }
+
+    private static String pgsafe(String s) {
+        if (s == null) {
+            return "";
+        }
+        return s.replaceAll("\u0000", " ");
     }
 
     private String getPrimaryLanguage(String languages) {
@@ -227,7 +239,7 @@ public class PGIndexer extends AbstractRecordProcessor {
     private static class StringCache {
 
         private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
-        private final Map<String, Integer> map = new HashMap<>();
+        private final Map<String, Integer> map = new ConcurrentHashMap<>();
         private final String tableName;
         private final int maxLength;
         private PreparedStatement insert;
@@ -277,10 +289,10 @@ public class PGIndexer extends AbstractRecordProcessor {
                     insert.execute();
                     insert.getConnection().commit();
                 }
+                return map.get(key);
             } finally {
                 lock.writeLock().unlock();
             }
-            return map.get(key);
         }
 
         public String getTableName() {

@@ -21,12 +21,12 @@ import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.Options;
-import org.apache.commons.codec.binary.Base32;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.http.impl.conn.ConnectionShutdownException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tallison.cc.index.PGIndexer;
+import org.tallison.util.PGUtil;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -42,6 +42,8 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Types;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.Callable;
@@ -53,19 +55,18 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.tika.exception.TikaException;
 import org.apache.tika.exception.TikaTimeoutException;
 import org.apache.tika.io.TikaInputStream;
 import org.apache.tika.metadata.Metadata;
-import org.apache.tika.pipes.FetchEmitTuple;
 import org.apache.tika.pipes.emitter.EmitterManager;
 import org.apache.tika.pipes.emitter.StreamEmitter;
 import org.apache.tika.pipes.emitter.TikaEmitterException;
 import org.apache.tika.pipes.fetcher.Fetcher;
 import org.apache.tika.pipes.fetcher.FetcherManager;
 import org.apache.tika.pipes.fetcher.http.HttpFetcher;
-import org.apache.tika.pipes.pipesiterator.PipesIterator;
 import org.apache.tika.utils.StringUtils;
 
 /**
@@ -80,7 +81,7 @@ public class Refetcher {
 
     private static final int MAX_WAIT_SECONDS = 30;
 
-    private static final String COMPLETED_HOST_SEMAPHORE = "";
+    private static final HostInfo COMPLETED_HOST_SEMAPHORE = new HostInfo(-1, null);
 
     static AtomicInteger WGET_COUNTER = new AtomicInteger(0);
 
@@ -89,11 +90,14 @@ public class Refetcher {
     private static final int MAX_FAILED_FETCHES_PER_HOST = 10;
 
     //Sleep at least this long between requests to the same host
-    private static final long SLEEP_BTWN_FETCHES_PER_HOST_MS = 10000;
+    private static final long SLEEP_BTWN_FETCHES_PER_HOST_MS = 6000;
 
     //Randomly add up to this many milliseconds to sleep per host
-    private static final int ADD_SLEEP_BTWN_FETCHES_PER_HOST_MS = 20000;
+    private static final int ADD_SLEEP_BTWN_FETCHES_PER_HOST_MS = 5000;
 
+    private static AtomicLong FETCHED = new AtomicLong(0);
+    private static long LAST_REPORTED_TIME = System.currentTimeMillis();
+    private static long LAST_REPORTED_FETCHED = 0;
     private static Options getOptions() {
         Options options = new Options();
 
@@ -102,6 +106,7 @@ public class Refetcher {
                 "tika-config.xml file for the pipes iterator, fetcher and emtters");
         options.addOption("f", "freshStart", false, "whether or not to delete the cc_refetch and " +
                 "cc_refetch_status tables (default = false)");
+        options.addOption("r", "retry", false, "whether or not to try previously failed refetches");
         options.addOption("n", "numThreads", true, "number of threads to run");
         return options;
     }
@@ -117,26 +122,31 @@ public class Refetcher {
             cleanStart = true;
         }
 
+        boolean retryRefetches = false;
+        if (line.hasOption('r')) {
+            retryRefetches = true;
+        }
         int numThreads = line.hasOption("n") ? Integer.parseInt(line.getOptionValue('n')) : 5;
         Refetcher refetcher = new Refetcher();
-        refetcher.execute(connection, tikaConfigPath, cleanStart, numThreads);
+        refetcher.execute(connection, tikaConfigPath, cleanStart, retryRefetches, numThreads);
     }
 
     private static void usage() {
     }
 
-    private void execute(Connection connection, Path tikaConfigFile, boolean freshStart, int numThreads)
+    private void execute(Connection connection, Path tikaConfigFile,
+                         boolean freshStart, boolean retryRefetches, int numThreads)
             throws Exception {
 
         createTables(connection, freshStart);
-        ArrayBlockingQueue<String> queue = new ArrayBlockingQueue<String>(1000);
+        ArrayBlockingQueue<HostInfo> queue = new ArrayBlockingQueue<>(1000);
 
         ExecutorService executorService = Executors.newFixedThreadPool(numThreads + 1);
         ExecutorCompletionService<Integer> executorCompletionService =
-                new ExecutorCompletionService<Integer>(executorService);
+                new ExecutorCompletionService<>(executorService);
 
         executorCompletionService.submit(
-                new Enqueuer(connection, queue));
+                new Enqueuer(connection, queue, retryRefetches));
         Fetcher fetcher = FetcherManager.load(tikaConfigFile).getFetcher("fetcher");
         StreamEmitter emitter = (StreamEmitter) EmitterManager.load(tikaConfigFile).getEmitter(
                 "emitter");
@@ -154,6 +164,9 @@ public class Refetcher {
                         future.get();
                     }
                 } catch (InterruptedException | ExecutionException e) {
+                    //at this point in development, go out with a bang
+                    e.printStackTrace();
+                    System.exit(1);
                     executorService.shutdownNow();
                     throw new RuntimeException(e);
                 }
@@ -190,7 +203,8 @@ public class Refetcher {
             st.execute(sql);
 
             sql = "create table cc_refetch (" + "id integer primary key, " + "target_url varchar(" +
-                    PGIndexer.MAX_URL_LENGTH + ")," + "http_status integer," +
+                    PGIndexer.MAX_URL_LENGTH + ")," + "num_redirects integer," +
+                    "http_status integer," +
                     "refetched_timestamp timestamp with time zone);";
 
             st.execute(sql);
@@ -201,27 +215,36 @@ public class Refetcher {
         private int threadId = WGET_COUNTER.getAndIncrement();
         //private final Base32 base32 = new Base32();
 
-        private final ArrayBlockingQueue<String> queue;
-        private final PreparedStatement selectHost;
+        private final ArrayBlockingQueue<HostInfo> queue;
+       // private final PreparedStatement selectHost;
         private final PreparedStatement insertFetchTable;
+        private final PreparedStatement insertRefetchTable;
         private final Fetcher fetcher;
         private final StreamEmitter emitter;
         Random random = new Random();
 
 
-        FetchWorker(ArrayBlockingQueue<String> q, Connection connection, Fetcher fetcher,
+        FetchWorker(ArrayBlockingQueue<HostInfo> q, Connection connection, Fetcher fetcher,
                     StreamEmitter emitter) throws SQLException {
             this.queue = q;
             String sql = "insert into cc_fetch (id, status_id, fetched_digest, fetched_length, " +
-                    "http_length, warc_ip_address) values (?,?,?,?,?,?)";
+                    "http_length, warc_ip_address) values (?,?,?,?,?,?)" +
+                    "on conflict (id) do update set status_id=?, fetched_digest=?," +
+                    "fetched_length=?, http_length=?, warc_ip_address=?";
             insertFetchTable = connection.prepareStatement(sql);
-            sql = "select u.id, u.url " +
+
+            sql = "insert into cc_refetch(id, target_url, num_redirects, http_status, " +
+                    "refetched_timestamp) values (?,?,?,?,current_timestamp(0))" +
+                    " on conflict (id) do update set target_url=?, num_redirects=?," +
+                    " http_status=?, refetched_timestamp=current_timestamp(0)";
+            insertRefetchTable = connection.prepareStatement(sql);
+            /*sql = "select u.id, u.url " +
                     "from cc_urls u " +
                     "join cc_hosts h on u.host = h.id " +
                     "join cc_truncated t on u.truncated=t.id " +
                     "left join cc_fetch f on u.id=f.id " +
-                    "where h.host = ? and length(t.name) > 0 and f.id is null";
-            selectHost = connection.prepareStatement(sql);
+                    "where h.id = ? and length(t.name) > 0 and f.id is null";
+            selectHost = connection.prepareStatement(sql);*/
             this.fetcher = fetcher;
             this.emitter = emitter;
         }
@@ -231,46 +254,39 @@ public class Refetcher {
             int processed = 0;
             while (true) {
                 try {
-
-                    String host = queue.poll(MAX_WAIT_SECONDS, TimeUnit.SECONDS);
-                    if (host == null) {
+                    HostInfo hostInfo = queue.poll(MAX_WAIT_SECONDS, TimeUnit.SECONDS);
+                    if (hostInfo == null) {
                         throw new TimeoutException("waited " + MAX_WAIT_SECONDS + " seconds");
                     }
-                    if (host == COMPLETED_HOST_SEMAPHORE) {
-                        queue.put(host);
+                    if (hostInfo == COMPLETED_HOST_SEMAPHORE) {
+                        queue.put(hostInfo);
                         return 1;
                     }
-                    LOGGER.info(
-                            "About to get host: " + host);
-                    selectHost.clearParameters();
-                    selectHost.setString(1, host);
-                    try (ResultSet rs = selectHost.executeQuery()) {
-                        //this counts fetch exceptions which could be a sign that a host
-                        //has blocked the crawler
-                        AtomicInteger unhappyHosts = new AtomicInteger(0);
-
-                        int i = 0;
-                        while (rs.next()) {
-                            int urlId = rs.getInt(1);
-                            String url = rs.getString(2);
-                            if (unhappyHosts.get() > MAX_FAILED_FETCHES_PER_HOST) {
-                                LOGGER.warn("Too many failed fetches for {}", host);
-                                writeStatus(urlId,
-                                        CCFileFetcher.FETCH_STATUS.REFETCH_UNHAPPY_HOST,
-                                        insertFetchTable);
-                                continue;
-                            }
-                            if (i > 0) {
-                                long sleep = SLEEP_BTWN_FETCHES_PER_HOST_MS +
-                                        random.nextInt(ADD_SLEEP_BTWN_FETCHES_PER_HOST_MS);
-                                LOGGER.info("about to sleep: {}ms", sleep);
-                                Thread.sleep(sleep);
-                            }
-                            LOGGER.info(
-                                    "About to get url: " + url);
-                            wget(urlId, url, unhappyHosts);
-                            i++;
+                    AtomicInteger unhappyHosts = new AtomicInteger(0);
+                    int i = 0;
+                    for (UrlInfo u : hostInfo.urls) {
+                        if (unhappyHosts.get() > MAX_FAILED_FETCHES_PER_HOST) {
+                            LOGGER.warn("Too many failed fetches for {}", hostInfo);
+                            writeStatus(u.urlId, CCFileFetcher.FETCH_STATUS.REFETCH_UNHAPPY_HOST,
+                                    insertFetchTable);
+                            continue;
                         }
+                        if (i > 0) {
+                            long sleep = SLEEP_BTWN_FETCHES_PER_HOST_MS +
+                                    random.nextInt(ADD_SLEEP_BTWN_FETCHES_PER_HOST_MS);
+                            LOGGER.info("about to sleep: {}ms for host {}", sleep, hostInfo.host);
+                            Thread.sleep(sleep);
+                        }
+                        LOGGER.info("About to get url: {}", u.url);
+                        long fetchStart = System.currentTimeMillis();
+                        wget(u.urlId, u.url, unhappyHosts);
+                        long fetchElapsed = System.currentTimeMillis() - fetchStart;
+                        LOGGER.info("got {} in {}ms", u.url, fetchElapsed);
+                        long fetched = FETCHED.incrementAndGet();
+                        if (fetched % 100 == 0) {
+                            logProgress(fetched);
+                        }
+                        i++;
                     }
                     processed++;
                     if (processed % 100 == 0) {
@@ -281,6 +297,19 @@ public class Refetcher {
                     return 1;
                 }
             }
+        }
+
+        private synchronized void logProgress(long fetched) {
+            long recentFetch = fetched - LAST_REPORTED_FETCHED;
+            long elapsed = System.currentTimeMillis() - LAST_REPORTED_TIME;
+            if (elapsed == 0) {
+                return;
+            }
+            double fetchesPerSecond = (double)recentFetch/((double)(elapsed/1000));
+            LOGGER.info("fetched {} total; {} per second ",
+                    fetched, fetchesPerSecond);
+            LAST_REPORTED_TIME = System.currentTimeMillis();
+            LAST_REPORTED_FETCHED = fetched;
         }
 
         private void wget(int urlId, String url, AtomicInteger unhappyHosts) throws SQLException,
@@ -312,52 +341,60 @@ public class Refetcher {
             try (InputStream is = fetcher.fetch(url, metadata)) {
                 Files.copy(is, tmpPath, StandardCopyOption.REPLACE_EXISTING);
             } catch (TikaTimeoutException e) {
-                LOGGER.warn("timeout {}", urlId);
+                LOGGER.warn("timeout {}", url);
                 writeStatus(urlId, CCFileFetcher.FETCH_STATUS.REFETCHED_TIMEOUT,
                         insertFetchTable);
                 return;
             } catch (ConnectionShutdownException e) {
-                LOGGER.warn(Integer.toString(urlId), e);
+                LOGGER.warn(url, e);
                 writeStatus(urlId, CCFileFetcher.FETCH_STATUS.REFETCHED_CONNECTION_SHUTDOWN,
                         insertFetchTable);
                 unhappyHosts.incrementAndGet();
                 return;
             } catch (IOException | TikaException e) {
-                LOGGER.warn(Integer.toString(urlId), e);
+                LOGGER.warn(url, e);
                 writeStatus(urlId, CCFileFetcher.FETCH_STATUS.REFETCHED_IO_EXCEPTION_READING_ENTITY,
                         insertFetchTable);
                 unhappyHosts.incrementAndGet();
+                String targetUrl = metadata.get(HttpFetcher.HTTP_TARGET_URL);
+                Integer status = metadata.getInt(HttpFetcher.HTTP_STATUS_CODE);
+                Integer numRedirects = metadata.getInt(HttpFetcher.HTTP_NUM_REDIRECTS);
+                insertRefetch(urlId, targetUrl, numRedirects, status);
                 return;
             }
+            String targetUrl = metadata.get(HttpFetcher.HTTP_TARGET_URL);
+            String targetIPAddress = metadata.get(HttpFetcher.HTTP_TARGET_IP_ADDRESS);
 
-            int status = metadata.getInt(HttpFetcher.HTTP_STATUS_CODE);
+            Integer status = metadata.getInt(HttpFetcher.HTTP_STATUS_CODE);
+            Integer numRedirects = metadata.getInt(HttpFetcher.HTTP_NUM_REDIRECTS);
             if (status < 200 || status > 299) {
                 unhappyHosts.incrementAndGet();
                 writeStatus(urlId, CCFileFetcher.FETCH_STATUS.REFETCHED_BAD_STATUS,
                         insertFetchTable);
+                insertRefetch(urlId, targetUrl, numRedirects, status);
                 return;
             }
 
             long httpLength = getHttpLength(metadata);
-            String targetUrl = metadata.get(HttpFetcher.HTTP_TARGET_URL);
-            String targetIPAddress = metadata.get(HttpFetcher.HTTP_TARGET_IP_ADDRESS);
 
             if (metadata.get(HttpFetcher.HTTP_FETCH_TRUNCATED) != null) {
                 LOGGER.warn("truncated: {}", urlId);
                 writeStatus(urlId, CCFileFetcher.FETCH_STATUS.REFETCHED_TRUNCATED, httpLength,
                         targetUrl, targetIPAddress,
                         insertFetchTable);
+                insertRefetch(urlId, targetUrl, numRedirects, status);
                 return;
             }
             long fetchedLength = -1;
             try {
                 fetchedLength = Files.size(tmpPath);
             } catch (IOException e) {
-                LOGGER.warn("file length {}", urlId, e);
+                LOGGER.warn("file length {}", url, e);
                 writeStatus(urlId, CCFileFetcher.FETCH_STATUS.REFETCHED_IO_EXCEPTION_FILE_LENGTH,
                         httpLength,
                         targetUrl, targetIPAddress,
                         insertFetchTable);
+                insertRefetch(urlId, targetUrl, numRedirects, status);
                 return;
             }
 
@@ -365,11 +402,12 @@ public class Refetcher {
             try (InputStream is = Files.newInputStream(tmpPath)) {
                 digest = DigestUtils.sha256Hex(is);
             } catch (IOException e) {
-                LOGGER.warn("digesting {}", urlId, e);
+                LOGGER.warn("digesting {}", url, e);
                 writeStatus(urlId, CCFileFetcher.FETCH_STATUS.REFETCHED_IO_EXCEPTION_DIGESTING,
                         httpLength, fetchedLength,
                         targetUrl, targetIPAddress,
                         insertFetchTable);
+                insertRefetch(urlId, targetUrl, numRedirects, status);
                 return;
             }
 
@@ -384,16 +422,33 @@ public class Refetcher {
                 //even if "update" is selected
                 //swallow
             } catch (TikaEmitterException | IOException e) {
-                LOGGER.warn(Integer.toString(urlId), e);
+                LOGGER.warn(url, e);
                 writeStatus(urlId, CCFileFetcher.FETCH_STATUS.REFETCHED_EXCEPTION_EMITTING, httpLength,
                         fetchedLength, targetUrl, targetIPAddress, digest,
                         insertFetchTable);
+                insertRefetch(urlId, targetUrl, numRedirects, status);
                 return;
             }
             writeStatus(urlId, CCFileFetcher.FETCH_STATUS.REFETCHED_SUCCESS, httpLength,
                     fetchedLength, targetUrl, targetIPAddress, digest,
                     insertFetchTable);
+            insertRefetch(urlId, targetUrl, numRedirects, status);
         }
+
+        private void insertRefetch(int urlId, String targetUrl, Integer numRedirects, Integer status)
+                throws SQLException {
+            insertRefetchTable.clearParameters();
+            int i = 0;
+            insertRefetchTable.setInt(++i, urlId);
+            PGUtil.safelySetString(insertRefetchTable, ++i, targetUrl, PGIndexer.MAX_URL_LENGTH );
+            PGUtil.safelySetInteger(insertRefetchTable, ++i, numRedirects);
+            PGUtil.safelySetInteger(insertRefetchTable, ++i, status);
+            PGUtil.safelySetString(insertRefetchTable, ++i, targetUrl, PGIndexer.MAX_URL_LENGTH );
+            PGUtil.safelySetInteger(insertRefetchTable, ++i, numRedirects);
+            PGUtil.safelySetInteger(insertRefetchTable, ++i, status);
+            insertRefetchTable.execute();
+        }
+
 
         private long getHttpLength(Metadata metadata) {
             String len = metadata.get(HttpFetcher.HTTP_HEADER_PREFIX + "Content-Length");
@@ -458,6 +513,29 @@ public class Refetcher {
         } else {
             insert.setString(++i, targetIPAddress);
         }
+        //on conflict
+        insert.setInt(++i, status.ordinal());
+        if (StringUtils.isBlank(digest)) {
+            insert.setNull(++i, Types.VARCHAR);
+        } else {
+            insert.setString(++i, digest);
+        }
+        if (fetchedLength < 0) {
+            insert.setNull(++i, Types.BIGINT);
+        } else {
+            insert.setLong(++i, fetchedLength);
+        }
+        if (httpLength < 0) {
+            insert.setNull(++i, Types.BIGINT);
+        } else {
+            insert.setLong(++i, httpLength);
+        }
+        if (StringUtils.isBlank(targetIPAddress)) {
+            insert.setNull(++i, Types.VARCHAR);
+        } else {
+            insert.setString(++i, targetIPAddress);
+        }
+
         insert.execute();
     }
 
@@ -477,33 +555,107 @@ public class Refetcher {
 
     private class Enqueuer implements Callable<Integer> {
         private final PreparedStatement select;
-        private final ArrayBlockingQueue<String> queue;
+        private final ArrayBlockingQueue<HostInfo> queue;
 
-        public Enqueuer(Connection connection, ArrayBlockingQueue<String> queue) throws SQLException {
+        public Enqueuer(Connection connection, ArrayBlockingQueue<HostInfo> queue,
+                        boolean retryRefetches) throws SQLException {
             this.queue = queue;
-            String sql = "select h.host from cc_urls u\n" +
-                    "join cc_hosts h on u.host = h.id\n" +
-                    "left join cc_fetch f on u.id = f.id\n" +
-                    "where f.id is null\n" +
-                    "group by h.host\n" +
-                    //this shuffles the hosts -- not truly random
-                    "order by length(h.host) % 7, h.host";
+            String sql = "";
+            if (retryRefetches) {
+                sql = "select h.id, h.host, u.id, u.url from cc_urls u " +
+                        "join cc_hosts h on u.host = h.id " +
+                        "join cc_truncated t on u.truncated = t.id "+
+                        "left join cc_fetch f on u.id = f.id " +
+                        "where (f.id is null or f.status_id > 11)  and length(t.name) > 0 " +
+                        //this shuffles the hosts -- not truly random
+                        "order by h.id % 7, h.host";
+            } else {
+                sql = "select h.id, h.host, u.id, u.url from cc_urls u " +
+                        "join cc_hosts h on u.host = h.id " +
+                        "join cc_truncated t on u.truncated = t.id " +
+                        "left join cc_fetch f on u.id = f.id " +
+                        "where f.id is null and length(t.name) > 0 " +
+                        //this shuffles the hosts -- not truly random
+                        "order by h.id % 7, h.host";
+            }
             select = connection.prepareStatement(sql);
         }
 
         @Override
         public Integer call() throws Exception {
+            long enqueued = 0;
+            HostInfo hostInfo = null;
             try (ResultSet rs = select.executeQuery()) {
+                int lastHost = -1;
                 while (rs.next()) {
-                    String host = rs.getString(1);
-                    if (! host.equals(COMPLETED_HOST_SEMAPHORE)) {
-                        //blocking
-                        queue.put(host);
+                    int hostId = rs.getInt(1);
+                    String host = rs.getString(2);
+                    int urlId = rs.getInt(3);
+                    String url = rs.getString(4);
+                    if (hostId == lastHost) {
+                        hostInfo.addUrl(new UrlInfo(urlId, url));
+                    } else {
+                        //this should only happen on first call
+                        if (hostInfo != null) {
+                            //blocking
+                            queue.put(hostInfo);
+                            LOGGER.info("enqueued host={} count={}",
+                                    host, hostInfo.size());
+                            enqueued++;
+                            if (enqueued % 1000 == 0) {
+                                LOGGER.info("enqueued: {}", enqueued);
+                            }
+                        }
+                        hostInfo = new HostInfo(hostId, host);
+                        hostInfo.addUrl(new UrlInfo(urlId, url));
                     }
+                    lastHost = hostId;
                 }
             }
+            if (hostInfo != null) {
+                queue.put(hostInfo);
+            }
             queue.put(COMPLETED_HOST_SEMAPHORE);
+            LOGGER.info("enqueuer has finished; added {}", enqueued);
             return 1;
+        }
+    }
+
+    private static class HostInfo {
+        private final int hostId;
+        private final String host;
+        List<UrlInfo> urls = new ArrayList();
+
+        public HostInfo(int hostId, String host) {
+            this.hostId = hostId;
+            this.host = host;
+        }
+        void addUrl(UrlInfo u) {
+            urls.add(u);
+        }
+
+        int size() {
+            return urls.size();
+        }
+
+        @Override
+        public String toString() {
+            return "HostInfo{" + "hostId=" + hostId + ", host='" + host + '\'' + '}';
+        }
+    }
+
+    private static class UrlInfo {
+        private final int urlId;
+        private final String url;
+
+        public UrlInfo(int urlId, String url) {
+            this.urlId = urlId;
+            this.url = url;
+        }
+
+        @Override
+        public String toString() {
+            return "UrlInfo{" + "urlId=" + urlId + ", url='" + url + '\'' + '}';
         }
     }
 }

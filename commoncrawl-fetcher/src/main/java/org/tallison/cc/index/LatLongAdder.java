@@ -9,6 +9,7 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Types;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorCompletionService;
@@ -21,11 +22,12 @@ import com.maxmind.geoip2.exception.AddressNotFoundException;
 import com.maxmind.geoip2.model.CityResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.tallison.util.PGUtil;
 
 public class LatLongAdder {
 
     public static String MAX_MIND_DB_PATH_PROPERTY_NAME = "MAX_MIND_DB_PATH";
-    private static final HostRecord END_QUEUE = new HostRecord(-1, null);
+    private static final HostRecord END_QUEUE = new HostRecord(-1, null, null);
     private static DatabaseReader MAX_MIND;
     static Logger LOGGER = LoggerFactory.getLogger(LatLongAdder.class);
 
@@ -65,15 +67,18 @@ public class LatLongAdder {
     private static class HostRecord {
         private final int id;
         private final String host;
+        private final String ipAddress;
 
-        public HostRecord(int id, String host) {
+        public HostRecord(int id, String host, String ipAddress) {
             this.id = id;
             this.host = host;
+            this.ipAddress = ipAddress;
         }
 
         @Override
         public String toString() {
-            return "HostRecord{" + "id=" + id + ", host='" + host + '\'' + '}';
+            return "HostRecord{" + "id=" + id + ", host='" + host + '\'' + ", ipAddress='" +
+                    ipAddress + '\'' + '}';
         }
     }
 
@@ -90,11 +95,17 @@ public class LatLongAdder {
 
         @Override
         public Integer call() throws Exception {
-            String sql = "select id, host from cc_hosts";
+            String sql = "select h.id as host_id, h.host, max(warc_ip_address) as ip_address " +
+                    "from cc_hosts h " +
+                    "inner join " +
+                    "cc_urls u on u.host = h.id " +
+                    "left join cc_fetch f on u.id=f.id " +
+                    "where h.country is null " +
+                    "group by h.id, h.host";
             try (ResultSet rs = connection.createStatement().executeQuery(sql)) {
                 while (rs.next()) {
                     //blocking
-                    queue.put(new HostRecord(rs.getInt(1), rs.getString(2)));
+                    queue.put(new HostRecord(rs.getInt(1), rs.getString(2), rs.getString(3)));
                 }
             }
             for (int i = 0; i < numThreads; i++) {
@@ -127,13 +138,29 @@ public class LatLongAdder {
                     return 1;
                 }
                 try {
-                    InetAddress ipAddress = InetAddress.getByName(r.host);
+                    String ipString = r.ipAddress == null ? r.host : r.ipAddress;
+                    InetAddress ipAddress = InetAddress.getByName(ipString);
                     CityResponse cityResponse = MAX_MIND.city(ipAddress);
+                    if (cityResponse == null) {
+                        continue;
+                    }
                     update.clearParameters();
-                    update.setString(1, ipAddress.getHostAddress());
-                    update.setString(2, cityResponse.getCountry().getIsoCode());
-                    update.setDouble(3, cityResponse.getLocation().getLatitude());
-                    update.setDouble(4, cityResponse.getLocation().getLongitude());
+
+                    PGUtil.safelySetString(update, 1, ipAddress.getHostAddress(), 20);
+                    if (cityResponse.getCountry() == null) {
+                        update.setNull(2, Types.VARCHAR);
+                    } else {
+                        PGUtil.safelySetString(update, 2, cityResponse.getCountry().getIsoCode(),
+                                20);
+                    }
+
+                    try {
+                        update.setDouble(3, cityResponse.getLocation().getLatitude());
+                        update.setDouble(4, cityResponse.getLocation().getLongitude());
+                    } catch (NullPointerException e) {
+                        update.setNull(3, Types.DOUBLE);
+                        update.setNull(4, Types.DOUBLE);
+                    }
                     update.setInt(5, r.id);
                     update.execute();
                 } catch (SQLException e) {

@@ -50,6 +50,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.zip.GZIPInputStream;
 
+import com.amazonaws.services.s3.model.AmazonS3Exception;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.DefaultParser;
@@ -91,34 +92,35 @@ public class CCFileFetcher {
 
     private final static String AWS_BASE = "https://commoncrawl.s3.amazonaws.com/";
     static Logger LOGGER = LoggerFactory.getLogger(CCFileFetcher.class);
-    private Base32 base32 = new Base32();
     private int batchTupleListSize = 500;
 
-    static String clean(String s) {
-        //make sure that the string doesn't contain \t or new line
-        if (s == null) {
-            return "";
-        }
-
-        if (s.startsWith("\"")) {
-            s = s.substring(1);
-        }
-        if (s.endsWith("\"")) {
-            s = s.substring(0, s.length() - 1);
-        }
-        if (s.contains("\"")) {
-            s = "\"" + s.replaceAll("\"", "\"\"") + "\"";
-        }
-        return s.replaceAll("\\s", " ");
+    public enum FETCH_STATUS {
+        BAD_URL, //0
+        FETCHED_IO_EXCEPTION,//1
+        FETCHED_NOT_200,//2
+        FETCHED_IO_EXCEPTION_READING_ENTITY,//3
+        FETCHED_IO_EXCEPTION_DIGESTING,//4
+        ALREADY_IN_REPOSITORY,//5
+        FETCHED_EXCEPTION_EMITTING,//6
+        ADDED_TO_REPOSITORY,//7
+        ADDED_TO_REPOSITORY_DIFF_DIGEST,//8
+        EMPTY_PAYLOAD,//9
+        TRUNCATED,//10
+        REFETCHED_SUCCESS,//11
+        REFETCHED_BAD_STATUS,//12
+        REFETCHED_CONNECTION_SHUTDOWN,//13
+        REFETCH_UNHAPPY_HOST,//14
+        REFETCHED_TIMEOUT,//15
+        REFETCHED_IO_EXCEPTION,//16
+        REFETCHED_NOT_200,//17
+        REFETCHED_IO_EXCEPTION_READING_ENTITY,//18
+        REFETCHED_IO_EXCEPTION_FILE_LENGTH,//19
+        REFETCHED_IO_EXCEPTION_DIGESTING,//20
+        REFETCHED_EXCEPTION_EMITTING,//21
+        REFETCHED_TRUNCATED,//22
     }
 
-    private static void deleteTmp(Path tmp) {
-        try {
-            Files.delete(tmp);
-        } catch (IOException e1) {
-            LOGGER.error("Couldn't delete tmp file: " + tmp.toAbsolutePath());
-        }
-    }
+
 
 
     private static Options getOptions() {
@@ -213,7 +215,7 @@ public class CCFileFetcher {
             sql = "drop table if exists cc_fetch";
             st.execute(sql);
 
-            sql = "create table cc_fetch (" + "id integer, " + "status_id int, " +
+            sql = "create table cc_fetch (" + "id integer primary key, " + "status_id int, " +
                     "fetched_digest varchar(64), " + "fetched_length bigint," +
                     "http_length bigint,"+
                     "warc_ip_address varchar(64));";
@@ -236,38 +238,20 @@ public class CCFileFetcher {
         connection.commit();
     }
 
-    enum FETCH_STATUS {
-        BAD_URL, //0
-        FETCHED_IO_EXCEPTION,//1
-        FETCHED_NOT_200,//2
-        FETCHED_IO_EXCEPTION_READING_ENTITY,//3
-        FETCHED_IO_EXCEPTION_DIGESTING,//4
-        ALREADY_IN_REPOSITORY,//5
-        FETCHED_EXCEPTION_EMITTING,//6
-        ADDED_TO_REPOSITORY,//7
-        TRUNCATED,//8
-        REFETCHED_SUCCESS,//9
-        REFETCHED_BAD_STATUS,//10
-        REFETCHED_CONNECTION_SHUTDOWN,//11
-        REFETCH_UNHAPPY_HOST,//12
-        REFETCHED_TIMEOUT,//13
-        REFETCHED_IO_EXCEPTION,//14
-        REFETCHED_NOT_200,//15
-        REFETCHED_IO_EXCEPTION_READING_ENTITY,//16
-        REFETCHED_IO_EXCEPTION_FILE_LENGTH,//17
-        REFETCHED_IO_EXCEPTION_DIGESTING,//18
-        REFETCHED_EXCEPTION_EMITTING,//19
-        REFETCHED_TRUNCATED,//20
-    }
+
 
     private static class WarcFileFetcher implements Callable<Integer> {
 
         private static final AtomicInteger COUNT = new AtomicInteger(0);
+        private static final int MAX_EMIT_EXCEPTION = 100;
         private final RangeFetcher fetcher;
         private final ArrayBlockingQueue<List<FetchEmitTuple>> q;
         private final StreamEmitter emitter;
         private final int max;
         private final PreparedStatement insert;
+        private int emitException = 0;
+        private Base32 base32 = new Base32();
+
 
         private WarcFileFetcher(Connection connection, RangeFetcher fetcher,
                                 ArrayBlockingQueue<List<FetchEmitTuple>> queue,
@@ -288,6 +272,10 @@ public class CCFileFetcher {
                     insert.close();
                     return fetched;
                 }
+                if (emitException > MAX_EMIT_EXCEPTION) {
+                    LOGGER.error("too many emit exceptions");
+                    return 1;
+                }
                 fetched = fetchFiles(tuples, fetched);
             }
         }
@@ -295,7 +283,13 @@ public class CCFileFetcher {
         private int fetchFiles(List<FetchEmitTuple> tuples, int fetched)
                 throws SQLException, TikaException, IOException {
             for (FetchEmitTuple t : tuples) {
-                processTuple(t);
+                try {
+                    processTuple(t);
+                } catch (IOException e) {
+                    LOGGER.warn("problem fetching {}", t.getId(), e);
+                    continue;
+                }
+
                 fetched++;
                 if (fetched % 100 == 0) {
                     insert.executeBatch();
@@ -343,6 +337,7 @@ public class CCFileFetcher {
                 return;
             }
             String truncated = t.getMetadata().get("cc_truncated");
+            String warcDigest = t.getMetadata().get("cc_index_digest");
             String ipAddress = "";
 
             Optional<InetAddress> inetAddress = ((WarcResponse) record).ipAddress();
@@ -367,12 +362,12 @@ public class CCFileFetcher {
                 writeStatus(t.getId(), FETCH_STATUS.TRUNCATED, httpContentLength, ipAddress,
                         insert);
             } else {
-                fetchPayload(t, httpContentLength, ipAddress, record);
+                fetchPayload(t, httpContentLength, ipAddress, warcDigest, record);
             }
         }
 
         private void fetchPayload(FetchEmitTuple t, long httpContentLength,
-                                  String ipAddress,
+                                  String ipAddress, String warcDigest,
                                   WarcRecord record)
                 throws IOException, SQLException {
             Optional<WarcPayload> payload = ((WarcResponse) record).payload();
@@ -382,6 +377,9 @@ public class CCFileFetcher {
             }
             if (payload.get().body().size() == 0) {
                 LOGGER.warn("empty payload id={}", t.getId());
+                writeStatus(t.getId(), FETCH_STATUS.EMPTY_PAYLOAD,
+                        httpContentLength,
+                        ipAddress, insert);
                 return;
             }
 
@@ -391,8 +389,18 @@ public class CCFileFetcher {
                 Files.copy(payload.get().body().stream(), tmp, StandardCopyOption.REPLACE_EXISTING);
                 String targetDigest = null;
                 long tmpLength = 0l;
+                String sha1digest = "";
                 try (InputStream is = Files.newInputStream(tmp)) {
-//            digest = base32.encodeAsString(DigestUtils.sha1(is));
+                    sha1digest = base32.encodeAsString(DigestUtils.sha1(is));
+                } catch (IOException e) {
+                    writeStatus(t.getId(), FETCH_STATUS.FETCHED_IO_EXCEPTION_DIGESTING,
+                            httpContentLength,
+                            ipAddress, insert);
+                    LOGGER.warn("IOException during digesting: " + tmp.toAbsolutePath());
+                    return;
+                }
+
+                try (InputStream is = Files.newInputStream(tmp)) {
                     targetDigest = DigestUtils.sha256Hex(is);
                     tmpLength = Files.size(tmp);
                 } catch (IOException e) {
@@ -403,21 +411,49 @@ public class CCFileFetcher {
                     return;
                 }
 
+                if (! sha1digest.equals(warcDigest)) {
+                    LOGGER.warn("Conflicting digests id={}", t.getId());
+                }
                 String targetPath =
                         targetDigest.substring(0, 2) + "/" + targetDigest.substring(2, 4) + "/" +
                                 targetDigest;
                 Metadata metadata = new Metadata();
+
                 try (InputStream is = TikaInputStream.get(tmp, metadata)) {
                     emitter.emit(targetPath, is, metadata);
+                } catch (AmazonS3Exception e) {
+                    if (e.getMessage() != null && e.getMessage().contains("Please reduce your " +
+                            "request rate")) {
+                        LOGGER.warn("throttling -- aws exception -- please reduce your request " +
+                                        "rate",
+                                t.getId(), e);
+                        try {
+                            Thread.sleep(500);
+                        } catch (InterruptedException ex) {
+                            //swallow
+                        }
+                    } else {
+                        LOGGER.warn("problem emitting id={}", t.getId(), e);
+                    }
+                    writeStatus(t.getId(), FETCH_STATUS.FETCHED_EXCEPTION_EMITTING, targetDigest,
+                            tmpLength, httpContentLength, ipAddress, insert);
+                    emitException++;
+                    return;
                 } catch (TikaEmitterException | IOException e) {
                     writeStatus(t.getId(), FETCH_STATUS.FETCHED_EXCEPTION_EMITTING, targetDigest,
                             tmpLength, httpContentLength, ipAddress, insert);
                     LOGGER.warn("problem emitting id={}", t.getId(), e);
+                    emitException++;
                     return;
                 }
-                writeStatus(t.getId(), FETCH_STATUS.ADDED_TO_REPOSITORY, targetDigest, tmpLength,
-                        httpContentLength,
-                        ipAddress, insert);
+                if (sha1digest.equals(warcDigest)) {
+                    writeStatus(t.getId(), FETCH_STATUS.ADDED_TO_REPOSITORY, targetDigest, tmpLength,
+                            httpContentLength, ipAddress, insert);
+                } else {
+                    writeStatus(t.getId(), FETCH_STATUS.ADDED_TO_REPOSITORY_DIFF_DIGEST,
+                            targetDigest, tmpLength,
+                            httpContentLength, ipAddress, insert);
+                }
             } finally {
                 deleteTmp(tmp);
             }
@@ -540,5 +576,13 @@ public class CCFileFetcher {
             return added;
         }
     }
+    private static void deleteTmp(Path tmp) {
+        try {
+            Files.delete(tmp);
+        } catch (IOException e1) {
+            LOGGER.error("Couldn't delete tmp file: " + tmp.toAbsolutePath());
+        }
+    }
+
 }
 
