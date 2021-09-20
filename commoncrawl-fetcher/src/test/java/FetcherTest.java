@@ -39,7 +39,8 @@ public class FetcherTest {
         //url = "https://www.whatismybrowser.com/detect/what-http-headers-is-my-browser-sending";
         //url = "http://forexcopier.net/FT5-QuickStartGuideJp.pdf";
         url = "https://meglervisning.no/salgsoppgave/hent?instid=MSRCOPS&estateid=906638e5-7bc9-45b8-9eac-c77308ec4682";
-        HttpClient client = HttpClients.custom().disableContentCompression().create().build();
+        url = "https://irma.nps.gov/DataStore/DownloadFile/583612";
+        HttpClient client = HttpClients.custom().create().build();
         HttpGet get = new HttpGet(url);
 
         //get.setHeader("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) " +

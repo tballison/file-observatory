@@ -340,6 +340,11 @@ public class Refetcher {
 
             try (InputStream is = fetcher.fetch(url, metadata)) {
                 Files.copy(is, tmpPath, StandardCopyOption.REPLACE_EXISTING);
+            } catch (NullPointerException e ) {
+                LOGGER.warn("npe {}", url);
+                writeStatus(urlId, CCFileFetcher.FETCH_STATUS.REFETCHED_IO_EXCEPTION,
+                        insertFetchTable);
+                return;
             } catch (TikaTimeoutException e) {
                 LOGGER.warn("timeout {}", url);
                 writeStatus(urlId, CCFileFetcher.FETCH_STATUS.REFETCHED_TIMEOUT,
@@ -428,7 +433,8 @@ public class Refetcher {
                         insertFetchTable);
                 insertRefetch(urlId, targetUrl, numRedirects, status);
                 return;
-            }
+            }//throw socket exception if we can't get to s3.  This should be a showstopper
+
             writeStatus(urlId, CCFileFetcher.FETCH_STATUS.REFETCHED_SUCCESS, httpLength,
                     fetchedLength, targetUrl, targetIPAddress, digest,
                     insertFetchTable);
