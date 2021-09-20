@@ -90,10 +90,10 @@ public class Refetcher {
     private static final int MAX_FAILED_FETCHES_PER_HOST = 10;
 
     //Sleep at least this long between requests to the same host
-    private static final long SLEEP_BTWN_FETCHES_PER_HOST_MS = 6000;
+    private static final long SLEEP_BTWN_FETCHES_PER_HOST_MS = 100;
 
     //Randomly add up to this many milliseconds to sleep per host
-    private static final int ADD_SLEEP_BTWN_FETCHES_PER_HOST_MS = 5000;
+    private static final int ADD_SLEEP_BTWN_FETCHES_PER_HOST_MS = 2000;
 
     private static AtomicLong FETCHED = new AtomicLong(0);
     private static long LAST_REPORTED_TIME = System.currentTimeMillis();
@@ -117,9 +117,9 @@ public class Refetcher {
         Connection connection = DriverManager.getConnection(line.getOptionValue("j"));
         Path tikaConfigPath = Paths.get(line.getOptionValue("c"));
 
-        boolean cleanStart = false;
-        if (line.hasOption("c")) {
-            cleanStart = true;
+        boolean freshStart = false;
+        if (line.hasOption("f")) {
+            freshStart = true;
         }
 
         boolean retryRefetches = false;
@@ -128,7 +128,7 @@ public class Refetcher {
         }
         int numThreads = line.hasOption("n") ? Integer.parseInt(line.getOptionValue('n')) : 5;
         Refetcher refetcher = new Refetcher();
-        refetcher.execute(connection, tikaConfigPath, cleanStart, retryRefetches, numThreads);
+        refetcher.execute(connection, tikaConfigPath, freshStart, retryRefetches, numThreads);
     }
 
     private static void usage() {
@@ -161,7 +161,7 @@ public class Refetcher {
                     Future<Integer> future = executorCompletionService.poll(1, TimeUnit.SECONDS);
                     if (future != null) {
                         completed++;
-                        future.get();
+                        LOGGER.info("finished worker id={}", future.get());
                     }
                 } catch (InterruptedException | ExecutionException e) {
                     //at this point in development, go out with a bang
@@ -251,6 +251,7 @@ public class Refetcher {
 
         @Override
         public Integer call() throws Exception {
+
             int processed = 0;
             while (true) {
                 try {
@@ -260,7 +261,7 @@ public class Refetcher {
                     }
                     if (hostInfo == COMPLETED_HOST_SEMAPHORE) {
                         queue.put(hostInfo);
-                        return 1;
+                        return threadId;
                     }
                     AtomicInteger unhappyHosts = new AtomicInteger(0);
                     int i = 0;
@@ -294,7 +295,7 @@ public class Refetcher {
                     }
                 } catch (InterruptedException e) {
                     e.printStackTrace();
-                    return 1;
+                    return threadId;
                 }
             }
         }
