@@ -26,6 +26,7 @@ public class QPDFJsonExtractor {
     private static Logger LOGGER = LoggerFactory.getLogger(QPDFJsonExtractor.class);
 
     private static final int MAX_DEPTH = 30;
+    private static final String TYPE = "/Type";
     private final Set<String> ignoreValues = new HashSet<>();
 
     private Matcher refMatcher = Pattern.compile("^\\d+ \\d+ R$").matcher("");
@@ -81,9 +82,18 @@ public class QPDFJsonExtractor {
     private void parseObject(String parent, JsonObject obj, QPDFResults results) {
         results.keys.addAll(obj.keySet());
         boolean isParentRef = refMatcher.reset(parent).find();
+        boolean isType = obj.has(TYPE);
+
+        //if this is an object with a /Type value, store
+        //the other keys in the object
+        Set<String> typeKeys = new HashSet<>();
+
         for (String k : obj.keySet()) {
             if (!isParentRef) {
                 results.parentAndKeys.add(parent + "->" + k);
+            }
+            if (isType && ! TYPE.equals(k)) {
+                typeKeys.add(k);
             }
             JsonElement el = obj.get(k);
             if (el.isJsonObject()) {
@@ -111,6 +121,12 @@ public class QPDFJsonExtractor {
 
             if (k.equals("/Filter")) {
                 processFilters(el, results);
+            }
+        }
+        if (isType) {
+            String type = obj.get(TYPE).getAsString();
+            for (String t : typeKeys) {
+                results.typeKeys.add(type + "->" + t);
             }
         }
     }

@@ -29,6 +29,7 @@ public class QPDFFeatureMapper implements FeatureMapper {
     //if a key matches this regex, do not put it in the out of spec key
     public static final Pattern IN_SPEC = Pattern.compile("\\A\\/(?:(?:R|CS|Cs|cs|GS|Gs|gs|P|p|SH|Sh|sh|F|FM|Fm|fm|I|IM|Im|XO|Xo|TT|MC)\\d+)|TT\\d+_\\d+\\Z");
     private static final int MAX_STRING_LENGTH = 100;
+    private static final int MAX_LIST_SIZE = 1000;
     private static Set<String> COMMON_KEYS = new HashSet<>();
 
 
@@ -76,6 +77,8 @@ public class QPDFFeatureMapper implements FeatureMapper {
             storedDocument.addNonBlankField("q_keys_and_values", toList(results.keyValues));
             storedDocument.addNonBlankField("q_max_filter_count",
                     Integer.toString(results.maxFilterCount));
+            storedDocument.addNonBlankField("q_type_keys", toList(results.typeKeys));
+
             //storedDocument.addNonBlankField("q_keys", sort(results.keys));
             //storedDocument.addNonBlankField("q_filters", sort(results.filters));
             //storedDocument.addNonBlankField("q_keys_and_values", sort(results.keyValues));
@@ -97,14 +100,19 @@ public class QPDFFeatureMapper implements FeatureMapper {
         ret.filters = normalize(results.filters);
         ret.keyValues = normalize(results.keyValues);
         ret.parentAndKeys = normalize(results.parentAndKeys);
+        ret.typeKeys = normalize(results.typeKeys);
         ret.keys = normalize(results.keys);
         return ret;
     }
 
     private Set<String> normalize(Set<String> strings) {
         Set<String> ret = new HashSet<>();
+        int i = 0;
         for (String s : strings) {
             ret.add(truncate(ESUtil.stripIllegalUnicode(s)));
+            if (i++ >= MAX_LIST_SIZE) {
+                return ret;
+            }
         }
         return ret;
     }
@@ -140,13 +148,6 @@ public class QPDFFeatureMapper implements FeatureMapper {
         }
     }
 
-
-    private String sort(Set<String> keySet) {
-        List<String> list = new ArrayList<>();
-        list.addAll(keySet);
-        Collections.sort(list);
-        return joinWith(" ", list);
-    }
 
     public static String joinWith(String delimiter, Collection<String> collection) {
         StringBuilder sb = new StringBuilder();

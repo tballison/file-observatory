@@ -1,3 +1,6 @@
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
 import org.junit.Test;
 import org.tallison.ingest.qpdf.QPDFJsonExtractor;
 import org.tallison.ingest.qpdf.QPDFResults;
@@ -32,6 +35,17 @@ public class QPDFJsonExtractorTest {
             //TODO: turn this into an actual test
         }
     }
+
+    @Test
+    public void testTypeKeys() throws Exception {
+        try (Reader reader = getReader("types.json")) {
+            QPDFJsonExtractor ex = new QPDFJsonExtractor();
+            QPDFResults results = ex.extract("id", reader);
+            assertEquals(40, results.typeKeys.size());
+            assertTrue(results.typeKeys.contains("/FontDescriptor->/Ascent"));
+        }
+    }
+
     private Reader getReader(String file) throws IOException {
         return Files.newBufferedReader(getPath(file), StandardCharsets.UTF_8);
     }
