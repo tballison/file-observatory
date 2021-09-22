@@ -84,12 +84,16 @@ public class TestGrammarRunner extends AbstractDirectoryProcessor {
 
             List<String> commandLine = new ArrayList<>();
             commandLine.add("./TestGrammar");
+            commandLine.add("-p");
             commandLine.add(srcPath.toAbsolutePath().toString());
-            commandLine.add("/grammar/tsv/latest");
+            commandLine.add("-t");
+            commandLine.add("/arlington-pdf-model/tsv/latest");
+            commandLine.add("-o");
             commandLine.add(outputPath.toAbsolutePath().toString());
+            commandLine.add("--brief");
 
             ProcessBuilder pb = new ProcessBuilder(commandLine.toArray(new String[commandLine.size()]));
-            pb.directory(new File("/grammar/"));
+            pb.directory(new File("/arlington-pdf-model/bin"));
             FileProcessResult r = ProcessExecutor.execute(pb,
                         timeoutMillis, metadataWriter.getMaxStdoutBuffer(),
                     metadataWriter.getMaxStderrBuffer());

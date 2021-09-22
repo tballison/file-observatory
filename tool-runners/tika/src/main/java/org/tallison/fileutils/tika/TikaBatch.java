@@ -16,15 +16,9 @@
  */
 package org.tallison.fileutils.tika;
 
-import static org.apache.tika.pipes.PipesServer.OOM;
 
-import org.apache.tika.config.TikaConfig;
-import org.apache.tika.exception.TikaConfigException;
-import org.apache.tika.exception.TikaException;
-import org.apache.tika.io.TikaInputStream;
 import org.apache.tika.metadata.Metadata;
 import org.apache.tika.metadata.TikaCoreProperties;
-import org.apache.tika.metadata.serialization.JsonMetadataList;
 import org.apache.tika.pipes.FetchEmitTuple;
 import org.apache.tika.pipes.PipesConfig;
 import org.apache.tika.pipes.PipesParser;
@@ -39,22 +33,11 @@ import org.apache.tika.pipes.pipesiterator.PipesIterator;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.tallison.batchlite.AbstractDirectoryProcessor;
-import org.tallison.batchlite.AbstractFileProcessor;
 import org.tallison.batchlite.ConfigSrc;
 import org.tallison.batchlite.FileProcessResult;
-import org.tallison.batchlite.FileToFileProcessor;
 import org.tallison.batchlite.MetadataWriter;
-import org.tallison.batchlite.ProcessExecutor;
-import org.tallison.batchlite.writer.MetadataWriterFactory;
 
 import java.io.IOException;
-import java.io.Writer;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.Callable;
@@ -62,8 +45,6 @@ import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public class TikaBatch {
 
