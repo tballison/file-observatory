@@ -90,7 +90,6 @@ public class TestGrammarRunner extends AbstractDirectoryProcessor {
             commandLine.add("/arlington-pdf-model/tsv/latest");
             commandLine.add("-o");
             commandLine.add(outputPath.toAbsolutePath().toString());
-            commandLine.add("--brief");
 
             ProcessBuilder pb = new ProcessBuilder(commandLine.toArray(new String[commandLine.size()]));
             pb.directory(new File("/arlington-pdf-model/bin"));
