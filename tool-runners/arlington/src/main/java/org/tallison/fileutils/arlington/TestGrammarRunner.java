@@ -104,7 +104,7 @@ public class TestGrammarRunner extends AbstractDirectoryProcessor {
     public static void main(String[] args) throws Exception {
 
         TestGrammarRunner runner = new TestGrammarRunner(
-                ConfigSrc.build(args, getName(), 1, MAX_BUFFER));
+                ConfigSrc.build(args, getName(), MAX_BUFFER, MAX_BUFFER));
 
         runner.execute();
     }
