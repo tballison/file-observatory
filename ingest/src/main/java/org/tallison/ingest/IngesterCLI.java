@@ -59,7 +59,7 @@ public class IngesterCLI {
         String esConnectionString = args[1];
         Fetcher fetcher = FetcherManager.load(Paths.get(args[2])).getFetcher("file-obs-fetcher");
         CompositeFeatureMapper compositeFeatureMapper = new CompositeFeatureMapper();
-        String sql = getSelectStar();
+        String sql = getSelectStar("selectStar-dev.sql");
         int numWorkers = 50;
         int numEmitters = 10;
         ArrayBlockingQueue<Map<String, String>> rows = new ArrayBlockingQueue<>(1000);
@@ -87,16 +87,16 @@ public class IngesterCLI {
                         int cnt = 0;
                         while (rs.next()) {
                             Map<String, String> row = mapify(rs);
-                            String k = row.get("fname");
+                            String k = row.get("id");
                             CONSIDERED.incrementAndGet();
-                            if (! esContains(k, esClient)) {
+                            //if (! esContains(k, esClient)) {
                                 LOGGER.info("About to add: {}", k);
                                 boolean offered = rows.offer(row, MAX_WAIT_MS, TimeUnit.MILLISECONDS);
                                 if (!offered) {
                                     throw new TimeoutException();
                                 }
                                 cnt++;
-                            }
+                            //}
                         }
                     }
                 }
@@ -191,9 +191,9 @@ public class IngesterCLI {
         return row;
     }
 
-    private static String getSelectStar() throws IOException {
+    private static String getSelectStar(String name) throws IOException {
         return IOUtils.toString(
-                IngesterCLI.class.getResourceAsStream("/selectStar-lite.sql"),
+                IngesterCLI.class.getResourceAsStream("/"+name),
                 StandardCharsets.UTF_8.name());
     }
 

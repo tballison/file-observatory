@@ -1,6 +1,6 @@
 {
   "index_patterns": [
-    "file-observatory-eval-three"
+    "file-observatory-202109"
   ],
   "mappings": {
     "_meta": {
@@ -424,6 +424,9 @@
             "type": "keyword"
           }
         }
+      },
+      "host_location" : {
+        "type": "geo_point"
       }
     }
   },

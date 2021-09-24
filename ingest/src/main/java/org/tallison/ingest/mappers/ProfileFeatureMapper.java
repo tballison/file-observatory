@@ -26,5 +26,6 @@ public class ProfileFeatureMapper implements FeatureMapper {
         storedDocument.addNonBlankField("shasum_256", row.get("shasum_256"));
         storedDocument.addNonBlankField("size", row.get("size"));
         storedDocument.addNonBlankField("collection", row.get("collection"));
+        storedDocument.addNonBlankField("host_location", row.get("host_location"));
     }
 }
