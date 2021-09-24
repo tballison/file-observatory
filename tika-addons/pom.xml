@@ -13,6 +13,7 @@
   <packaging>pom</packaging>
   <modules>
     <module>tika-pipes-reporter</module>
+    <module>tika-eval-multicomparer</module>
   </modules>
 
   <properties>
