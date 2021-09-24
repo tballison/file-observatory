@@ -25,6 +25,17 @@ public class QPDFJsonExtractorTest {
         }
     }
 
+    @Test
+    public void testDebugging2() throws Exception {
+        try (Reader reader = getReader("simple.json")) {
+            QPDFJsonExtractor ex = new QPDFJsonExtractor();
+            QPDFResults results = ex.extract("id", reader);
+            System.out.println(results);
+            //TODO: turn this into an actual test
+        }
+    }
+
+
     //bugtrackers/GHOSTSCRIPT/
     @Test
     public void testDebugging() throws Exception {

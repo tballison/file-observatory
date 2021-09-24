@@ -1,0 +1,152 @@
+{
+  "acroform": {
+    "fields": [],
+    "hasacroform": false,
+    "needappearances": false
+  },
+  "encrypt": {
+    "capabilities": {
+      "accessibility": true,
+      "extract": true,
+      "moddifyannotations": true,
+      "modify": true,
+      "modifyassembly": true,
+      "modifyforms": true,
+      "modifyother": true,
+      "printhigh": true,
+      "printlow": true
+    },
+    "encrypted": false,
+    "ownerpasswordmatched": false,
+    "parameters": {
+      "P": 0,
+      "R": 0,
+      "V": 0,
+      "bits": 0,
+      "filemethod": "none",
+      "key": null,
+      "method": "none",
+      "streammethod": "none",
+      "stringmethod": "none"
+    },
+    "userpasswordmatched": false
+  },
+  "objects": {
+    "1 0 R": {
+      "/CreationDate": "D:20130524165309",
+      "/Producer": "wkhtmltopdf",
+      "/Title": ""
+    },
+    "2 0 R": {
+      "/Count": 8,
+      "/Kids": [
+        "6 0 R",
+        "36 0 R"
+      ],
+      "/ProcSet": [
+        "/PDF",
+        "/Text",
+        "/ImageB",
+        "/ImageC"
+      ],
+      "/Type": "/Pages"
+    },
+    "294 0 R": {
+      "/Pages": "2 0 R",
+      "/Type": "/Catalog"
+    },
+    "trailer": {
+      "/Info": "1 0 R",
+      "/Root": "294 0 R",
+      "/Size": 309
+    }
+  },
+  "outlines": [],
+  "pagelabels": [],
+  "pages": [
+    {
+      "contents": [
+        "32 0 R"
+      ],
+      "images": [],
+      "label": null,
+      "object": "6 0 R",
+      "outlines": [],
+      "pageposfrom1": 1
+    },
+    {
+      "contents": [
+        "64 0 R"
+      ],
+      "images": [],
+      "label": null,
+      "object": "36 0 R",
+      "outlines": [],
+      "pageposfrom1": 2
+    },
+    {
+      "contents": [
+        "101 0 R"
+      ],
+      "images": [],
+      "label": null,
+      "object": "68 0 R",
+      "outlines": [],
+      "pageposfrom1": 3
+    },
+    {
+      "contents": [
+        "148 0 R"
+      ],
+      "images": [],
+      "label": null,
+      "object": "105 0 R",
+      "outlines": [],
+      "pageposfrom1": 4
+    },
+    {
+      "contents": [
+        "186 0 R"
+      ],
+      "images": [],
+      "label": null,
+      "object": "152 0 R",
+      "outlines": [],
+      "pageposfrom1": 5
+    },
+    {
+      "contents": [
+        "229 0 R"
+      ],
+      "images": [],
+      "label": null,
+      "object": "190 0 R",
+      "outlines": [],
+      "pageposfrom1": 6
+    },
+    {
+      "contents": [
+        "263 0 R"
+      ],
+      "images": [],
+      "label": null,
+      "object": "233 0 R",
+      "outlines": [],
+      "pageposfrom1": 7
+    },
+    {
+      "contents": [
+        "295 0 R"
+      ],
+      "images": [],
+      "label": null,
+      "object": "267 0 R",
+      "outlines": [],
+      "pageposfrom1": 8
+    }
+  ],
+  "parameters": {
+    "decodelevel": "generalized"
+  },
+  "version": 1
+}
