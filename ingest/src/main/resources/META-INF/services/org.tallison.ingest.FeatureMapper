@@ -9,9 +9,10 @@ org.tallison.ingest.mappers.PDFInfoFeatureMapper
 #org.tallison.ingest.mappers.PDFMinerMapper
 org.tallison.ingest.mappers.ProfileFeatureMapper
 org.tallison.ingest.mappers.QPDFFeatureMapper
-#org.tallison.ingest.mappers.StatusFeatureMapper
-#org.tallison.ingest.mappers.TikaFeatureMapper
+org.tallison.ingest.mappers.StatusFeatureMapper
+org.tallison.ingest.mappers.TikaFeatureMapper
+org.tallison.ingest.mappers.MultiCompareMapper
 #org.tallison.ingest.mappers.PDFResurrectMapper
 #org.tallison.ingest.mappers.PDFFontsMapper
-#org.tallison.ingest.mappers.XPDFFontsMapper
+org.tallison.ingest.mappers.XPDFFontsMapper
 #org.tallison.ingest.mappers.UniverseMapper

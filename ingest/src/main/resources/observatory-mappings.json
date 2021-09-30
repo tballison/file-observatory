@@ -1,6 +1,6 @@
 {
   "index_patterns": [
-    "file-observatory-202109"
+    "file-observatory-cc-dev"
   ],
   "mappings": {
     "_meta": {
@@ -12,6 +12,9 @@
         "type": "keyword"
       },
       "original_fname": {
+        "type": "keyword"
+      },
+      "detected_mime": {
         "type": "keyword"
       },
       "collection": {
@@ -130,6 +133,10 @@
       },
       "tk_subject": {
         "type": "text"
+      },
+      "tk_percent_unmapped_unicode": {
+        "type": "float",
+        "store": true
       },
       "q_status": {
         "type": "keyword"
@@ -261,6 +268,14 @@
       "pinfo_pages": {
         "type": "integer"
       },
+      "pinfo_created": {
+        "type": "date",
+        "store": true
+      },
+      "pinfo_modified": {
+        "type": "date",
+        "store": true
+      },
       "pc_summary_info": {
         "analyzer": "text_basic",
         "type": "text",
@@ -290,6 +305,30 @@
         "analyzer": "text_basic",
         "type": "text",
         "store": "true"
+      },
+      "mt_num_tokens": {
+        "type": "integer",
+        "store": true
+      },
+      "mt_oov": {
+        "type": "float",
+        "store": true
+      },
+      "mt_lang_detected": {
+        "type": "keyword",
+        "store": true
+      },
+      "ptt_num_tokens": {
+        "type": "integer",
+        "store": true
+      },
+      "ptt_oov": {
+        "type": "float",
+        "store": true
+      },
+      "ptt_lang_detected": {
+        "type": "keyword",
+        "store": true
       },
       "cpu_status": {
         "type": "keyword"
@@ -389,6 +428,18 @@
         "type": "keyword",
         "store": true
       },
+      "overlap_tk_v_mt": {
+        "type": "float",
+        "store": true
+      },
+      "overlap_tk_v_ptt": {
+        "type": "float",
+        "store": true
+      },
+      "overlap_mt_v_ptt": {
+        "type": "float",
+        "store": true
+      },
       "tools_status": {
         "type": "text",
         "analyzer": "ws_lc",
@@ -427,6 +478,15 @@
       },
       "host_location" : {
         "type": "geo_point"
+      },
+      "country": {
+        "type": "keyword"
+      },
+      "tld": {
+        "type": "keyword"
+      },
+      "url": {
+        "type": "keyword"
       }
     }
   },

@@ -29,6 +29,8 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.tika.eval.core.langid.LanguageIDWrapper;
 import org.apache.tika.eval.core.textstats.BasicTokenCountStatsCalculator;
@@ -58,6 +60,8 @@ public class MultiCompareWorker implements Callable<Integer> {
     private static final Property[] EVAL_PROPS = new Property[] {
             NUM_TOKENS, NUM_ALPHA_TOKENS, NUM_COMMON_TOKENS, LANGUAGE, OUT_OF_VOCABULARY,
     };
+
+    private static Logger LOGGER = LoggerFactory.getLogger(MultiCompareWorker.class);
 
     private static final AtomicLong TUPLES_PROCESSED = new AtomicLong(0);
     private final Connection connection;
@@ -100,6 +104,10 @@ public class MultiCompareWorker implements Callable<Integer> {
                     return 1;
                 }
                 process(t);
+                long processed = TUPLES_PROCESSED.incrementAndGet();
+                if (processed % 100 == 0) {
+                    LOGGER.info("processed {}", processed);
+                }
             }
         } finally {
             connection.close();
@@ -148,7 +156,6 @@ public class MultiCompareWorker implements Callable<Integer> {
         for (Float comparison : comparisons) {
             updateFloat(insert, ++i, comparison);
         }
-        System.out.println("finished: " + i);
         insert.execute();
     }
 

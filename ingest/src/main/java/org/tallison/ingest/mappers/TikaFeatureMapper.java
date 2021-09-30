@@ -77,9 +77,13 @@ public class TikaFeatureMapper implements FeatureMapper {
         //TODO -- add this in a better spot.
         storedDocument.addNonBlankField("tk_creator_tool", root.get(TikaCoreProperties.CREATOR_TOOL));
         storedDocument.addNonBlankField("tk_producer", root.get(PDF.DOC_INFO_PRODUCER));//fix
-        storedDocument.addNonBlankField("tk_oov", root.get("tika-eval:oov"));
-        storedDocument.addNonBlankField("tk_num_tokens", root.get("tika-eval:numTokens"));
-        storedDocument.addNonBlankField("tk_lang_detected", root.get("tika-eval:lang"));
+        if (! storedDocument.getFields().keySet().contains("tk_oov")) {
+            storedDocument.addNonBlankField("tk_oov", root.get("tika-eval:oov"));
+            storedDocument.addNonBlankField("tk_num_tokens", root.get("tika-eval:numTokens"));
+            storedDocument.addNonBlankField("tk_lang_detected", root.get("tika-eval:lang"));
+        }
+        storedDocument.addNonBlankField("tk_created", root.get(TikaCoreProperties.CREATED));
+        storedDocument.addNonBlankField("tk_modified", root.get(TikaCoreProperties.MODIFIED));
         String mimeDetailed = root.get(Metadata.CONTENT_TYPE);
         String mime = mimeDetailed;
         if (mimeDetailed != null) {
@@ -100,5 +104,24 @@ public class TikaFeatureMapper implements FeatureMapper {
         storedDocument.addNonBlankField("tk_pdfa_version", root.get(PDF.PDFA_VERSION));
         storedDocument.addNonBlankField("tk_pdf_extension_version", root.get(PDF.PDF_EXTENSION_VERSION));
         storedDocument.addNonBlankField("tk_action_trigger", root.get(PDF.ACTION_TRIGGER));
+        addUnmappedUnicodeChars(root, storedDocument);
+    }
+
+    private void addUnmappedUnicodeChars(Metadata m, StoredDocument sd) {
+        int[] unmapped = m.getIntValues(PDF.UNMAPPED_UNICODE_CHARS_PER_PAGE);
+        int[] chars = m.getIntValues(PDF.CHARACTERS_PER_PAGE);
+
+        int unmappedTotal = 0;
+        int charsTotal = 0;
+        for (int c : unmapped) {
+            unmappedTotal += c;
+        }
+        for (int c : chars) {
+            charsTotal += c;
+        }
+        if (charsTotal > 0) {
+            double unmappedPercent = (double)(unmappedTotal)/(double)(charsTotal);
+            sd.addNonBlankField("tk_percent_unmapped_unicode", Double.toString(unmappedPercent));
+        }
     }
 }

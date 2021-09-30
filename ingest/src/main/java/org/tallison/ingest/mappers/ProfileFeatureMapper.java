@@ -26,6 +26,11 @@ public class ProfileFeatureMapper implements FeatureMapper {
         storedDocument.addNonBlankField("shasum_256", row.get("shasum_256"));
         storedDocument.addNonBlankField("size", row.get("size"));
         storedDocument.addNonBlankField("collection", row.get("collection"));
+        //these are all commoncrawl/web crawl specific... factor into another mapper?
         storedDocument.addNonBlankField("host_location", row.get("host_location"));
+        storedDocument.addNonBlankField("country", row.get("country"));
+        storedDocument.addNonBlankField("tld", row.get("tld"));
+        storedDocument.addNonBlankField("detected_mime", row.get("detected_mime"));
+        storedDocument.addNonBlankField("url", row.get("url"));
     }
 }

@@ -5,7 +5,7 @@ RUN apt-get update && apt-get install g++-8 gcc-8 cmake git -y
 RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-8 800 --slave /usr/bin/g++ g++ /usr/bin/g++-8
 
 #TODO: need to tag specific version
-RUN git clone -b testgrammar-rewrite-pdfium https://github.com/pdf-association/arlington-pdf-model /arlington-pdf-model
+RUN git clone https://github.com/pdf-association/arlington-pdf-model /arlington-pdf-model
 
 RUN cd /arlington-pdf-model/TestGrammar && mkdir LinRelease && cd LinRelease && \
     cmake -DCMAKE_BUILD_TYPE=Release .. && make

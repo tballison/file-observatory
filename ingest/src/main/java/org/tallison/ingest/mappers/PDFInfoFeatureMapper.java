@@ -11,8 +11,14 @@ import org.tallison.quaerite.core.StoredDocument;
 import java.nio.file.Path;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
@@ -27,6 +33,7 @@ public class PDFInfoFeatureMapper implements FeatureMapper {
     Pattern INTEGER = Pattern.compile("^\\s*(\\d+)");
     private static Map<String, String> KEY_VALUE_MAP = new HashMap<>();
     private static Set<String> BOOLEAN_VALS = new HashSet<>();
+    private static Set<String> DATE_VALS = new HashSet<>();
 
     static {
         KEY_VALUE_MAP.put("Producer", "pinfo_producer");
@@ -37,10 +44,14 @@ public class PDFInfoFeatureMapper implements FeatureMapper {
         KEY_VALUE_MAP.put("Optimized", "pinfo_optimized");
         KEY_VALUE_MAP.put("JavaScript", "pinfo_javascript");
         KEY_VALUE_MAP.put("Encrypted", "pinfo_encrypted");
+        KEY_VALUE_MAP.put("CreationDate", "pinfo_created");
+        KEY_VALUE_MAP.put("ModDate",  "pinfo_modified");
         BOOLEAN_VALS.add("Tagged");
         BOOLEAN_VALS.add("Optimized");
         BOOLEAN_VALS.add("JavaScript");
         BOOLEAN_VALS.add("Encrypted");
+        DATE_VALS.add("CreationDate");
+        DATE_VALS.add("ModDate");
 
     }
     @Override
@@ -58,6 +69,8 @@ public class PDFInfoFeatureMapper implements FeatureMapper {
                 if (KEY_VALUE_MAP.containsKey(k)) {
                     if (BOOLEAN_VALS.contains(k)) {
                         v = (v.startsWith("yes")) ? "true" : "false";
+                    } else if (DATE_VALS.contains(k)) {
+                        v = convertDate(v);
                     }
                     if (k.equals("Pages")) {
                         //very rarely, this can be: "24 (including covers)"
@@ -73,5 +86,20 @@ public class PDFInfoFeatureMapper implements FeatureMapper {
             }
         }
         storedDocument.addNonBlankField("pinfo", stdout);
+    }
+
+    private String convertDate(String v) {
+        if (StringUtils.isBlank(v)){
+            return "";
+        }
+        v = v.replaceAll("\\s+", " ").trim();
+        try {
+            Instant instant = LocalDateTime.parse(v,
+                    DateTimeFormatter.ofPattern("EEE MMM d HH:mm:ss yyyy z", Locale.US)).atZone(ZoneId.of("UTC")).toInstant();
+            return DateTimeFormatter.ISO_INSTANT.format(instant);
+        } catch (DateTimeParseException e) {
+            LOGGER.warn("couldn't parse >{}<", v);
+            return "";
+        }
     }
 }

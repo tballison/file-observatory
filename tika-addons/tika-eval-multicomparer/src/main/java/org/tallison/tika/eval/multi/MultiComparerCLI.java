@@ -11,14 +11,19 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.tika.config.ConfigBase;
 import org.apache.tika.config.Initializable;
@@ -34,6 +39,7 @@ import org.apache.tika.utils.StringUtils;
 public class MultiComparerCLI extends ConfigBase implements Initializable {
 
     public static final String TABLE_NAME = "multi_comparisons";
+    private static Logger LOGGER = LoggerFactory.getLogger(MultiComparerCLI.class);
 
     public enum EXTRACT_STATUS {
         MISSING,
@@ -44,11 +50,12 @@ public class MultiComparerCLI extends ConfigBase implements Initializable {
     }
     public static void main(String[] args) throws Exception {
         Path configPath = Paths.get(args[0]);
+        boolean isDelta = args.length > 1;
         PipesIterator pipesIterator = PipesIterator.build(configPath);
         FetcherManager fetcherManager = FetcherManager.load(configPath);
         MultiComparerCLI multiComparerCLI = MultiComparerCLI.load(configPath);
 
-        multiComparerCLI.execute(pipesIterator, fetcherManager);
+        multiComparerCLI.execute(pipesIterator, fetcherManager, isDelta);
     }
 
     public static MultiComparerCLI load(Path configPath) throws IOException, TikaConfigException {
@@ -65,16 +72,18 @@ public class MultiComparerCLI extends ConfigBase implements Initializable {
     private long maxInputStreamLengthBytes = 100_000_000;
     private int numThreads = 10;
 
-    private void execute(PipesIterator pipesIterator, FetcherManager fetcherManager) throws Exception {
+    private void execute(PipesIterator pipesIterator, FetcherManager fetcherManager,
+                         boolean isDelta) throws Exception {
         checkFetchers(fetcherManager);
         Connection connection = DriverManager.getConnection(connectionString);
-        createTable(connection);
+        createTable(connection, isDelta);
         ArrayBlockingQueue<FetchEmitTuple> tuples = new ArrayBlockingQueue<>(1000);
         Enqueuer enqueuer = new Enqueuer(pipesIterator, tuples);
 
         ExecutorService executorService = Executors.newFixedThreadPool(numThreads + 1);
         ExecutorCompletionService<Integer> executorCompletionService =
                 new ExecutorCompletionService<>(executorService);
+
         executorCompletionService.submit(enqueuer);
         for (int i = 0; i < numThreads; i++) {
             executorCompletionService.submit(new MultiCompareWorker(connectionString, tuples,
@@ -102,7 +111,10 @@ public class MultiComparerCLI extends ConfigBase implements Initializable {
 
     }
 
-    private void createTable(Connection connection) throws SQLException {
+    private void createTable(Connection connection, boolean isDelta) throws SQLException {
+        if (isDelta) {
+            return;
+        }
         String sql = "drop table if exists " + TABLE_NAME;
         try (Statement st = connection.createStatement()) {
             st.execute(sql);
@@ -123,7 +135,7 @@ public class MultiComparerCLI extends ConfigBase implements Initializable {
             }
         }
         sql += ")";
-        System.out.println(sql);
+
         try (Statement st = connection.createStatement()) {
             st.execute(sql);
         }
@@ -188,12 +200,16 @@ public class MultiComparerCLI extends ConfigBase implements Initializable {
 
         @Override
         public Integer call() throws Exception {
+            int offered = 0;
             for (FetchEmitTuple tuple : pipesIterator) {
-                System.out.println("offering "+ tuple);
+                if (offered % 1000 == 0) {
+                    LOGGER.info("enqueuer offered: {}", offered);
+                }
                 tuples.offer(tuple);
+                offered++;
             }
             tuples.offer(PipesIterator.COMPLETED_SEMAPHORE);
-            System.out.println("done offering");
+            LOGGER.info("done offering {}", offered);
             return 1;
         }
     }
