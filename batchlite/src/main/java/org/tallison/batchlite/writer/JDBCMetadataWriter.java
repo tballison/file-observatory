@@ -49,8 +49,19 @@ public class JDBCMetadataWriter extends MetadataWriter {
         super(name);
         String table = name;
         isPostgres = connectionString.startsWith("jdbc:postgresql");
-        String sql = "insert into "+table+" values (?,?,?,?,?," +
-                "?,?,?,?,?);";
+        String sql = "insert into "+table+
+                " values (?,?,?,?,?," +
+                         "?,?,?,?,?)" +
+                " on conflict (path) do update " +
+                " set exit_value = ?, " +
+                " timeout=?, " +
+                " process_time_ms=?, " +
+                "stdout=?, " +
+                "stdout_length=?, " +
+                "stdout_truncated=?, " +
+                "stderr=?, " +
+                "stderr_length=?, " +
+                "stderr_truncated=?;";
         try {
             connection = DriverManager.getConnection(connectionString);
             connection.setAutoCommit(false);
@@ -122,6 +133,17 @@ public class JDBCMetadataWriter extends MetadataWriter {
             insert.setString(++i, clean(result.getStderr(), getMaxStderrBuffer()));
             insert.setLong(++i, result.getStderrLength());
             insert.setBoolean(++i, result.isStderrTruncated());
+            //do update
+            insert.setInt(++i, result.getExitValue());
+            insert.setBoolean(++i, result.isTimeout());
+            insert.setLong(++i, result.getProcessTimeMillis());
+            insert.setString(++i, clean(result.getStdout(), getMaxStdoutBuffer()));
+            insert.setLong(++i, result.getStdoutLength());
+            insert.setBoolean(++i, result.isStdoutTruncated());
+            insert.setString(++i, clean(result.getStderr(), getMaxStderrBuffer()));
+            insert.setLong(++i, result.getStderrLength());
+            insert.setBoolean(++i, result.isStderrTruncated());
+
             insert.addBatch();
 
             if (getRecordsWritten() % 20 == 0) {
