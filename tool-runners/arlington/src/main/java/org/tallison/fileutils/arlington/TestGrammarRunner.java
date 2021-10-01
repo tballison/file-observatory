@@ -44,7 +44,7 @@ public class TestGrammarRunner extends AbstractDirectoryProcessor {
     private static final Logger LOG = LoggerFactory.getLogger(TestGrammarRunner.class);
 
     private static final int MAX_BUFFER = 20000;
-    private final long timeoutMillis = 120000;
+    private final long timeoutMillis = 600000;
 
     public static String getName() {
         return "arlington";
