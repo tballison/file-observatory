@@ -96,10 +96,10 @@ public class LatLongAdder {
         @Override
         public Integer call() throws Exception {
             String sql = "select h.id as host_id, h.host, max(warc_ip_address) as ip_address " +
-                    "from cc_hosts h " +
+                    "from sample.cc_hosts h " +
                     "inner join " +
-                    "cc_urls u on u.host = h.id " +
-                    "left join cc_fetch f on u.id=f.id " +
+                    "sample.cc_urls u on u.host = h.id " +
+                    "left join sample.cc_fetch f on u.id=f.id " +
                     "where h.country is null " +
                     "group by h.id, h.host";
             try (ResultSet rs = connection.createStatement().executeQuery(sql)) {
@@ -124,23 +124,27 @@ public class LatLongAdder {
                 SQLException {
             this.connection = connection;
             this.queue = queue;
-            update = connection.prepareStatement("update cc_hosts set " +
+            update = connection.prepareStatement("update sample.cc_hosts set " +
                     "(ip_address, country, latitude, " +
                     "longitude) = (?,?,?,?) where id = ?");
         }
 
         @Override
         public Integer call() throws Exception {
+            int inBatch = 0;
+            int maxBatch = 10000;
             while (true) {
                 //blocking
                 HostRecord r = queue.take();
                 if (r == END_QUEUE) {
+                    update.executeBatch();
                     return 1;
                 }
                 try {
                     String ipString = r.ipAddress == null ? r.host : r.ipAddress;
                     InetAddress ipAddress = InetAddress.getByName(ipString);
                     CityResponse cityResponse = MAX_MIND.city(ipAddress);
+
                     if (cityResponse == null) {
                         continue;
                     }
@@ -162,13 +166,19 @@ public class LatLongAdder {
                         update.setNull(4, Types.DOUBLE);
                     }
                     update.setInt(5, r.id);
-                    update.execute();
+                    update.addBatch();
+                    if (inBatch++ > maxBatch) {
+                        update.executeBatch();
+                        inBatch = 0;
+                    }
                 } catch (SQLException e) {
                     throw e;
                 } catch (UnknownHostException|AddressNotFoundException e) {
                     LOGGER.warn(r.toString(), e);
                 } catch (Exception e) {
                     throw e;
+                } finally {
+                    update.executeBatch();
                 }
             }
         }

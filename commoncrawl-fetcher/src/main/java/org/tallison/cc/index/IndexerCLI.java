@@ -62,6 +62,7 @@ public class IndexerCLI {
         options.addOption("f", "filterFile",
                 true,
                 "json file that describes filters");
+        options.addOption("s", "schema", true, "db schema");
         return options;
     }
 
@@ -86,8 +87,12 @@ public class IndexerCLI {
         }
         IndexerCLI indexer = new IndexerCLI();
         Connection connection = DriverManager.getConnection(jdbc);
+        String schema = "";
+        if (line.hasOption("schema")) {
+            schema = line.getOptionValue("s");
+        }
         try {
-            indexer.execute(tikaConfigPath, connection, filterFile, numThreads, max);
+            indexer.execute(tikaConfigPath, connection, schema, filterFile, numThreads, max);
         } finally {
             connection.commit();
             connection.close();
@@ -95,9 +100,10 @@ public class IndexerCLI {
     }
 
     private void execute(Path tikaConfigPath, Connection connection,
+                         String schema,
                          Path filterFile, int numThreads, int max)
             throws Exception {
-        PGIndexer.init(connection);
+        PGIndexer.init(connection, schema);
 
         RecordFilter filter = CompositeRecordFilter.load(filterFile);
 
@@ -121,7 +127,7 @@ public class IndexerCLI {
             LOGGER.info("added index paths");
             for (int i = 0; i < numThreads; i++) {
                 completionService.submit(new CallableIndexer(paths, fetcher,
-                                new PGIndexer(connection, filter),
+                                new PGIndexer(connection, schema, filter),
                         max, totalProcessed));
             }
 

@@ -66,6 +66,7 @@ import org.netpreserve.jwarc.WarcResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tallison.cc.index.CCIndexRecord;
+import org.tallison.util.PGUtil;
 
 import org.apache.tika.exception.TikaException;
 import org.apache.tika.io.TikaInputStream;
@@ -133,6 +134,7 @@ public class CCFileFetcher {
         options.addOption("m", "max", true, "max files to retrieve");
         options.addOption("f", "freshStart", false, "whether or not to delete the cc_fetch and " +
                 "cc_fetch_status tables (default = false)");
+        options.addOption("s", "schema", true, "schema to use in the db");
         return options;
     }
 
@@ -152,13 +154,14 @@ public class CCFileFetcher {
         }
         Path tikaConfigPath = Paths.get(line.getOptionValue("c"));
         int numThreads = (line.hasOption("n")) ? Integer.parseInt(line.getOptionValue("n")) : 5;
-        ccFileFetcher.execute(connection, tikaConfigPath, numThreads, freshStart, max);
+        String schema = line.hasOption("s") ? line.getOptionValue("s") : "";
+        ccFileFetcher.execute(connection, schema, tikaConfigPath, numThreads, freshStart, max);
     }
 
-    private void execute(Connection connection, Path tikaConfigPath, int numThreads,
+    private void execute(Connection connection, String schema, Path tikaConfigPath, int numThreads,
                          boolean cleanStart, int max) throws Exception {
         connection.setAutoCommit(false);
-        createFetchTable(connection, cleanStart);
+        createFetchTable(connection, schema, cleanStart);
         PipesIterator pipesIterator = PipesIterator.build(tikaConfigPath);
 
         ExecutorService es = Executors.newFixedThreadPool(numThreads + 1);
@@ -172,7 +175,7 @@ public class CCFileFetcher {
                 (StreamEmitter) EmitterManager.load(tikaConfigPath).getEmitter(pipesIterator.getEmitterName());
 
         for (int i = 0; i < numThreads; i++) {
-            completionService.submit(new WarcFileFetcher(connection, fetcher,
+            completionService.submit(new WarcFileFetcher(connection, schema, fetcher,
                     idIterator.getQueue(), emitter,
                     max));
         }
@@ -191,9 +194,9 @@ public class CCFileFetcher {
 
     }
 
-    private void createFetchTable(Connection connection, boolean cleanStart) throws SQLException {
+    private void createFetchTable(Connection connection, String schema, boolean cleanStart) throws SQLException {
 
-        String sql = "select * from cc_fetch limit 1";
+        String sql = "select * from " + PGUtil.getTable(schema, "cc_fetch") + " limit 1";
         if (!cleanStart) {
             //test to see if the table already exists
             boolean createTable = false;
@@ -206,31 +209,36 @@ public class CCFileFetcher {
             } catch (SQLException e) {
                 //table doesn't exist
                 createTable = true;
+                connection.rollback();
             }
             if (!createTable) {
                 return;
             }
         }
         try (Statement st = connection.createStatement()) {
-            sql = "drop table if exists cc_fetch";
+            sql = "drop table if exists " + PGUtil.getTable(schema, "cc_fetch");
             st.execute(sql);
 
-            sql = "create table cc_fetch (" + "id integer primary key, " + "status_id int, " +
+            sql = "create table " + PGUtil.getTable(schema, "cc_fetch") +
+                    " (" + "id integer primary key, " + "status_id int, " +
                     "fetched_digest varchar(64), " + "fetched_length bigint," +
                     "http_length bigint,"+
                     "warc_ip_address varchar(64));";
             st.execute(sql);
 
-            sql = "drop table if exists cc_fetch_status";
+            sql = "drop table if exists " + PGUtil.getTable(schema, "cc_fetch_status");
             st.execute(sql);
 
-            sql = "create table cc_fetch_status " + "(id integer primary key, status varchar(64));";
+            sql = "create table " + PGUtil.getTable(schema, "cc_fetch_status")
+                    + " (id integer " +
+                    "primary key, status varchar(64));";
             st.execute(sql);
 
 
             for (FETCH_STATUS status : FETCH_STATUS.values()) {
 
-                sql = "insert into cc_fetch_status values (" + status.ordinal() + ",'" +
+                sql = "insert into " +PGUtil.getTable(schema, "cc_fetch_status")
+                                +" values (" + status.ordinal() + ",'" +
                         status.name() + "');";
                 st.execute(sql);
             }
@@ -253,13 +261,13 @@ public class CCFileFetcher {
         private Base32 base32 = new Base32();
 
 
-        private WarcFileFetcher(Connection connection, RangeFetcher fetcher,
+        private WarcFileFetcher(Connection connection, String schema, RangeFetcher fetcher,
                                 ArrayBlockingQueue<List<FetchEmitTuple>> queue,
                                 StreamEmitter emitter, int max) throws IOException, SQLException {
             this.fetcher = fetcher;
             this.q = queue;
             this.emitter = emitter;
-            insert = prepareInsert(connection);
+            insert = prepareInsert(connection, schema);
             this.max = max;
         }
 
@@ -311,8 +319,9 @@ public class CCFileFetcher {
         }
 
 
-        private PreparedStatement prepareInsert(Connection connection) throws SQLException {
-            String sql = "insert into cc_fetch values (?, ?, ?, ?, ?, ?)";
+        private PreparedStatement prepareInsert(Connection connection, String schema) throws SQLException {
+            String sql = "insert into " + PGUtil.getTable(schema, "cc_fetch")
+                    + " values (?, ?, ?, ?, ?, ?)";
             return connection.prepareStatement(sql);
         }
 

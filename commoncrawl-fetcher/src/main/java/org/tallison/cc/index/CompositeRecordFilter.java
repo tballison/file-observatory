@@ -33,7 +33,9 @@ public class CompositeRecordFilter implements RecordFilter {
     private StringFilter regexDetectedMimesInclude;
 
     private boolean defaultInclude = false;
+    private float defaultProbability = 1.0f;
 
+    private Random random = new Random(314159);
     public static RecordFilter load(Path jsonFile) throws IOException {
         if (jsonFile == null) {
             return new AcceptAll();
@@ -96,6 +98,9 @@ public class CompositeRecordFilter implements RecordFilter {
         if (root.has("defaultInclude")) {
             filter.defaultInclude = root.get("defaultInclude").getAsBoolean();
         }
+        if (root.has("defaultProbability")) {
+            filter.defaultProbability = root.get("defaultProbability").getAsFloat();
+        }
         return filter;
     }
 
@@ -114,6 +119,14 @@ public class CompositeRecordFilter implements RecordFilter {
 
         if (!statusInclude.accept(record.getStatus())) {
             return false;
+        }
+        //TODO -- clean this up
+        if (defaultProbability < 1.0f && defaultProbability >= 0.0f) {
+            if (random.nextFloat() < defaultProbability) {
+                return true;
+            } else {
+                return false;
+            }
         }
 
         RESULT r = mimesInclude.accept(record.getNormalizedMime());

@@ -8,6 +8,8 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Locale;
 
+import org.apache.commons.lang3.StringUtils;
+
 public class HostUpsert {
 
     private final String tableName;
@@ -16,17 +18,17 @@ public class HostUpsert {
     private PreparedStatement insert;
     private PreparedStatement select;
 
-    public HostUpsert(Connection connection, String tableName, String columnName,
+    public HostUpsert(Connection connection, String schema, String tableName,
                       int maxLength) throws SQLException {
-        this.tableName = "cc_hosts";
+        this.tableName = StringUtils.isAllBlank(schema) ? tableName : schema+"."+tableName;
         this.columnName = "host";
         this.maxLength = maxLength;
 
         this.insert = connection.prepareStatement(
-                "insert into " + tableName + " (" + columnName + ", tld) values (?,?)" +
+                "insert into " + this.tableName + " (" + columnName + ", tld) values (?,?)" +
                         " on CONFLICT (" + columnName + ") DO NOTHING");
         this.select = connection.prepareStatement(
-                "select id from " + tableName + " where " + columnName + "=?");        }
+                "select id from " + this.tableName + " where " + columnName + "=?");        }
 
 
     public int upsert(String key) throws SQLException {

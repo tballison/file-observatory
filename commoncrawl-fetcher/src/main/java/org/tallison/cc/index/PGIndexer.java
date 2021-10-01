@@ -36,6 +36,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tallison.util.HostUpsert;
+import org.tallison.util.PGUtil;
 
 public class PGIndexer extends AbstractRecordProcessor {
     public static final int MAX_URL_LENGTH = 10000;
@@ -43,13 +44,12 @@ public class PGIndexer extends AbstractRecordProcessor {
     public static final int MAX_HOST_LENGTH = 256;
     private static final AtomicLong ADDED = new AtomicLong(0);
     private static final AtomicLong CONSIDERED = new AtomicLong(0);
-    private static final StringCache MIME_CACHE = new StringCache("cc_mimes", 2000);
-    private static final StringCache DETECTED_MIME_CACHE =
-            new StringCache("cc_detected_mimes", 2000);
-    private static final StringCache LANGUAGE_CACHE = new StringCache("cc_languages", 2000);
-    private static final StringCache TRUNCATED_CACHE = new StringCache("cc_truncated", 12);
-    private static final StringCache WARC_FILENAME_CACHE =
-            new StringCache("cc_warc_file_name", 200);
+    private static StringCache MIME_CACHE = null;
+
+    private static StringCache DETECTED_MIME_CACHE = null;
+    private static StringCache LANGUAGE_CACHE = null;
+    private static StringCache TRUNCATED_CACHE = null;
+    private static StringCache WARC_FILENAME_CACHE = null;
     private static final long STARTED = System.currentTimeMillis();
     static Logger LOGGER = LoggerFactory.getLogger(PGIndexer.class);
     static AtomicInteger THREAD_COUNTER = new AtomicInteger(-1);
@@ -58,13 +58,15 @@ public class PGIndexer extends AbstractRecordProcessor {
     private final Connection connection;
     private final RecordFilter recordFilter;
     private final HostUpsert hostCache;
+    private final String schema;
     private long added = 0;
 
-    public PGIndexer(Connection connection, RecordFilter recordFilter) throws SQLException {
+    public PGIndexer(Connection connection, String schema, RecordFilter recordFilter) throws SQLException {
         this.connection = connection;
         this.recordFilter = recordFilter;
+        this.schema = schema;
         this.insert = connection.prepareStatement(
-                "insert into cc_urls (" +
+                "insert into " + PGUtil.getTable(schema, "cc_urls") + "(" +
                         "url, host, digest, mime, detected_mime,"+
                         " charset, languages, status, truncated, warc_file_name, "+
                         "warc_offset, warc_length) values" +
@@ -73,12 +75,22 @@ public class PGIndexer extends AbstractRecordProcessor {
                         "?,?,?,?,?,"+
                         "?,?)");
         this.hostCache = new HostUpsert(connection,
-                "cc_hosts", "host", MAX_HOST_LENGTH);
+                schema,
+                "cc_hosts", MAX_HOST_LENGTH);
     }
 
-    public static void init(Connection connection) throws SQLException {
+    public static void init(Connection connection, String schema) throws SQLException {
         connection.setAutoCommit(false);
-        initTables(connection, MIME_CACHE, DETECTED_MIME_CACHE, LANGUAGE_CACHE, TRUNCATED_CACHE,
+        DETECTED_MIME_CACHE = new StringCache(schema, "cc_detected_mimes", 2000);
+        LANGUAGE_CACHE = new StringCache(schema, "cc_languages", 2000);
+
+        MIME_CACHE = new StringCache(schema, "cc_mimes", 2000);
+        TRUNCATED_CACHE = new StringCache(schema, "cc_truncated", 12);
+        WARC_FILENAME_CACHE =
+                new StringCache(schema, "cc_warc_file_name", 200);
+        initTables(connection, schema,
+                MIME_CACHE, DETECTED_MIME_CACHE, LANGUAGE_CACHE,
+                TRUNCATED_CACHE,
                 WARC_FILENAME_CACHE);
     }
 
@@ -89,11 +101,13 @@ public class PGIndexer extends AbstractRecordProcessor {
         }
     }
 
-    private static void initTables(Connection connection, StringCache... caches)
+    private static void initTables(Connection connection, String schema, StringCache... caches)
             throws SQLException {
-        connection.createStatement().execute("drop table if exists cc_urls");
+
+        connection.createStatement().execute("drop table if exists "+
+                PGUtil.getTable(schema, "cc_urls"));
         connection.createStatement().execute(
-                "create table cc_urls " + "(" +
+                "create table "+PGUtil.getTable(schema, "cc_urls") + " (" +
                         "id serial primary key," +
                         " url varchar(" + MAX_URL_LENGTH + ")," +
                         " host integer," +
@@ -108,9 +122,10 @@ public class PGIndexer extends AbstractRecordProcessor {
                         " warc_offset bigint," +
                         " warc_length bigint);");
 
-        connection.createStatement().execute("drop table if exists cc_hosts");
+        connection.createStatement().execute("drop table if exists "+
+                        PGUtil.getTable(schema, "cc_hosts"));
         connection.createStatement().execute(
-                "create table cc_hosts " +
+                "create table "+PGUtil.getTable(schema, "cc_hosts") +
                         "(" +
                         "id serial primary key," +
                         "host varchar(" + MAX_HOST_LENGTH + ") UNIQUE," +
@@ -120,12 +135,13 @@ public class PGIndexer extends AbstractRecordProcessor {
                         "latitude float, longitude float)");
 
         for (StringCache cache : caches) {
-            connection.createStatement().execute("drop table if exists " + cache.getTableName());
+            connection.createStatement().execute("drop table if exists " +
+                    PGUtil.getTable(schema, cache.getTableName()));
             connection.createStatement().execute(
-                    "create table " + cache.getTableName() +
+                    "create table " + PGUtil.getTable(schema, cache.getTableName()) +
                             "(id integer primary key," +
                             "name varchar(" + cache.getMaxLength() + "))");
-            cache.prepareStatement(connection);
+            cache.prepareStatement(connection, schema);
         }
 
 
@@ -154,10 +170,6 @@ public class PGIndexer extends AbstractRecordProcessor {
                 continue;
             }
             CONSIDERED.incrementAndGet();
-            if (r.getUrl().equals("http://mesclassesdeneige.be/telecharge" +
-                    ".php?pdf=fichiers/Pages%2050-51%20Ch%C3%A2tel%20(Clos%20Savoyard).pdf")) {
-                System.out.println(r);
-            }
             try {
                 long total = ADDED.getAndIncrement();
                 if (++added % 1000 == 0) {
@@ -240,19 +252,21 @@ public class PGIndexer extends AbstractRecordProcessor {
 
         private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
         private final Map<String, Integer> map = new ConcurrentHashMap<>();
+        private final String schema;
         private final String tableName;
         private final int maxLength;
         private PreparedStatement insert;
 
-        StringCache(String tableName, int maxLength) {
+        StringCache(String schema, String tableName, int maxLength) {
+            this.schema = schema;
             this.tableName = tableName;
             this.maxLength = maxLength;
 
         }
 
-        private void prepareStatement(Connection connection) throws SQLException {
+        private void prepareStatement(Connection connection, String schema) throws SQLException {
             insert = connection.prepareStatement(
-                    "insert into " + tableName + " (id, name) values (?,?)");
+                    "insert into " + PGUtil.getTable(schema, tableName) + " (id, name) values (?,?)");
         }
 
 

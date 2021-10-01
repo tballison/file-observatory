@@ -4,8 +4,17 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Types;
 
+import org.apache.commons.lang3.StringUtils;
+
 public class PGUtil {
 
+
+    public static String getTable(String schema, String table) {
+        if (StringUtils.isAllBlank(schema)) {
+            return table;
+        }
+        return schema + "." + table;
+    }
     public static void safelySetString(PreparedStatement insert, int colNumber, String val,
                                  int maxLength) throws SQLException {
         if (val == null) {
