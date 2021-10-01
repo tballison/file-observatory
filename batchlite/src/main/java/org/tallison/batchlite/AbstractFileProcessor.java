@@ -35,7 +35,7 @@ public abstract class AbstractFileProcessor implements Callable<Integer> {
     public static String FETCHER_NAME = "file-obs-fetcher";
     public static String EMITTER_NAME = "file-obs-emitter";
 
-    private static final long DEFAULT_TIMEOUT_MILLIS = 30000;
+    private static final long DEFAULT_TIMEOUT_MILLIS = 120000;
     private static final int MAX_BUFFER = 10000;
 
     private static AtomicInteger THREAD_COUNT = new AtomicInteger();
