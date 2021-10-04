@@ -85,7 +85,7 @@ public class GhostScriptToTextRunner extends AbstractDirectoryProcessor {
             commandLine.add("-DNOPAUSE");
             commandLine.add("-sDEVICE=txtwrite");
             commandLine.add("-sOutputFile="+outputPath.toAbsolutePath().toString());
-            commandLine.add("-dNEWPDF");
+            commandLine.add("-dNEWPDF");//this invokes the new c-based pdf parser as of 9.55.0
             commandLine.add(srcPath.toAbsolutePath().toString());
             if (! Files.isDirectory(outputPath.getParent())) {
                 Files.createDirectories(outputPath.getParent());
