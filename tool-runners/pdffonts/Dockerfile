@@ -4,19 +4,21 @@
 FROM amd64/openjdk:11.0.8-slim-buster as POPPLER_BUILDER
 
 #python:3.8-slim-buster as POPPLER_BUILDER
-RUN apt-get update && apt-get install bash wget build-essential cmake libfreetype6-dev pkg-config libfontconfig-dev libjpeg-dev libopenjp2-7-dev -y
-RUN wget https://poppler.freedesktop.org/poppler-data-0.4.9.tar.gz \
-    && tar -xf poppler-data-0.4.9.tar.gz \
-    && cd poppler-data-0.4.9 \
+RUN apt-get update && apt-get install bash wget build-essential \
+    cmake libfreetype6-dev pkg-config libfontconfig-dev  \
+    libjpeg-dev libopenjp2-7-dev -y
+RUN wget https://poppler.freedesktop.org/poppler-data-0.4.11.tar.gz \
+    && tar -xf poppler-data-0.4.11.tar.gz \
+    && cd poppler-data-0.4.11 \
     && make install \
     && cd .. \
-    && wget https://poppler.freedesktop.org/poppler-0.86.1.tar.xz \
-    && tar -xf poppler-0.86.1.tar.xz \
-    && cd poppler-0.86.1 \
+    && wget https://poppler.freedesktop.org/poppler-21.10.0.tar.xz \
+    && tar -xf poppler-21.10.0.tar.xz \
+    && cd poppler-21.10.0 \
     && mkdir build \
     && cd build \
-    && cmake .. \
-    && make \
+    && cmake -DENABLE_BOOST=OFF .. \
+    && make  \
     && make install \
     && ldconfig
 #CMD tail -f /dev/null

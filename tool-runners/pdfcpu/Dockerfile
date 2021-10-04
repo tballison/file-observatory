@@ -6,7 +6,7 @@ FROM golang:1.16.6 as builder
 # install
 
 #RUN go get github.com/pdfcpu/pdfcpu/cmd/...
-RUN git clone https://github.com/pdfcpu/pdfcpu /pdfcpu
+RUN git clone -b v0.3.12 --depth 1 https://github.com/pdfcpu/pdfcpu /pdfcpu
 RUN cd /pdfcpu && git checkout tags/v0.3.12 -b v0.3.12-tag
 #WORKDIR $GOPATH/src/github.com/pdfcpu/pdfcpu/cmd/pdfcpu
 RUN cd /pdfcpu/cmd/pdfcpu && CGO_ENABLED=0 GOOS=linux go build -a -o pdfcpu .
