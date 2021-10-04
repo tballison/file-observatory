@@ -21,6 +21,7 @@
         <module>caradoc</module>
         <module>clamav</module>
         <module>fileprofiler</module>
+        <module>gstotext</module>
         <module>mutoolclean</module>
         <module>mutooltext</module>
         <module>qpdf</module>
