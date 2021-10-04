@@ -47,7 +47,7 @@ public class GhostScriptToTextRunner extends AbstractDirectoryProcessor {
     }
 
     public static String getName() {
-        return "pdftotext";
+        return "gstotext";
     }
 
     @Override
