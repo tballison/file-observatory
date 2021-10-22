@@ -1,0 +1,15 @@
+Unable to parse 'data/iccs/86/20/862090af4442059ff416679acb001ae23acc18852f2dc430d0845c061b937e9c' as ICC profile!
+
+Validation Report
+-----------------
+Profile has Critical Error(s) that violate ICC specification.
+
+NonCompliant! - Bad Header File Size
+Error! -  - AToB0Tag - Tag has invalid structure!
+Error! -  - AToB1Tag - Tag has invalid structure!
+Error! -  - AToB2Tag - Tag has invalid structure!
+Error! -  - BToA0Tag - Tag has invalid structure!
+Error! -  - BToA1Tag - Tag has invalid structure!
+Error! -  - BToA2Tag - Tag has invalid structure!
+Error! -  - gamutTag - Tag has invalid structure!
+Error! -  - Unknown 'AS00' = 41533030 - Tag has invalid structure!

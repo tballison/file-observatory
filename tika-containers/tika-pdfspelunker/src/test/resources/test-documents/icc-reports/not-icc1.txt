@@ -1,0 +1,8 @@
+Unable to parse 'data/blah.tgz' as ICC profile!
+
+Validation Report
+-----------------
+Profile has Critical Error(s) that violate ICC specification.
+
+Error! -  - Unable to read profile!**
+	Profile has invalid structure!

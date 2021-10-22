@@ -30,20 +30,26 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.pdfbox.contentstream.PDFGraphicsStreamEngine;
+import org.apache.pdfbox.contentstream.operator.MissingOperandException;
+import org.apache.pdfbox.contentstream.operator.Operator;
 import org.apache.pdfbox.cos.COSBase;
 import org.apache.pdfbox.cos.COSDictionary;
 import org.apache.pdfbox.cos.COSName;
 import org.apache.pdfbox.cos.COSObject;
+import org.apache.pdfbox.cos.COSObjectKey;
 import org.apache.pdfbox.cos.COSStream;
 import org.apache.pdfbox.filter.MissingImageReaderException;
 import org.apache.pdfbox.io.IOUtils;
+import org.apache.pdfbox.pdmodel.MissingResourceException;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDResources;
 import org.apache.pdfbox.pdmodel.font.PDFont;
+import org.apache.pdfbox.pdmodel.graphics.PDXObject;
 import org.apache.pdfbox.pdmodel.graphics.color.PDColor;
 import org.apache.pdfbox.pdmodel.graphics.color.PDDeviceGray;
 import org.apache.pdfbox.pdmodel.graphics.color.PDDeviceRGB;
 import org.apache.pdfbox.pdmodel.graphics.color.PDPattern;
+import org.apache.pdfbox.pdmodel.graphics.form.PDFormXObject;
 import org.apache.pdfbox.pdmodel.graphics.form.PDTransparencyGroup;
 import org.apache.pdfbox.pdmodel.graphics.image.PDImage;
 import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
@@ -72,7 +78,11 @@ import org.apache.tika.sax.EmbeddedContentHandler;
 import org.apache.tika.sax.XHTMLContentHandler;
 
 /**
- * Copied nearly verbatim from PDFBox
+ * Initially copied verbatim from PDFBox.  We had to use the GraphicsEngine
+ * to extract actual images correctly. We can't just take the raw streams.
+ *
+ * We had to bolt onto this, the ability to track which streams were processed,
+ * and also process, e.g., ICC profiles.
  */
 class ImageGraphicsEngine extends PDFGraphicsStreamEngine {
 
@@ -86,7 +96,8 @@ class ImageGraphicsEngine extends PDFGraphicsStreamEngine {
 
     private static final List<String> JP2 = Collections.singletonList(COSName.JPX_DECODE.getName());
 
-    private static final List<String> JB2 = Collections.singletonList(COSName.JBIG2_DECODE.getName());
+    private static final List<String> JB2 =
+            Collections.singletonList(COSName.JBIG2_DECODE.getName());
     final List<IOException> exceptions = new ArrayList<>();
     private final EmbeddedDocumentExtractor embeddedDocumentExtractor;
     private final Set<COSStream> processedStreams;
@@ -94,28 +105,28 @@ class ImageGraphicsEngine extends PDFGraphicsStreamEngine {
     private final Metadata parentMetadata;
     private final XHTMLContentHandler xhtml;
     private final ParseContext parseContext;
+    private final ParseState parseState;
+    private static boolean FASTER = false;
     //TODO: parameterize this ?
     private boolean useDirectJPEG = true;
+    private COSObjectKey currObjectKey = null; // object key currently being processed
 
-    //TODO: this is an embarrassment of an initializer...fix
-    protected ImageGraphicsEngine(PDPage page, EmbeddedDocumentExtractor embeddedDocumentExtractor,
-                                  Set<COSStream> processedStreams,
-                                  AtomicInteger imageCounter, XHTMLContentHandler xhtml,
-                                  Metadata parentMetadata, ParseContext parseContext) {
+    protected ImageGraphicsEngine(PDPage page, ParseState parseState) {
         super(page);
-        this.embeddedDocumentExtractor = embeddedDocumentExtractor;
-        this.processedStreams = processedStreams;
-        this.imageCounter = imageCounter;
-        this.xhtml = xhtml;
-        this.parentMetadata = parentMetadata;
-        this.parseContext = parseContext;
+        this.parseState = parseState;
+        this.embeddedDocumentExtractor = parseState.embeddedDocumentExtractor;
+        this.processedStreams = parseState.visitedStreams;
+        this.imageCounter = parseState.imageCounter;
+        this.xhtml = parseState.xhtml;
+        this.parentMetadata = parseState.parentMetadata;
+        this.parseContext = parseState.parseContext;
     }
 
     //nearly directly copied from PDFBox ExtractImages
     private static void writeToBuffer(PDImage pdImage, String suffix, boolean directJPEG,
                                       OutputStream out) throws IOException, TikaException {
-
-        if ("jpg".equals(suffix)) {
+        COSBase base = pdImage.getCOSObject();
+        if (!FASTER && "jpg".equals(suffix)) {
 
             String colorSpaceName = pdImage.getColorSpace().getName();
             if (directJPEG || (PDDeviceGray.INSTANCE.getName().equals(colorSpaceName) ||
@@ -154,7 +165,7 @@ class ImageGraphicsEngine extends PDFGraphicsStreamEngine {
                     ImageIOUtil.writeImage(image, "jpeg2000", out);
                 }
             }
-        } else if ("tif".equals(suffix) && pdImage.getColorSpace().equals(PDDeviceGray.INSTANCE)) {
+        } else if (! FASTER && "tif".equals(suffix) && pdImage.getColorSpace().equals(PDDeviceGray.INSTANCE)) {
             BufferedImage image = pdImage.getImage();
             if (image == null) {
                 return;
@@ -180,12 +191,14 @@ class ImageGraphicsEngine extends PDFGraphicsStreamEngine {
                 IOUtils.closeQuietly(data);
             }
         } else {
-            //this takes forever...if we don't need to do it, don't
-            //BufferedImage image = pdImage.getImage();
-            //if (image == null) {
-             //   return;
-           // }
-            //ImageIOUtil.writeImage(image, suffix, out);
+            if (!FASTER) {
+                //this takes forever...if we don't need to do it, don't
+                BufferedImage image = pdImage.getImage();
+                if (image == null) {
+                    return;
+                }
+                ImageIOUtil.writeImage(image, suffix, out);
+            }
         }
         out.flush();
     }
@@ -243,31 +256,78 @@ class ImageGraphicsEngine extends PDFGraphicsStreamEngine {
         }
     }
 
+    /**
+     * This is the hook for intercepting draw objects so that we can get the COSObjectKeys
+     * @param operator
+     * @param operands
+     * @throws IOException
+     */
+    @Override
+    protected void processOperator(Operator operator, List<COSBase> operands) throws IOException {
+
+        if (operator.getName().equals("Do")) {
+            //draw object ... process
+            COSObjectKey k = recordDrawObject(operands);
+            COSObjectKey prevKey = currObjectKey;
+            currObjectKey = k;
+            super.processOperator(operator, operands);
+            currObjectKey = prevKey;
+        }
+    }
+
+    private COSObjectKey recordDrawObject(List<COSBase> operands) throws IOException {
+        if (operands.isEmpty()) {
+            return null;
+        } else {
+            COSBase base0 = (COSBase)operands.get(0);
+            if (base0 instanceof COSName) {
+                COSName objectName = (COSName) base0;
+                COSDictionary cosDictionary = getResources().getCOSObject();
+                COSBase b = cosDictionary.getItem(COSName.XOBJECT);
+                if (b != null && b instanceof COSDictionary) {
+                    COSObject obj = ((COSDictionary)b).getCOSObject(objectName);
+                    return new COSObjectKey(obj);
+                }
+            }
+        }
+        return null;
+    }
+
+
     @Override
     public void drawImage(PDImage pdImage) throws IOException {
+        COSBase cosPDImage = pdImage.getCOSObject();
 
-        int imageNumber = 0;
-        if (pdImage instanceof PDImageXObject) {
-            COSStream cosStream = ((PDImageXObject)pdImage).getCOSObject();
-            if (processedStreams.contains(cosStream)) {
+        Metadata metadata = new Metadata();
+
+        if (cosPDImage instanceof COSStream) {
+            if (processedStreams.contains((COSStream) cosPDImage)) {
                 return;
             }
-
-            PDImageXObject softMask = ((PDImageXObject)pdImage).getSoftMask();
+            processedStreams.add((COSStream) cosPDImage);
+            String filterChain = PDFSpelunker.getFilterString(
+                    PDFSpelunker.getFilters(((COSStream) cosPDImage)));
+            metadata.set(PDFSpelunker.STREAM_FILTER_CHAIN, filterChain);
+        }
+        metadata.set(PDFSpelunker.STREAM_TYPE, "XObject");
+        String cosPath = "";
+        if (currObjectKey != null) {
+            cosPath = parseState.getCosPath(currObjectKey);
+            metadata.set(PDFSpelunker.COS_PATH, cosPath);
+        }
+        int imageNumber = 0;
+        if (pdImage instanceof PDImageXObject) {
+            PDImageXObject softMask = ((PDImageXObject) pdImage).getSoftMask();
             if (softMask != null) {
                 //we are currently suppressing treating softmasks
                 //as their own images.
                 processedStreams.add(softMask.getCOSObject());
             }
-            processedStreams.add(cosStream);
         }
         if (pdImage instanceof PDImageXObject) {
             if (pdImage.isStencil()) {
                 processColor(getGraphicsState().getNonStrokingColor());
             }
-
-            PDImageXObject xobject = (PDImageXObject) pdImage;
-
             imageNumber = imageCounter.getAndIncrement();
 
         } else {
@@ -277,10 +337,11 @@ class ImageGraphicsEngine extends PDFGraphicsStreamEngine {
         //For now, we're relying on the cosobject, but this could lead to
         //duplicates if the pdImage is not a PDImageXObject?
         try {
-            processImage(pdImage, imageNumber);
+            processImage(pdImage, metadata, imageNumber);
         } catch (TikaException | SAXException e) {
             throw new IOException(e);
         } catch (IOException e) {
+            e.printStackTrace();
             handleCatchableIOE(e);
         }
     }
@@ -372,10 +433,9 @@ class ImageGraphicsEngine extends PDFGraphicsStreamEngine {
         }
     }
 
-    private void processImage(PDImage pdImage, int imageNumber)
+    private void processImage(PDImage pdImage, Metadata metadata, int imageNumber)
             throws IOException, TikaException, SAXException {
         //this is the metadata for this particular image
-        Metadata metadata = new Metadata();
         String suffix = getSuffix(pdImage, metadata);
         String fileName = "image" + imageNumber + "." + suffix;
 
@@ -395,9 +455,8 @@ class ImageGraphicsEngine extends PDFGraphicsStreamEngine {
         if (embeddedDocumentExtractor.shouldParseEmbedded(metadata)) {
             ByteArrayOutputStream buffer = new ByteArrayOutputStream();
             if (pdImage instanceof PDImageXObject) {
-               // PDMetadataExtractor
-                 //       .extract(((PDImageXObject) pdImage).getMetadata(), metadata,
-                //       parseContext);
+                //PDMetadataExtractor.extract(((PDImageXObject) pdImage).getMetadata(), metadata,
+                // parseContext);
             }
             //extract the metadata contained outside of the image
             try {
@@ -410,9 +469,8 @@ class ImageGraphicsEngine extends PDFGraphicsStreamEngine {
                 return;
             }
             try (InputStream embeddedIs = TikaInputStream.get(buffer.toByteArray())) {
-                embeddedDocumentExtractor
-                        .parseEmbedded(embeddedIs, new EmbeddedContentHandler(xhtml), metadata,
-                                false);
+                embeddedDocumentExtractor.parseEmbedded(embeddedIs,
+                        new EmbeddedContentHandler(xhtml), metadata, false);
             }
         }
 
@@ -422,7 +480,7 @@ class ImageGraphicsEngine extends PDFGraphicsStreamEngine {
             throws IOException, SAXException {
         if (pdImage instanceof PDImageXObject) {
             //PDMetadataExtractor
-              //      .extract(((PDImageXObject) pdImage).getMetadata(), metadata, parseContext);
+            //      .extract(((PDImageXObject) pdImage).getMetadata(), metadata, parseContext);
         }
         metadata.set(Metadata.IMAGE_WIDTH, pdImage.getWidth());
         metadata.set(Metadata.IMAGE_LENGTH, pdImage.getHeight());
@@ -470,19 +528,19 @@ class ImageGraphicsEngine extends PDFGraphicsStreamEngine {
     }
 
     void handleCatchableIOE(IOException e) throws IOException {
-            if (e.getCause() instanceof SAXException && e.getCause().getMessage() != null &&
-                    e.getCause().getMessage().contains("Your document contained more than")) {
-                //TODO -- is there a cleaner way of checking for:
-                // WriteOutContentHandler.WriteLimitReachedException?
-                throw e;
-            }
+        if (e.getCause() instanceof SAXException && e.getCause().getMessage() != null &&
+                e.getCause().getMessage().contains("Your document contained more than")) {
+            //TODO -- is there a cleaner way of checking for:
+            // WriteOutContentHandler.WriteLimitReachedException?
+            throw e;
+        }
 
-            String msg = e.getMessage();
-            if (msg == null) {
-                msg = "IOException, no message";
-            }
-            parentMetadata.add(TikaCoreProperties.TIKA_META_EXCEPTION_WARNING, msg);
-            exceptions.add(e);
+        String msg = e.getMessage();
+        if (msg == null) {
+            msg = "IOException, no message";
+        }
+        parentMetadata.add(TikaCoreProperties.TIKA_META_EXCEPTION_WARNING, msg);
+        exceptions.add(e);
     }
 
     List<IOException> getExceptions() {

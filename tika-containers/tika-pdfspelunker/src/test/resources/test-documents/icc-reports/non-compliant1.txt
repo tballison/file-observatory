@@ -1,0 +1,50 @@
+Profile:            'data/iccs/7c/68/7c68fd34c873bf7db8faa3a1133d176a7c92a88f8a05d482d406857ee212ce98'
+Profile ID:         e798cc1d9f659a6155ac35ad9ac383bb
+Size:               1829077(0x1be8d5) bytes
+
+Header
+------
+Attributes:         Reflective | Glossy
+Cmm:                Heidelberg
+Creation Date:      2/28/2007  08:00:00
+Creator:            'HDM ' = 48444D20
+Data Color Space:   CmykData
+Flags               EmbeddedProfileFalse | UseAnywhere
+PCS Color Space:    LabData
+Platform:           Unknown
+Rendering Intent:   Relative Colorimetric
+Profile Class:      OutputClass
+Profile SubClass:   Not Defined
+Version:            2.40
+Illuminant:         X=0.9642, Y=1.0000, Z=0.8249
+Spectral PCS:       NoSpectralData
+Spectral PCS Range: Not Defined
+BiSpectral Range:   Not Defined
+MCS Color Space:    Not Defined
+
+Profile Tags
+------------
+                         Tag    ID      Offset	    Size	     Pad
+                        ----  ------    ------	    ----	     ---
+                copyrightTag  'cprt'       288	     103	       1
+          mediaWhitePointTag  'wtpt'       392	      20	       0
+                    AToB0Tag  'A2B0'       412	  396852	       0
+                    BToA0Tag  'B2A0'    397264	  291132	       0
+                    gamutTag  'gamt'    688396	   33840	       0
+                    AToB1Tag  'A2B1'    722236	  396852	       0
+                    BToA1Tag  'B2A1'   1119088	  291132	       0
+                    AToB2Tag  'A2B2'       412	  396852	       0
+                    BToA2Tag  'B2A2'   1410220	  291132	       0
+                  grayTRCTag  'kTRC'   1701352	     524	       0
+   Unknown 'hd10' = 68643130  'hd10'   1701876	     364	       0
+       profileDescriptionTag  'desc'   1702240	     152	       0
+               charTargetTag  'targ'   1702392	  126685	       0
+
+
+Validation Report
+-----------------
+Profile violates ICC specification
+
+Warning! - OutputClassTag exclusion test failed.
+Warning! - Unknown 'hd10' = 68643130: - Unknown Tag.
+NonCompliant! - File size is not a multiple of 4 bytes (last tag needs padding?).
