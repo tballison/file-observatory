@@ -1,7 +1,10 @@
 package org.tallison.tika.parsers.image;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -15,7 +18,10 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.commons.compress.compressors.gzip.GzipCompressorOutputStream;
+import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xml.sax.ContentHandler;
@@ -28,6 +34,7 @@ import org.apache.tika.extractor.EmbeddedDocumentUtil;
 import org.apache.tika.io.TemporaryResources;
 import org.apache.tika.io.TikaInputStream;
 import org.apache.tika.metadata.Metadata;
+import org.apache.tika.metadata.TikaCoreProperties;
 import org.apache.tika.mime.MediaType;
 import org.apache.tika.parser.AbstractParser;
 import org.apache.tika.parser.ParseContext;
@@ -62,7 +69,7 @@ public class ICCImageParser extends AbstractParser {
     private List<String> iccCommandLine;
     private long timeoutMs = 30000;
 
-    private Path rootDir = Paths.get("/something/something");
+    private Path rootDir = Paths.get("/Users/allison/data/cc/iccs");
 
     @Override
     public Set<MediaType> getSupportedTypes(ParseContext parseContext) {
@@ -111,26 +118,27 @@ public class ICCImageParser extends AbstractParser {
         iccPathString += ".icc";//specified on the commandline!
         Path iccPath = Paths.get(iccPathString);
         if (!Files.exists(iccPath)) {
-            //log
+            LOGGER.warn("couldn't find icc file: {}", iccPathString);
             return;
         }
         EmbeddedDocumentExtractor ex =
                 EmbeddedDocumentUtil.getEmbeddedDocumentExtractor(parseContext);
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
         try (TikaInputStream iccTis = TikaInputStream.get(iccPath)) {
-            Path f = iccTis.getPath();
-            String hex = "";
-            try (InputStream is = Files.newInputStream(f)) {
-                hex = DigestUtils.sha256Hex(is);
-            }
-            //temporary hack to extract icc bytes
-            Path targ = rootDir.resolve(hex.substring(0,2)+"/"+hex.substring(2,4)+"/"+hex);
-            if (Files.exists(targ)) {
-                return;
-            } else {
-                Files.createDirectories(targ.getParent());
-                Files.copy(f, targ, StandardCopyOption.REPLACE_EXISTING);
-            }
-            //ex.parseEmbedded(iccTis, contentHandler, new Metadata(), false);
+            IOUtils.copy(iccTis, bos);
+        }
+        String hex = DigestUtils.sha256Hex(bos.toByteArray());
+        ByteArrayOutputStream gzip = new ByteArrayOutputStream();
+        try (OutputStream os = new GzipCompressorOutputStream(gzip)) {
+            IOUtils.copy(new ByteArrayInputStream(bos.toByteArray()), os);
+        }
+        Base64 base64 = new Base64();
+        String encoded = base64.encodeToString(gzip.toByteArray());
+        Metadata iccMetadata = new Metadata();
+        iccMetadata.set("shasum_256", hex);
+        iccMetadata.set("base64_gzip_bytes", encoded);
+        try (InputStream embeddedIs = TikaInputStream.get(bos.toByteArray())) {
+            ex.parseEmbedded(embeddedIs, contentHandler, iccMetadata, false);
         }
     }
 

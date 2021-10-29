@@ -50,13 +50,13 @@ public class PDFSpelunker extends AbstractParser {
             Collections.singleton(MediaType.application("pdf"));
     private static Logger LOG = LoggerFactory.getLogger(PDFSpelunker.class);
     private static Set<String> DO_NOT_PARSE_EMBEDDED = Set.of("Contents", "ToUnicode",
-            "Function", "Mask", "SMask", "XObject", "Fm1");
+            "Function", "Mask", "SMask", "XObject", "Fm1", "ObjStm");
 
     AtomicInteger imageCounter = new AtomicInteger(0);
 
     Set<String> streamTypes = Set.of("ToUnicode", "FontFile1", "FontFile2", "FontFile3",
             "Font", "Fm1", "XObject", "Contents", "SMask", "Function", "ColorSpace",
-            "DestOutputProfile", "Metadata");
+            "DestOutputProfile", "Metadata", "ObjStm");
 
     static Set<COSName> NEVER_FOLLOW = Set.of(COSName.PARENT, COSName.DEST, COSName.A);
 
@@ -275,11 +275,13 @@ public class PDFSpelunker extends AbstractParser {
             parseState.visitedStreams.add(stream);
         }
 
-        String embeddedType = guessEmbeddedType(parseState, isOrphan);
+        String embeddedType = guessEmbeddedType(stream, parseState, isOrphan);
         /*System.out.println("guessed type " + parseState.type + " " +
                 parseState.subtype + " :: " + embeddedType);*/
         if (! DO_NOT_PARSE_EMBEDDED.contains(embeddedType)) {
-
+            if (isOrphan) {
+                System.out.println("ORPHAN: " + isOrphan);
+            }
             ByteArrayOutputStream bos = new ByteArrayOutputStream();
 
             try (InputStream is = stream.createInputStream()) {
@@ -317,8 +319,12 @@ public class PDFSpelunker extends AbstractParser {
         processDict(key, (COSDictionary) stream, parseState);
     }
 
-    private String guessEmbeddedType(ParseState parseState, boolean isOrphaned) {
+    private String guessEmbeddedType(COSStream cosStream, ParseState parseState, boolean isOrphaned) {
         if (isOrphaned) {
+            String type = cosStream.getNameAsString(COSName.TYPE);
+            if (type != null && streamTypes.contains(type)) {
+                return type;
+            }
             return "unknown-orphan";
         }
         for (int i = parseState.cosPath.size()-1; i > -1; i--) {

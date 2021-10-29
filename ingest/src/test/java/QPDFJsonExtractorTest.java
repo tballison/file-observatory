@@ -57,6 +57,17 @@ public class QPDFJsonExtractorTest {
         }
     }
 
+    @Test
+    public void testFontIdentifier() throws Exception {
+        try (Reader reader = getReader("tmp.json")) {
+            QPDFJsonExtractor ex = new QPDFJsonExtractor();
+            QPDFResults results = ex.extract("id", reader);
+            System.out.println(results);
+            assertEquals(40, results.typeKeys.size());
+            assertTrue(results.typeKeys.contains("/FontDescriptor->/Ascent"));
+        }
+    }
+
     private Reader getReader(String file) throws IOException {
         return Files.newBufferedReader(getPath(file), StandardCharsets.UTF_8);
     }

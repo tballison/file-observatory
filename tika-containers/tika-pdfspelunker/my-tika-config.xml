@@ -17,15 +17,19 @@
 -->
 <properties>
   <parsers>
+    <!--
     <parser class="org.apache.tika.parser.DefaultParser">
       <parser-exclude class="org.apache.tika.parser.image.JpegParser"/>
-    </parser>
+    </parser> -->
 
     <!--        <parser class="org.tallison.tika.parsers.pdf.PDFSpelunker"/>-->
     <parser class="org.apache.tika.parser.external2.ExternalParser">
       <params>
         <param name="supportedTypes" type="list">
           <string>application/vnd.iccprofile</string>
+          <string>application/octet-stream</string>
+          <string>text/plain</string>
+          <string>text/tsv</string>
         </param>
         <param name="commandLine" type="list">
           <string>/DemoIccMax/Lin/Tools/IccDumpProfile/iccDumpProfile</string>
@@ -45,6 +49,7 @@
         </param>
       </params>
     </parser>
+    <!--
     <parser class="org.tallison.tika.parsers.image.ICCImageParser">
       <params>
         <param name="iccCommandLine" type="list">
@@ -56,20 +61,20 @@
           <string>${INPUT_FILE}</string>
         </param>
       </params>
-    </parser>
+    </parser> -->
   </parsers>
   <server>
     <params>
-      <port>9998</port>
-      <taskTimeoutMillis>180000</taskTimeoutMillis>
+      <port>9993-9998</port>
+      <taskTimeoutMillis>30000</taskTimeoutMillis>
       <enableUnsecureFeatures>false</enableUnsecureFeatures>
       <maxFiles>10000000</maxFiles>
       <forkedJvmArgs>
-        <arg>-Xmx2g</arg>
+        <arg>-Xmx1g</arg>
      </forkedJvmArgs>
-    <!--  <endpoints>
+     <endpoints>
         <endpoint>rmeta</endpoint>
-      </endpoints>-->
+      </endpoints>
     </params>
   </server>
 </properties>

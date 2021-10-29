@@ -1,13 +1,20 @@
 package org.tallison.tika.parsers.pdf;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.InputStream;
 import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 
+import org.apache.commons.codec.binary.Base64;
+import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream;
+import org.apache.commons.io.IOUtils;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import org.apache.tika.TikaTest;
@@ -23,6 +30,7 @@ import org.apache.tika.parser.RecursiveParserWrapper;
 import org.apache.tika.sax.BasicContentHandlerFactory;
 import org.apache.tika.sax.RecursiveParserWrapperHandler;
 
+@Ignore
 public class PDFSpelunkerTest extends TikaTest {
 
     @Test
@@ -54,11 +62,11 @@ public class PDFSpelunkerTest extends TikaTest {
         Parser p = new AutoDetectParser(tikaConfig);
 
         for (File f : dir.toFile().listFiles()) {
-            //if (f.getName().contains("0005188e9")) {
+           // if (f.getName().contains("0004fde91")) {
                 //      "0005daade87bed981f113253fb8d5d94cc5a814ea308169c87f00946c1ae1c4b")) {
                 System.out.println(f);
                 getRecursiveMetadata(f.toPath(), p, false);
-            //}
+           // }
 
         }
     }
