@@ -10,9 +10,9 @@ RUN wget https://poppler.freedesktop.org/poppler-data-0.4.11.tar.gz \
     && cd poppler-data-0.4.11 \
     && make install \
     && cd .. \
-    && wget https://poppler.freedesktop.org/poppler-21.10.0.tar.xz \
-    && tar -xf poppler-21.10.0.tar.xz \
-    && cd poppler-21.10.0 \
+    && wget https://poppler.freedesktop.org/poppler-21.11.0.tar.xz \
+    && tar -xf poppler-21.11.0.tar.xz \
+    && cd poppler-21.11.0 \
     && mkdir build \
     && cd build \
     && cmake -DENABLE_BOOST=OFF .. \

@@ -24,6 +24,7 @@ import java.util.concurrent.Future;
 import javax.ws.rs.core.Response;
 
 import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.commons.io.IOUtils;
 import org.apache.cxf.jaxrs.client.WebClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -67,9 +68,9 @@ public class FuzzClient {
                 "http://localhost:9997",
                 "http://localhost:9998"
         };
-        Path seedDir = Paths.get("FILL IN");
-        Path outputDir = Paths.get("FILL IN");
-        int iterationsPerFile = 1000;
+        Path seedDir = Paths.get("/Users/allison/data/cc/iccs");
+        Path outputDir = Paths.get("/Users/allison/data/cc/fuzz-20211101");
+        int iterationsPerFile = 500;
         FuzzClient fuzzClient = new FuzzClient(tikaUrls, seedDir, outputDir, iterationsPerFile);
         fuzzClient.execute();
     }
@@ -152,7 +153,7 @@ public class FuzzClient {
     private class Fuzzer implements Callable<Integer> {
 
         GeneralTransformer transformer =
-                new GeneralTransformer(2, new ByteDeleter(), new ByteFlipper(), new ByteInjector(),
+                new GeneralTransformer(1, new ByteDeleter(), new ByteFlipper(), new ByteInjector(),
                         new Truncator(), new SpanSwapper());
 
         private final String tikaUrl;
@@ -247,7 +248,7 @@ public class FuzzClient {
                     fuzzedDigest = DigestUtils.sha256Hex(is);
                 }
                 String name = exitValue+"/" + fuzzedDigest + "-"+seedDigest;
-                LOG.error("crash: {} -> {}: {}", tikaUrl,exitValue, name);
+                LOG.error("crash: {} -> {}: {}", tikaUrl, exitValue, name);
 
                 Path target = outputDir.resolve("files").resolve(name);
                 if (!Files.isDirectory(target.getParent())) {

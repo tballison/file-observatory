@@ -16,23 +16,51 @@
   limitations under the License.
 -->
 <properties>
-    <parsers>
-        <parser class="org.apache.tika.parser.pdftotext.PDFToText">
-            <params>
-                <param name="timeoutMillis" type="long">120000</param>
-            </params>
-        </parser>
-    </parsers>
-    <server>
-        <port>9998</port>
-        <taskTimeoutMillis>180000</taskTimeoutMillis>
-        <enableUnsecureFeatures>false</enableUnsecureFeatures>
-        <maxFiles>10000000</maxFiles>
-        <forkedJVMArgs>
-            <arg>-Xmx2g</arg>
-        </forkedJVMArgs>
-        <endpoints>
-            <endpoint>rmeta</endpoint>
-        </endpoints>
-    </server>
+  <parsers>
+    <parser class="org.apache.tika.parser.DefaultParser">
+      <parser-exclude class="org.apache.tika.parser.pdf.PDFParser"/>
+      <parser-exclude class="org.apache.tika.parser.microsoft.ooxml.OOXMLParser"/>
+      <parser-exclude class="org.apache.tika.parser.microsoft.OfficeParser"/>
+    </parser>
+    <parser class="org.apache.tika.parser.microsoft.ooxml.OOXMLParser">
+      <params>
+        <param name="includeDeletedContent" type="bool">true</param>
+        <param name="includeMoveFromContent" type="bool">true</param>
+        <param name="extractMacros" type="bool">true</param>
+      </params>
+    </parser>
+    <parser class="org.apache.tika.parser.microsoft.OfficeParser">
+      <params>
+        <param name="extractMacros" type="bool">true</param>
+      </params>
+    </parser>
+    <parser class="org.apache.tika.parser.external2.ExternalParser">
+      <params>
+        <param name="supportedTypes" type="list">
+          <string>application/pdf</string>
+        </param>
+        <param name="commandLine" type="list">
+          <string>pdftotext</string>
+          <string>${INPUT_FILE}</string>
+          <string>${OUTPUT_FILE}</string>
+        </param>
+        <param name="returnStdout" type="bool">true</param>
+      </params>
+    </parser>
+  </parsers>
+  <server>
+    <params>
+    <port>9998</port>
+    <taskTimeoutMillis>180000</taskTimeoutMillis>
+    <enableUnsecureFeatures>false</enableUnsecureFeatures>
+    <maxFiles>10000000</maxFiles>
+    <forkedJvmArgs>
+      <arg>-Xmx2g</arg>
+    </forkedJvmArgs>
+    <endpoints>
+      <endpoint>rmeta</endpoint>
+      <endpoint>tika</endpoint>
+    </endpoints>
+    </params>
+  </server>
 </properties>
