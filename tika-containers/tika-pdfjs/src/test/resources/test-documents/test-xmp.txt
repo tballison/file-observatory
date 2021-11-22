@@ -1,0 +1,52 @@
+# Document Loaded
+Number of Pages: 62
+
+# Metadata Is Loaded
+## Info
+{
+  "PDFFormatVersion": "1.6",
+  "IsLinearized": true,
+  "IsAcroFormPresent": false,
+  "IsXFAPresent": false,
+  "IsCollectionPresent": false,
+  "IsSignaturesPresent": false,
+  "CreationDate": "D:20210402144320-04'00'",
+  "Creator": "PScript5.dll Version 5.2.2",
+  "ModDate": "D:20210402154701-04'00'",
+  "Producer": "Acrobat Distiller 20.0 (Windows)",
+  "Title": "18-956 Google LLC v. Oracle America, Inc. (04/05/2021)"
+}
+
+## Metadata
+{
+  "xmp:modifydate": "2021-04-02T15:47:01-04:00",
+  "xmp:createdate": "2021-04-02T14:43:20-04:00",
+  "xmp:metadatadate": "2021-04-02T15:47:01-04:00",
+  "xmp:creatortool": "PScript5.dll Version 5.2.2",
+  "dc:format": "application/pdf",
+  "dc:creator": [],
+  "dc:title": "18-956 Google LLC v. Oracle America, Inc. (04/05/2021)",
+  "xmpmm:documentid": "uuid:1cd7d060-dd8f-463c-bfa8-18072b031ff2",
+  "xmpmm:instanceid": "uuid:327587b5-f503-4f7a-b4b2-444c4ead47ad",
+  "pdf:producer": "Acrobat Distiller 20.0 (Windows)"
+}
+
+# Page 1
+Size: 612x792
+
+Warning: fetchStandardFontData: failed to fetch file "FoxitSerifBold.pfb" with "UnknownErrorException: The standard font "baseUrl" parameter must be specified, ensure that the "standardFontDataUrl" API parameter is provided.".
+## Text Content
+                            page 1 content
+# Page 2
+Size: 612x792
+
+## Text Content
+
+page 2 content
+# Page 3
+Size: 612x792
+
+## Text Content
+              pdf page 3 content
+
+# End of Document

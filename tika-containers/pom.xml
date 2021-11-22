@@ -15,6 +15,7 @@
         <module>tika-pdftotext</module>
         <module>tika-pdfchecker</module>
         <module>tika-pdfspelunker</module>
+        <module>tika-pdfjs</module>
     </modules>
 
 

@@ -1,0 +1,49 @@
+# Document Loaded
+Number of Pages: 4
+
+# Metadata Is Loaded
+## Info
+{
+  "PDFFormatVersion": "1.5",
+  "Language": "en-US",
+  "EncryptFilterName": null,
+  "IsLinearized": false,
+  "IsAcroFormPresent": false,
+  "IsXFAPresent": false,
+  "IsCollectionPresent": false,
+  "IsSignaturesPresent": false,
+  "Producer": "Microsoft® Word 2016",
+  "Creator": "Microsoft® Word 2016",
+  "CreationDate": "D:20210421211209+00'00'",
+  "ModDate": "D:20210421211209+00'00'"
+}
+
+# Page 1
+Size: 612x792
+
+Warning: TT: undefined function: 32
+Warning: fetchStandardFontData: failed to fetch file "FoxitSans.pfb" with "UnknownErrorException: The standard font "baseUrl" parameter must be specified, ensure that the "standardFontDataUrl" API parameter is provided.".
+Warning: fetchStandardFontData: failed to fetch file "FoxitSerif.pfb" with "UnknownErrorException: The standard font "baseUrl" parameter must be specified, ensure that the "standardFontDataUrl" API parameter is provided.".
+## Text Content
+here is some page 1 content
+
+# Page 2
+Size: 612x792
+
+## Text Content
+some page 2 content
+
+# Page 3
+Size: 612x792
+
+## Text Content
+Some page 3 content
+
+# Page 4
+Size: 612x792
+
+Warning: fetchStandardFontData: failed to fetch file "FoxitSerifBold.pfb" with "UnknownErrorException: The standard font "baseUrl" parameter must be specified, ensure that the "standardFontDataUrl" API parameter is provided.".
+## Text Content
+Some more text
+
+# End of Document
