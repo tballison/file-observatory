@@ -9,6 +9,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -25,6 +26,7 @@ import org.xml.sax.SAXException;
 import org.apache.tika.exception.TikaException;
 import org.apache.tika.metadata.Metadata;
 import org.apache.tika.metadata.PDF;
+import org.apache.tika.metadata.PagedText;
 import org.apache.tika.metadata.Property;
 import org.apache.tika.metadata.TikaCoreProperties;
 import org.apache.tika.mime.MediaType;
@@ -35,21 +37,27 @@ import org.apache.tika.sax.XHTMLContentHandler;
 public class PDFJSOutputParser extends AbstractParser {
 
     public static final Property WARNINGS = Property.externalTextBag("PDFJS:Warnings");
+    public static final Property INFOS = Property.externalTextBag("PDFJS:Infos");
 
+    private static final Pattern RANDOM_KEY_PATTERN = Pattern.compile("# Random Key: (\\d+)");
     private static final String DOCUMENT_LOADED = "# Document Loaded";
+
     private static final String WARNING_PREFIX = "Warning: ";
+    private static final String INFO_PREFIX = "Info: ";
+
     private static final String TEXT_CONTENT = "## Text Content";
     private static final String END_OF_DOCUMENT = "# End of Document";
 
     private static final String PDDOC_INFO = "## Info";
     private static final String XMP_METADATA = "## Metadata";
 
-    private static final String PAGE_START = "# Page ";
+    private static final String PAGE_START = "# Page";
+
+    //skip an info line that logs the time to extrat content per page
+    private static final String SKIP_INFO = "getTextContent: time=";
 
     private static Pattern PAGE_PATTERN = Pattern.compile("# Page (\\d+)");
-    private static Pattern JSON_HACK_MATCHER =
-            Pattern.compile("\"([^\"]+)\": (?:\"([^\r\n]+)\"|([^\r\n]+))");
-
+    private static Pattern NUMBER_OF_PAGES_PATTERN = Pattern.compile("# Number of Pages: (\\d+)");
 
     private static Map<String, Property> PROPERTIES = new ConcurrentHashMap();
     static {
@@ -63,7 +71,9 @@ public class PDFJSOutputParser extends AbstractParser {
         PROPERTIES.put("IsXFAPreset", PDF.HAS_XFA);
         PROPERTIES.put("IsCollectionPresent", PDF.HAS_COLLECTION);
         PROPERTIES.put("CreationDate", TikaCoreProperties.CREATED);
+        PROPERTIES.put("xmp:createdate", TikaCoreProperties.CREATED);
         PROPERTIES.put("ModDate", TikaCoreProperties.MODIFIED);
+        PROPERTIES.put("xmp:moddifydate", TikaCoreProperties.MODIFIED);
         PROPERTIES.put("Title", TikaCoreProperties.TITLE);
         PROPERTIES.put("dc:title", TikaCoreProperties.TITLE);
 //        PROPERTIES.put("IsSignaturesPresent", PDF.HAS_SIGNATURE);
@@ -76,25 +86,41 @@ public class PDFJSOutputParser extends AbstractParser {
     @Override
     public void parse(InputStream inputStream, ContentHandler contentHandler, Metadata metadata,
                       ParseContext parseContext) throws IOException, SAXException, TikaException {
-        Set<String> warnings = new HashSet<>();
+        Set<String> infos = new LinkedHashSet<>();
+        Set<String> warnings = new LinkedHashSet<>();
+        Matcher randomKeyMatcher = RANDOM_KEY_PATTERN.matcher("");
+        Matcher numPagesMatcher = NUMBER_OF_PAGES_PATTERN.matcher("");
         Matcher pageMatcher = PAGE_PATTERN.matcher("");
-        XHTMLContentHandler xhtml = new XHTMLContentHandler(contentHandler, metadata);
 
+        XHTMLContentHandler xhtml = new XHTMLContentHandler(contentHandler, metadata);
+        long randKey = -1;
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream,
                 StandardCharsets.UTF_8))) {
             String line = reader.readLine();
             while (line != null) {
-                if (line.startsWith(PDDOC_INFO)) {
+                if (randKey < 0) {
+                    randomKeyMatcher.reset(line);
+                    if (randomKeyMatcher.find()) {
+                        randKey = Long.parseLong(randomKeyMatcher.group(1));
+                    }
+                } else if (line.startsWith(PDDOC_INFO) && verify(randKey, PDDOC_INFO, line)) {
                     loadInfo(reader, metadata);
-                } else if (line.startsWith(XMP_METADATA)) {
+                } else if (line.startsWith(XMP_METADATA) && verify(randKey, XMP_METADATA, line)) {
                     loadInfo(reader, metadata);
-                } else if (pageMatcher.reset(line).find()) {
+                } else if (numPagesMatcher.reset(line).find() && verify(randKey,
+                        numPagesMatcher.group(0), line)) {
+                    int numPages = Integer.parseInt(numPagesMatcher.group(1));
+                    metadata.set(PagedText.N_PAGES, numPages);
+                } else if (pageMatcher.reset(line).find() && verify(randKey,
+                        pageMatcher.group(0), line)) {
                     String pageNumber = pageMatcher.group(1);
                     xhtml.startElement("div", "page", pageNumber);
-                    line = loadPage(reader, xhtml, warnings);
+                    //this line is probably the start of the next page or end of document
+                    line = loadPage(reader, randKey, xhtml, infos, warnings);
                     xhtml.endElement("div");
                     continue;
-                } else if (line.startsWith(END_OF_DOCUMENT)) {
+                } else if (line.startsWith(END_OF_DOCUMENT) && verify(randKey, END_OF_DOCUMENT,
+                        line)) {
                     break;
                 }
                 line = reader.readLine();
@@ -102,32 +128,56 @@ public class PDFJSOutputParser extends AbstractParser {
         } finally {
             //xhtml.endDocument();
         }
+        for (String info : infos) {
+            metadata.add(INFOS, info);
+        }
         for (String w : warnings) {
             metadata.add(WARNINGS, w);
         }
     }
 
-    private String loadPage(BufferedReader reader, XHTMLContentHandler xhtml,
-                            Set<String> warnings) throws IOException, SAXException {
+    private boolean verify(long randKey, String prefix, String line) {
+        //TODO prefix+ key=randKey should equal the line
+        return line.trim().endsWith(" key="+randKey);
+    }
+
+    private String loadPage(BufferedReader reader, long randKey, XHTMLContentHandler xhtml,
+                            Set<String> infos, Set<String> warnings) throws IOException,
+            SAXException {
         String line = reader.readLine();
         boolean inText = false;
         while (line != null) {
-            if (line.startsWith(END_OF_DOCUMENT)) {
+            if (line.startsWith(END_OF_DOCUMENT) && verify(randKey, END_OF_DOCUMENT, line)) {
                 return line;
-            } else if (line.startsWith(PAGE_START)) {
+            } else if (line.startsWith(PAGE_START) && verify(randKey, PAGE_START, line)) {
                 return line;
             } else if (line.startsWith(WARNING_PREFIX)) {
                 String w = line.substring(WARNING_PREFIX.length());
                 warnings.add(w);
-            } else if (line.startsWith(TEXT_CONTENT)) {
-                inText = true;
-                line = reader.readLine();
-                continue;
-            } else if (inText) {
-                xhtml.characters(line);
-                xhtml.characters("\n");
+            } else if (line.startsWith(INFO_PREFIX)) {
+                String info = line.substring(INFO_PREFIX.length());
+                if (! info.contains(SKIP_INFO)) {
+                    infos.add(info);
+                }
+            } else if (line.startsWith(TEXT_CONTENT) && verify(randKey, TEXT_CONTENT, line)) {
+                return readContent(reader, randKey, xhtml);
             }
+            line = reader.readLine();
+        }
+        throw new EOFException();
+    }
 
+    private String readContent(BufferedReader reader, long randKey,
+                               XHTMLContentHandler xhtml) throws IOException, SAXException {
+        String line = reader.readLine();
+        while (line != null) {
+            if (line.startsWith(END_OF_DOCUMENT) && verify(randKey, END_OF_DOCUMENT, line)) {
+                return line;
+            } else if (line.startsWith(PAGE_START) && verify(randKey, PAGE_START, line)) {
+                return line;
+            }
+            xhtml.characters(line);
+            xhtml.characters("\n");
             line = reader.readLine();
         }
         throw new EOFException();
@@ -135,7 +185,6 @@ public class PDFJSOutputParser extends AbstractParser {
 
     private void loadInfo(BufferedReader reader, Metadata metadata) throws IOException {
         String line = reader.readLine();
-        Matcher jsonHack = JSON_HACK_MATCHER.matcher(line);
         StringBuilder sb = new StringBuilder();
         boolean inJson = false;
         while (line != null) {

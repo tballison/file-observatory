@@ -1,10 +1,13 @@
-# Document Loaded
-Number of Pages: 62
+# Random Key: 765668851
+# Document Loaded key=765668851
+# Number of Pages: 2 key=765668851
 
-# Metadata Is Loaded
-## Info
+#  Metadata Is Loaded key=765668851
+## Info key=765668851
 {
   "PDFFormatVersion": "1.6",
+  "Language": null,
+  "EncryptFilterName": null,
   "IsLinearized": true,
   "IsAcroFormPresent": false,
   "IsXFAPresent": false,
@@ -17,7 +20,7 @@ Number of Pages: 62
   "Title": "18-956 Google LLC v. Oracle America, Inc. (04/05/2021)"
 }
 
-## Metadata
+## Metadata key=765668851
 {
   "xmp:modifydate": "2021-04-02T15:47:01-04:00",
   "xmp:createdate": "2021-04-02T14:43:20-04:00",
@@ -31,22 +34,23 @@ Number of Pages: 62
   "pdf:producer": "Acrobat Distiller 20.0 (Windows)"
 }
 
-# Page 1
-Size: 612x792
+# Page 1 key=765668851
+# Size: 612x792 key=765668851
 
+Info: TT: CALL empty stack (or invalid entry).
+Info: TT: CALL empty stack (or invalid entry).
+Info: TT: CALL empty stack (or invalid entry).
+Info: TT: CALL empty stack (or invalid entry).
 Warning: fetchStandardFontData: failed to fetch file "FoxitSerifBold.pfb" with "UnknownErrorException: The standard font "baseUrl" parameter must be specified, ensure that the "standardFontDataUrl" API parameter is provided.".
-## Text Content
-                            page 1 content
-# Page 2
-Size: 612x792
+Info: page=1 - getTextContent: time=141ms
+## Text Content key=765668851
+page 1 content
 
-## Text Content
+# Page 2 key=765668851
+# Size: 612x792 key=765668851
 
+Info: page=2 - getTextContent: time=33ms
+## Text Content key=765668851
 page 2 content
-# Page 3
-Size: 612x792
 
-## Text Content
-              pdf page 3 content
-
-# End of Document
+# End of Document key=765668851

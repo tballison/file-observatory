@@ -30,7 +30,7 @@
         </param>
         <param name="commandLine" type="list">
           <string>node</string>
-          <string>/builddir/pdf.js-2.11.338/examples/node/getinfo.js</string>
+          <string>/builddir/pdf.js-2.11.338/examples/node/my-getinfo.js</string>
           <string>${INPUT_FILE}</string>
         </param>
         <param name="returnStdout" type="bool">false</param>

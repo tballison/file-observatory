@@ -10,7 +10,12 @@ RUN mkdir /builddir && cd /builddir && \
     tar -xzvf v2.11.338.tar.gz && cd pdf.js-2.11.338 &&  \
     npm install && gulp dist-install
 
-# figure two stage build and what we can jettison for a smaller container
+COPY js/my-getinfo.js /builddir/pdf.js-2.11.338/examples/node/my-getinfo.js
+
+# TODO: figure two stage build and what we can jettison for a smaller container
+# TODO: this is barely a good start on this...
+RUN rm /builddir/v2.11.338.tar.gz
+
 RUN mkdir /tika-bin/
 COPY target/tika-pdfjs-1.0.0-SNAPSHOT.jar /tika-bin/
 #find a more elegant way of grabbing this after we release it
