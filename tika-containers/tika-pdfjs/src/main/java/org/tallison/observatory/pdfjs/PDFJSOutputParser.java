@@ -24,6 +24,7 @@ import org.xml.sax.ContentHandler;
 import org.xml.sax.SAXException;
 
 import org.apache.tika.exception.TikaException;
+import org.apache.tika.metadata.ExternalProcess;
 import org.apache.tika.metadata.Metadata;
 import org.apache.tika.metadata.PDF;
 import org.apache.tika.metadata.PagedText;
@@ -33,6 +34,7 @@ import org.apache.tika.mime.MediaType;
 import org.apache.tika.parser.AbstractParser;
 import org.apache.tika.parser.ParseContext;
 import org.apache.tika.sax.XHTMLContentHandler;
+import org.apache.tika.utils.StringUtils;
 
 public class PDFJSOutputParser extends AbstractParser {
 
@@ -91,8 +93,22 @@ public class PDFJSOutputParser extends AbstractParser {
         Matcher randomKeyMatcher = RANDOM_KEY_PATTERN.matcher("");
         Matcher numPagesMatcher = NUMBER_OF_PAGES_PATTERN.matcher("");
         Matcher pageMatcher = PAGE_PATTERN.matcher("");
-
+        String error = metadata.get(ExternalProcess.STD_ERR);
+        if (!StringUtils.isBlank(error)) {
+            return;
+        }
         XHTMLContentHandler xhtml = new XHTMLContentHandler(contentHandler, metadata);
+        /*
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream,
+                StandardCharsets.UTF_8))) {
+            String line = reader.readLine();
+            while (line != null) {
+                xhtml.characters(line);
+                xhtml.characters("\n");
+                line = reader.readLine();
+            }
+        }*/
+
         long randKey = -1;
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream,
                 StandardCharsets.UTF_8))) {
@@ -104,23 +120,24 @@ public class PDFJSOutputParser extends AbstractParser {
                         randKey = Long.parseLong(randomKeyMatcher.group(1));
                     }
                 } else if (line.startsWith(PDDOC_INFO) && verify(randKey, PDDOC_INFO, line)) {
-                    loadInfo(reader, metadata);
+                    line = loadInfo(reader, randKey, numPagesMatcher, pageMatcher, metadata);
+                    continue;
                 } else if (line.startsWith(XMP_METADATA) && verify(randKey, XMP_METADATA, line)) {
-                    loadInfo(reader, metadata);
-                } else if (numPagesMatcher.reset(line).find() && verify(randKey,
-                        numPagesMatcher.group(0), line)) {
+                    line = loadInfo(reader, randKey, numPagesMatcher, pageMatcher, metadata);
+                    continue;
+                } else if (numPagesMatcher.reset(line).find() &&
+                        verify(randKey, numPagesMatcher.group(0), line)) {
                     int numPages = Integer.parseInt(numPagesMatcher.group(1));
                     metadata.set(PagedText.N_PAGES, numPages);
-                } else if (pageMatcher.reset(line).find() && verify(randKey,
-                        pageMatcher.group(0), line)) {
+                } else if (pageMatcher.reset(line).find() &&
+                        verify(randKey, pageMatcher.group(0), line)) {
                     String pageNumber = pageMatcher.group(1);
                     xhtml.startElement("div", "page", pageNumber);
                     //this line is probably the start of the next page or end of document
                     line = loadPage(reader, randKey, xhtml, infos, warnings);
                     xhtml.endElement("div");
                     continue;
-                } else if (line.startsWith(END_OF_DOCUMENT) && verify(randKey, END_OF_DOCUMENT,
-                        line)) {
+                } else if (line.startsWith(END_OF_DOCUMENT) && verify(randKey, END_OF_DOCUMENT, line)) {
                     break;
                 }
                 line = reader.readLine();
@@ -128,6 +145,7 @@ public class PDFJSOutputParser extends AbstractParser {
         } finally {
             //xhtml.endDocument();
         }
+
         for (String info : infos) {
             metadata.add(INFOS, info);
         }
@@ -183,17 +201,32 @@ public class PDFJSOutputParser extends AbstractParser {
         throw new EOFException();
     }
 
-    private void loadInfo(BufferedReader reader, Metadata metadata) throws IOException {
+    private String loadInfo(BufferedReader reader, long randKey,
+                            Matcher numPagesMatcher, Matcher pageMatcher,
+                            Metadata metadata) throws IOException {
         String line = reader.readLine();
         StringBuilder sb = new StringBuilder();
         boolean inJson = false;
         while (line != null) {
             if (line.trim().equals("{")) {
                 inJson = true;
-            } else if (line.trim().equals("}")) {
-                sb.append(line);
+            } else if (line.startsWith(PDDOC_INFO) && verify(randKey, PDDOC_INFO, line)) {
                 parseJsonMetadata(sb.toString(), metadata);
-                return;
+                return line;
+            } else if (line.startsWith(XMP_METADATA) && verify(randKey, XMP_METADATA, line)) {
+                parseJsonMetadata(sb.toString(), metadata);
+                return line;
+            } else if (numPagesMatcher.reset(line).find() &&
+                verify(randKey, numPagesMatcher.group(0), line)) {
+                parseJsonMetadata(sb.toString(), metadata);
+                return line;
+            } else if (pageMatcher.reset(line).find() &&
+                    verify(randKey, pageMatcher.group(0), line)) {
+                parseJsonMetadata(sb.toString(), metadata);
+                return line;
+            } else if (line.startsWith(END_OF_DOCUMENT) && verify(randKey, END_OF_DOCUMENT, line)) {
+                parseJsonMetadata(sb.toString(), metadata);
+                return line;
             }
             if (inJson) {
                 sb.append(line).append("\n");
@@ -203,9 +236,10 @@ public class PDFJSOutputParser extends AbstractParser {
         if (line == null) {
             throw new EOFException();
         }
+        return line;
     }
 
-    private void parseJsonMetadata(String json, Metadata metadata) {
+    private void parseJsonMetadata(String json, Metadata metadata) throws IOException {
         try {
             JsonNode root = new ObjectMapper().readTree(json);
             if (!root.isObject()) {
@@ -218,7 +252,8 @@ public class PDFJSOutputParser extends AbstractParser {
                 writeMetadata(k, v, metadata);
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            throw e;
+//            e.printStackTrace();
         }
     }
 

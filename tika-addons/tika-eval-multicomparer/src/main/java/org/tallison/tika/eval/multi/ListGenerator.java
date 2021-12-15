@@ -8,7 +8,7 @@ public class ListGenerator {
 
     public static void main(String[] args) throws Exception {
         Set<String> seen = new HashSet<>();
-        File tools = new File("/home/tallison/data/extracts");
+        File tools = new File(".../data/extracts");
         for (File tool : tools.listFiles()) {
             for (File c : tool.listFiles()) {
                 for (File e : c.listFiles()) {

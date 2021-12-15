@@ -43,4 +43,21 @@ public class PDFJSOutputParserTest {
         assertTrue(content.contains("page 1 content"));
         assertTrue(content.contains("page 2 content"));
     }
+
+    @Test
+    public void testXMPEmbedded() throws Exception {
+        Metadata metadata = new Metadata();
+        ContentHandler contentHandler = new ToXMLContentHandler();
+        XHTMLContentHandler xhtml = new XHTMLContentHandler(contentHandler, metadata);
+        xhtml.startDocument();
+        Parser p = new PDFJSOutputParser();
+        try (InputStream is = PDFJSOutputParserTest.class
+                .getResourceAsStream("/test-documents/test-xmp2.txt")) {
+            p.parse(is, xhtml, metadata, new ParseContext());
+        }
+        xhtml.endDocument();
+        String content = contentHandler.toString();
+        assertEquals(1, (int)metadata.getInt(PagedText.N_PAGES));
+        assertTrue(Boolean.parseBoolean(metadata.get(PDF.HAS_ACROFORM_FIELDS)));
+    }
 }

@@ -2,19 +2,24 @@ FROM node:16.13.0
 
 #make sure you have enough memory to build this --memory=900
 RUN npm install -g gulp-cli
-RUN apt-get update && apt-get -y install wget openjdk-11-jre
 
-#OMG do we really have to build from scratch?
+#Option A: grab and build a specific release
+#RUN apt-get update && apt-get -y install wget openjdk-11-jre
+#RUN mkdir /builddir && cd /builddir && \
+#   wget https://github.com/mozilla/pdf.js/archive/refs/tags/v2.11.338.tar.gz && \
+#   tar -xzvf v2.11.338.tar.gz && mv pdf.js-2.11.338 pdf.js && \
+#   cd pdf.js && npm install && gulp dist-install && \
+#   rm /builddir/v2.11.338.tar.gz
+
+#Option B: build from main
+RUN apt-get update && apt-get -y install git openjdk-11-jre
 RUN mkdir /builddir && cd /builddir && \
-    wget https://github.com/mozilla/pdf.js/archive/refs/tags/v2.11.338.tar.gz && \
-    tar -xzvf v2.11.338.tar.gz && cd pdf.js-2.11.338 &&  \
+    git clone https://github.com/mozilla/pdf.js && cd pdf.js && \
     npm install && gulp dist-install
 
-COPY js/my-getinfo.js /builddir/pdf.js-2.11.338/examples/node/my-getinfo.js
+COPY js/my-getinfo.js /builddir/pdf.js/examples/node/my-getinfo.js
 
 # TODO: figure two stage build and what we can jettison for a smaller container
-# TODO: this is barely a good start on this...
-RUN rm /builddir/v2.11.338.tar.gz
 
 RUN mkdir /tika-bin/
 COPY target/tika-pdfjs-1.0.0-SNAPSHOT.jar /tika-bin/

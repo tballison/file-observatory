@@ -27,10 +27,14 @@
       <params>
         <param name="supportedTypes" type="list">
           <string>application/pdf</string>
+          <string>application/octet-stream</string>
+          <string>text/x-matlab</string>
+          <string>text/plain</string>
         </param>
         <param name="commandLine" type="list">
           <string>node</string>
-          <string>/builddir/pdf.js-2.11.338/examples/node/my-getinfo.js</string>
+          <string>--abort-on-uncaught-exception</string>
+          <string>/builddir/pdf.js/examples/node/my-getinfo.js</string>
           <string>${INPUT_FILE}</string>
         </param>
         <param name="returnStdout" type="bool">false</param>
@@ -41,8 +45,8 @@
   </parsers>
   <server>
     <params>
-      <port>9998</port>
-      <taskTimeoutMillis>30000</taskTimeoutMillis>
+      <port>9990-9999</port>
+      <taskTimeoutMillis>120000</taskTimeoutMillis>
       <enableUnsecureFeatures>false</enableUnsecureFeatures>
       <maxFiles>10000000</maxFiles>
       <forkedJvmArgs>

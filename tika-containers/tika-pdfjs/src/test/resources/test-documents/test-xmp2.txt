@@ -1,0 +1,26 @@
+# Random Key: 367480315
+# Document Loaded key=367480315
+# Number of Pages: 1 key=367480315
+
+# Metadata Is Loaded key=367480315
+
+## Info key=367480315
+{
+   "PDFFormatVersion": "1.5",
+   "IsLinearized": false,
+   "IsAcroFormPresent": true,
+   "IsXFAPresent": false,
+   "Trapped": {
+       "name": "False"
+   },
+   "Custom": {
+        "PTEX.Fullbanner": "This is pdfTeX, Version 3.14159265-2.6-1.40.18 (TeX Live 2017/Debian) kpathsea version 6.2.3"
+   }
+}
+
+# Page 1 key=367480315
+# Size: 595.276x841.89 key=367480315
+Info: page=1 - getTextContent: time=40ms
+## Text Content key=367480315
+Name Copy Reset
+# End of Document key=367480315
