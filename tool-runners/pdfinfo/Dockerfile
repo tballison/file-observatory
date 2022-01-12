@@ -1,25 +1,26 @@
 #slight modification from:
 #https://stackoverflow.com/questions/61272431/installing-poppler-utils-of-version-0-82-in-docker
 #See also: https://github.com/quarkness/docker-poppler/blob/master/Dockerfile
-FROM amd64/openjdk:11.0.8-slim-buster as POPPLER_BUILDER
-
-#python:3.8-slim-buster as POPPLER_BUILDER
+FROM debian:buster-20211220-slim as POPPLER_BUILDER
+## can't build w 22.01.0 with the current dependencies...need to figure out how to
+# migrate to 22.x
+ENV POPPLER_VERSION=21.12.0
+ENV POPPLER_DATA_VERSION=0.4.11
 RUN apt-get update && apt-get install bash wget build-essential cmake libfreetype6-dev pkg-config libfontconfig-dev libjpeg-dev libopenjp2-7-dev -y
-RUN wget https://poppler.freedesktop.org/poppler-data-0.4.11.tar.gz \
-    && tar -xf poppler-data-0.4.11.tar.gz \
-    && cd poppler-data-0.4.11 \
+RUN wget https://poppler.freedesktop.org/poppler-data-${POPPLER_DATA_VERSION}.tar.gz \
+    && tar -xf poppler-data-${POPPLER_DATA_VERSION}.tar.gz \
+    && cd poppler-data-${POPPLER_DATA_VERSION} \
     && make install \
     && cd .. \
-    && wget https://poppler.freedesktop.org/poppler-21.10.0.tar.xz \
-    && tar -xf poppler-21.10.0.tar.xz \
-    && cd poppler-21.10.0 \
+    && wget https://poppler.freedesktop.org/poppler-${POPPLER_VERSION}.tar.xz \
+    && tar -xf poppler-${POPPLER_VERSION}.tar.xz \
+    && cd poppler-${POPPLER_VERSION} \
     && mkdir build \
-    && cd build \
-    && cmake -DENABLE_BOOST=OFF .. \
+    && cd build  \
+    && cmake -DENABLE_BOOST=OFF ..\
     && make \
     && make install \
     && ldconfig
-#CMD tail -f /dev/null
 
 
 FROM amd64/openjdk:11.0.8-slim-buster
