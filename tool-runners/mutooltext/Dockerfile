@@ -7,14 +7,15 @@ MAINTAINER Jens Fischer
 # include bash for debugging the build only
 
 #get tags from here: http://git.ghostscript.com/?p=mupdf.git;a=summary
-#versions 1.18.0 1.17.0, 1.16.1, 1.16.0, 1.15.0, 1.14.0, 1.13.0, 1.12.0, 1.11.1
+#versions 1.19.0 1.18.0 1.17.0, 1.16.1, 1.16.0, 1.15.0, 1.14.0, 1.13.0, 1.12.0, 1.11.1
+ENV MUTOOL_VERSION 1.19.0
 RUN apk add --no-cache \
         git \
         make \
         pkgconfig \
         build-base \
         bash \
-	&& git clone -b 1.18.0 https://github.com/ArtifexSoftware/mupdf \
+	&& git clone -b ${MUTOOL_VERSION} https://github.com/ArtifexSoftware/mupdf \
         && cd mupdf \
         && git submodule update --init \
         && make HAVE_X11=no HAVE_GLUT=no prefix=/usr/local install \
