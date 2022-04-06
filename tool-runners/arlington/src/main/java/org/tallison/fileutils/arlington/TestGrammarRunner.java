@@ -98,7 +98,6 @@ public class TestGrammarRunner extends AbstractDirectoryProcessor {
             FileProcessResult r = ProcessExecutor.execute(pb,
                         timeoutMillis, metadataWriter.getMaxStdoutBuffer(),
                     metadataWriter.getMaxStderrBuffer());
-            LOG.info("arlington result: " + r);
             metadataWriter.write(relPath, r);
         }
     }

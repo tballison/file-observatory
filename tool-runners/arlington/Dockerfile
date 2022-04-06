@@ -10,7 +10,7 @@ RUN git clone  https://github.com/pdf-association/arlington-pdf-model /arlington
 
 RUN cd /arlington-pdf-model/TestGrammar && \
     cmake -B cmake-linux/debug -DPDFSDK_PDFIUM=ON -DCMAKE_BUILD_TYPE=Debug . && \
-    cmake --build cmake-linux/debug --config Debug && ./bin/linux/TestGrammar_d
+    cmake --build cmake-linux/debug --config Debug
 
 
 FROM amd64/openjdk:11.0.8-slim-buster
