@@ -67,10 +67,7 @@ public abstract class FileToFileProcessor extends AbstractFileProcessor {
             try (InputStream is = configSrc.getFetcher().fetch(relPath, new Metadata());
                  TikaInputStream tis = TikaInputStream.get(is)) {
                 Path tmpSrcFile = tis.getPath();
-                //temporary workaround for arlington
-                //switch this back to tmp.createTempFile()
-                 tmpOutFile = tmpSrcFile.getParent().resolve(
-                        tmpSrcFile.getFileName().toString() + "-" + UUID.randomUUID());
+                tmpOutFile = tmp.createTempFile();
 
                 process(relPath, tmpSrcFile, tmpOutFile, metadataWriter);
                 if (Files.size(tmpOutFile) > 0) {
