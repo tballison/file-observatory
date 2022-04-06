@@ -83,7 +83,7 @@ public class TestGrammarRunner extends AbstractDirectoryProcessor {
                             MetadataWriter metadataWriter) throws IOException {
 
             List<String> commandLine = new ArrayList<>();
-            commandLine.add("./TestGrammar");
+            commandLine.add("./TestGrammar_d");
             commandLine.add("-b");//brief
             commandLine.add("--clobber");
             commandLine.add("-p");
