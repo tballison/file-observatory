@@ -21,6 +21,7 @@ import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,6 +51,7 @@ public class MultiComparerCLI extends ConfigBase implements Initializable {
     }
     public static void main(String[] args) throws Exception {
         Path configPath = Paths.get(args[0]);
+        Class.forName("org.postgresql.Driver");
         boolean isDelta = args.length > 1;
         PipesIterator pipesIterator = PipesIterator.build(configPath);
         FetcherManager fetcherManager = FetcherManager.load(configPath);
@@ -205,7 +207,8 @@ public class MultiComparerCLI extends ConfigBase implements Initializable {
                 if (offered % 1000 == 0) {
                     LOGGER.info("enqueuer offered: {}", offered);
                 }
-                tuples.offer(tuple);
+                //TODO: time this out with offer
+                tuples.put(tuple);
                 offered++;
             }
             tuples.offer(PipesIterator.COMPLETED_SEMAPHORE);

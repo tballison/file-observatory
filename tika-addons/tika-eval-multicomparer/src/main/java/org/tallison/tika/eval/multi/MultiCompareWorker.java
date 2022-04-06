@@ -100,7 +100,9 @@ public class MultiCompareWorker implements Callable<Integer> {
             while (true) {
                 FetchEmitTuple t = tuples.take();
                 if (t == PipesIterator.COMPLETED_SEMAPHORE) {
+                    LOGGER.info("completed; about to offer 'stop' semaphore");
                     tuples.offer(t);
+                    LOGGER.info("completed; offered'stop' semaphore");
                     return 1;
                 }
                 process(t);
@@ -156,7 +158,10 @@ public class MultiCompareWorker implements Callable<Integer> {
         for (Float comparison : comparisons) {
             updateFloat(insert, ++i, comparison);
         }
+        long processed = TUPLES_PROCESSED.get();
+        LOGGER.debug("about to insert " + t.getFetchKey().getFetchKey());
         insert.execute();
+        LOGGER.debug("inserted " + t.getFetchKey().getFetchKey());
     }
 
     private void load(String tool, String fetchKey, String extension, List<Metadata> metadatas) {

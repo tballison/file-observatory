@@ -84,6 +84,8 @@ public class TestGrammarRunner extends AbstractDirectoryProcessor {
 
             List<String> commandLine = new ArrayList<>();
             commandLine.add("./TestGrammar");
+            commandLine.add("-b");//brief
+            commandLine.add("--clobber");
             commandLine.add("-p");
             commandLine.add(srcPath.toAbsolutePath().toString());
             commandLine.add("-t");

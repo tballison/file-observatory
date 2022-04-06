@@ -1,0 +1,17 @@
+# Set build arguments here. See `gn help buildargs`.
+
+# need this to build pdfium_test
+pdf_is_standalone = true
+
+#other options are commented out below
+#use_goma = true  # Googlers only. Make sure goma is installed and running first.
+#is_debug = true  # Enable debugging features.
+
+# Set true to enable experimental Skia backend.
+#pdf_use_skia = false
+# Set true to enable experimental Skia backend (paths only).
+#pdf_use_skia_paths = false
+
+#pdf_enable_xfa = true  # Set false to remove XFA support (implies JS support).
+#pdf_enable_v8 = true  # Set false to remove Javascript support.
+#is_component_build = false # Disable component build (Though it should work)

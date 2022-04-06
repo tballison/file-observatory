@@ -5,10 +5,12 @@ RUN apt-get update && apt-get install g++-8 gcc-8 cmake git -y
 RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-8 800 --slave /usr/bin/g++ g++ /usr/bin/g++-8
 
 #TODO: need to tag specific version
-RUN git clone -b v0.5 --depth 1 https://github.com/pdf-association/arlington-pdf-model /arlington-pdf-model
+RUN git clone  https://github.com/pdf-association/arlington-pdf-model /arlington-pdf-model && \
+    cd /arlington-pdf-model && git checkout e9b4264
 
-RUN cd /arlington-pdf-model/TestGrammar && mkdir LinRelease && cd LinRelease && \
-    cmake -DPDFSDK_PDFIUM=ON .. && make release
+RUN cd /arlington-pdf-model/TestGrammar && \
+    cmake -B cmake-linux/debug -DPDFSDK_PDFIUM=ON -DCMAKE_BUILD_TYPE=Debug . && \
+    cmake --build cmake-linux/debug --config Debug && ./bin/linux/TestGrammar_d
 
 
 FROM amd64/openjdk:11.0.8-slim-buster
