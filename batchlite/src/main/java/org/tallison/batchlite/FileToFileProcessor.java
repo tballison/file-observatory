@@ -63,11 +63,10 @@ public abstract class FileToFileProcessor extends AbstractFileProcessor {
     public void process(FetchEmitTuple tuple) throws IOException {
         String relPath = tuple.getFetchKey().getFetchKey();
         try (TemporaryResources tmp = new TemporaryResources()) {
-            Path tmpOutFile = null;
             try (InputStream is = configSrc.getFetcher().fetch(relPath, new Metadata());
                  TikaInputStream tis = TikaInputStream.get(is)) {
                 Path tmpSrcFile = tis.getPath();
-                tmpOutFile = tmp.createTempFile();
+                Path tmpOutFile = tmp.createTempFile();
 
                 process(relPath, tmpSrcFile, tmpOutFile, metadataWriter);
                 if (Files.size(tmpOutFile) > 0) {
@@ -81,10 +80,6 @@ public abstract class FileToFileProcessor extends AbstractFileProcessor {
                 }
             } catch (TikaException e) {
                 throw new IOException(e);
-            } finally {
-                if (tmpOutFile != null) {
-                    Files.delete(tmpOutFile);
-                }
             }
         }
     }
