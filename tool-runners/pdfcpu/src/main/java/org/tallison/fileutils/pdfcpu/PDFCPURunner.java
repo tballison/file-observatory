@@ -51,7 +51,7 @@ public class PDFCPURunner extends AbstractDirectoryProcessor {
     }
 
     public static String getName() {
-        return "pdfcpu";
+        return "pdfcpu_relaxed";
     }
 
     @Override
@@ -83,7 +83,7 @@ public class PDFCPURunner extends AbstractDirectoryProcessor {
                 commandLine.add("/root/pdfcpu");
                 commandLine.add("validate");
                 commandLine.add("-mode");
-                commandLine.add("strict");
+                commandLine.add("relaxed");
 
                 if (! srcPath.toAbsolutePath().endsWith(".pdf")) {
                     tmpDotPDF = Files.createTempFile("cpu-runner", ".pdf");
