@@ -11,7 +11,7 @@ RUN apk add --no-cache \
         bash \
         zlib \
         build-base py-pip jpeg-dev zlib-dev \
-        openjdk11-jre 
+        openjdk11-jre
 #	&& git clone -b v0.1.6 https://github.com/trailofbits/polyfile.git
 
 

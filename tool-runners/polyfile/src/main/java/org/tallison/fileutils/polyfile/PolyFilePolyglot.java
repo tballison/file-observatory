@@ -41,7 +41,7 @@ public class PolyFilePolyglot extends AbstractDirectoryProcessor {
     private static final Logger LOG = LoggerFactory.getLogger(PolyFilePolyglot.class);
 
     private final int maxErrBufferLength = 100;
-    private final long timeoutMillis = 120000;
+    private final long timeoutMillis = 300000;
 
     public PolyFilePolyglot(ConfigSrc config) throws TikaException, IOException {
         super(config);
