@@ -40,7 +40,8 @@ import org.apache.tika.pipes.FetchEmitTuple;
 public class PolyFilePolyglot extends AbstractDirectoryProcessor {
     private static final Logger LOG = LoggerFactory.getLogger(PolyFilePolyglot.class);
 
-    private final int maxErrBufferLength = 100;
+    private static final int maxErrBufferLength = 1000;
+    private static final int maxStdOutLength = 10000;
     private final long timeoutMillis = 300000;
 
     public PolyFilePolyglot(ConfigSrc config) throws TikaException, IOException {
@@ -95,7 +96,7 @@ public class PolyFilePolyglot extends AbstractDirectoryProcessor {
 
         PolyFilePolyglot runner = new PolyFilePolyglot(
                 ConfigSrc.build(args,
-                        getName(), 10000, 1000));
+                        getName(), maxStdOutLength, maxErrBufferLength));
         //runner.setMaxFiles(100);
         runner.execute();
     }

@@ -1,0 +1,13 @@
+{
+  "status": [200,300,400],
+  "regex" : {
+    "mimes": [
+      "\\Aaudio",
+      "\\Avideo"
+    ],
+    "detected_mimes": [
+      "\\Aaudio",
+      "\\Avideo"
+    ]
+  }
+}

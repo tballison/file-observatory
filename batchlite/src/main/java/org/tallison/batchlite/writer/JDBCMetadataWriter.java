@@ -53,7 +53,7 @@ public class JDBCMetadataWriter extends MetadataWriter {
 
     JDBCMetadataWriter(String name, String connectionString, boolean isDelta,
                        int maxStdout, int maxStderr) throws IOException {
-        super(name);
+        super(name, maxStdout, maxStderr);
         this.table = name;
         this.connectionString = connectionString;
         isPostgres = connectionString.startsWith("jdbc:postgresql");

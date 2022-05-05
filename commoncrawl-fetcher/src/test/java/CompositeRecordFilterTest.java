@@ -19,6 +19,11 @@ public class CompositeRecordFilterTest {
         assertTrue(accept(filter, "application/pDf", "application/pDf"));
     }
 
+    @Test
+    public void testOne() throws Exception {
+        RecordFilter filter = loadFilter("mime-filters-av.json");
+        System.out.println(accept(filter, "file", "image/vnd.zbrush.pcx"));
+    }
     //TODO: add more unit tests
 
     public static boolean accept(RecordFilter filter, String mime, String detectedMime) {

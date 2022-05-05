@@ -44,12 +44,14 @@ public abstract class MetadataWriter implements Callable<Integer> {
     private static final long MAX_POLL_SECONDS = 6000;
     private static final int MAX_BUFFER = 10000;
     int recordsWritten = 0;
-    private int maxStdoutBuffer = MAX_BUFFER;
-    private int maxStderrBuffer = MAX_BUFFER;
+    private final int maxStdoutBuffer;
+    private final int maxStderrBuffer;
     private final ArrayBlockingQueue<PathResultPair> rows = new ArrayBlockingQueue<>(1000);
     private final String name;
-    public MetadataWriter(String name) {
+    public MetadataWriter(String name, int maxStdoutBuffer, int maxStderrBuffer) {
         this.name = name;
+        this.maxStdoutBuffer = maxStdoutBuffer;
+        this.maxStderrBuffer = maxStderrBuffer;
     }
 
     public String getName() {
@@ -63,16 +65,8 @@ public abstract class MetadataWriter implements Callable<Integer> {
         return maxStdoutBuffer;
     }
 
-    public void setMaxStdoutBuffer(int maxStdoutBuffer) {
-        this.maxStdoutBuffer = maxStdoutBuffer;
-    }
-
     public int getMaxStderrBuffer() {
         return maxStderrBuffer;
-    }
-
-    public void setMaxStderrBuffer(int maxStderrBuffer) {
-        this.maxStderrBuffer = maxStderrBuffer;
     }
 
     public void write(String relPath, FileProcessResult result) throws IOException {

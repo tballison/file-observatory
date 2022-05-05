@@ -52,7 +52,7 @@ public class CCIndexWGetter {
     private static String AWS_URL_BASE = "https://commoncrawl.s3.amazonaws.com/cc-index/collections/";
     private static String AWS_URL_INDICES = "/indexes/cdx-";
 
-    private static final int DEFAULT_NUM_THREADS = 3;//be nice...don't do more than this
+    private static final int DEFAULT_NUM_THREADS = 2;//be nice...don't do more than this
 
     private static Options getOptions() {
         Options options = new Options();
@@ -157,8 +157,19 @@ public class CCIndexWGetter {
                             "-O", output.toAbsolutePath().toString(), url);
                     Process process = pb.inheritIO().start();
                     finished = process.waitFor(5, TimeUnit.MINUTES);
+
                     if (finished) {
-                        LOGGER.info("successfully retrieved:" +output.getFileName());
+                        int exitValue = process.exitValue();
+                        if (exitValue == 0) {
+                            LOGGER.info("successfully retrieved:" + output.getFileName());
+                        } else {
+                            LOGGER.info("exit value is bad: " + exitValue + " " + output.getFileName());
+                            finished = false;
+                            //sleep a bit and hope the process has fully finished
+                            //otherwise, it might not let go of the file
+                            Thread.sleep(1000);
+                            Files.delete(output);
+                        }
                     } else {
                         LOGGER.warn("timeout on: "+output.getFileName());
                         process.destroy();
