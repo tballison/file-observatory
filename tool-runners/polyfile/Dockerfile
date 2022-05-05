@@ -5,10 +5,11 @@
 # from the other docker files: build the java first, then
 # copy that jar into the build container for polyfile.
 
-FROM python:3.8.5-alpine3.12
+FROM python:3.10.4-alpine3.15
 RUN apk add --no-cache \
-        git \
+ #       git \
         bash \
+        libffi-dev \
         zlib \
         build-base py-pip jpeg-dev zlib-dev \
         openjdk11-jre
