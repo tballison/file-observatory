@@ -11,13 +11,15 @@ RUN apk add --no-cache \
         bash \
         zlib \
         build-base py-pip jpeg-dev zlib-dev \
-        openjdk11-jre \
-	&& git clone -b v0.1.6 https://github.com/trailofbits/polyfile.git
+        openjdk11-jre 
+#	&& git clone -b v0.1.6 https://github.com/trailofbits/polyfile.git
 
 
 ENV LIBRARY_PATH=/lib:/usr/lib
 
-RUN cd polyfile && pip3 install -e .
+#RUN cd polyfile && pip3 install -e .
+
+RUN pip3 install polyfile==0.4.1
 
 COPY target/polyfile-1.0.0-SNAPSHOT.jar /polyfile-1.0.0-SNAPSHOT.jar
 
