@@ -31,8 +31,8 @@ public class JSONMetadataWriter extends MetadataWriter {
     private final Path metadataRootDir;
 
     public JSONMetadataWriter(String name,
-                              Path metadataRootDir) {
-        super(name);
+                              Path metadataRootDir, int stdoutLimit, int stderrLimit) {
+        super(name, stdoutLimit, stderrLimit);
         this.metadataRootDir = metadataRootDir;
     }
 

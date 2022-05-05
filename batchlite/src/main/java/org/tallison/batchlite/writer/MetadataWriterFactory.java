@@ -29,9 +29,9 @@ public class MetadataWriterFactory {
         if (writerString.startsWith("jdbc:")) {
             return new JDBCMetadataWriter(name, writerString, isDelta, maxStdout, maxStderr);
         } else if (writerString.endsWith(".csv") || writerString.endsWith(".tsv")) {
-            return new CSVMetadataWriter(name, Paths.get(writerString));
+            return new CSVMetadataWriter(name, Paths.get(writerString), maxStdout, maxStderr);
         } else {
-            return new JSONMetadataWriter(name, Paths.get(writerString));
+            return new JSONMetadataWriter(name, Paths.get(writerString), maxStdout, maxStderr);
         }
     }
 }

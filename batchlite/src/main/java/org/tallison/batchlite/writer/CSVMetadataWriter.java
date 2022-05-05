@@ -39,8 +39,8 @@ public class CSVMetadataWriter extends MetadataWriter {
     private final CSVPrinter printer;
 
     CSVMetadataWriter(String name,
-                      Path csvFile) throws IOException {
-        super(name);
+                      Path csvFile, int stdoutLength, int stderrLength) throws IOException {
+        super(name, stdoutLength, stderrLength);
         printer = new CSVPrinter(
                 Files.newBufferedWriter(csvFile, StandardCharsets.UTF_8),
                 CSVFormat.EXCEL);
@@ -55,6 +55,7 @@ public class CSVMetadataWriter extends MetadataWriter {
 
     @Override
     public void write(PathResultPair pair) throws IOException {
+        //TODO: truncate stdout, stder
         List<String> cols = new ArrayList<>();
         FileProcessResult result = pair.getResult();
         cols.add(pair.getRelPath());
