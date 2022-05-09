@@ -20,7 +20,7 @@ ENV LIBRARY_PATH=/lib:/usr/lib
 
 #RUN cd polyfile && pip3 install -e .
 
-RUN pip3 install polyfile==0.4.1
+RUN pip3 install polyfile==0.4.2
 
 COPY target/polyfile-1.0.0-SNAPSHOT.jar /polyfile-1.0.0-SNAPSHOT.jar
 
