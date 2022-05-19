@@ -41,7 +41,7 @@ public class TikaPipesReporter extends PipesReporter implements Initializable {
     private static int MAX_PATH_LENGTH = 1024;
     private static int MAX_STDERR = 1024;
     private static boolean IS_POSTGRES = true;
-    private static int BATCH_SIZE = 10000;
+    private static int BATCH_SIZE = 1000;
     private String connectionString;
     private Connection connection;
     private ExecutorService executorService;
@@ -194,10 +194,11 @@ public class TikaPipesReporter extends PipesReporter implements Initializable {
                     continue;
                 } else if (reportData == STOP_SEMAPHORE) {
                     sendReports(reports);
+                    reports.clear();
                     return 1;
                 } else {
                     reports.add(reportData);
-                    if (reports.size() > 1000) {
+                    if (reports.size() > BATCH_SIZE) {
                         sendReports(reports);
                         reports.clear();
                     }
@@ -205,7 +206,7 @@ public class TikaPipesReporter extends PipesReporter implements Initializable {
             }
         }
 
-        private void sendReports(List<ReportData> reportData) {
+        private void sendReports(List<ReportData> reportData) throws InterruptedException {
             int tries = 0;
             while (tries++ < 10) {
                 try {
@@ -221,13 +222,8 @@ public class TikaPipesReporter extends PipesReporter implements Initializable {
             throw new RuntimeException("Couldn't write to db. Shutting down now.");
         }
 
-        private void tryReconnect() {
-            try {
-                Thread.sleep(10000);
-            } catch (InterruptedException ex) {
-                LOGGER.warn("interrupted");
-                return;
-            }
+        private void tryReconnect() throws InterruptedException {
+            Thread.sleep(10000);
             try {
                 connection.close();
             } catch (SQLException e2) {
