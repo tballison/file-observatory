@@ -198,7 +198,7 @@ public class TikaPipesReporter extends PipesReporter implements Initializable {
                     return 1;
                 } else {
                     reports.add(reportData);
-                    if (reports.size() > BATCH_SIZE) {
+                    if (reports.size() >= BATCH_SIZE) {
                         sendReports(reports);
                         reports.clear();
                     }
