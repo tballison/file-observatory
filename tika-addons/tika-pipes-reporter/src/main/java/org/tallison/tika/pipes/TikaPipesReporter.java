@@ -8,6 +8,8 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Savepoint;
 import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.Callable;
@@ -39,6 +41,7 @@ public class TikaPipesReporter extends PipesReporter implements Initializable {
     private static int MAX_PATH_LENGTH = 1024;
     private static int MAX_STDERR = 1024;
     private static boolean IS_POSTGRES = true;
+    private static int BATCH_SIZE = 10000;
     private String connectionString;
     private Connection connection;
     private ExecutorService executorService;
@@ -51,7 +54,7 @@ public class TikaPipesReporter extends PipesReporter implements Initializable {
         if (future != null) {
             try {
                 future.get();
-            } catch (InterruptedException|ExecutionException e) {
+            } catch (InterruptedException | ExecutionException e) {
                 e.printStackTrace();
                 throw new RuntimeException(e);
             }
@@ -79,7 +82,7 @@ public class TikaPipesReporter extends PipesReporter implements Initializable {
         LOGGER.debug("in close -- future taken");
         try {
             future.get();
-        } catch (InterruptedException|ExecutionException e) {
+        } catch (InterruptedException | ExecutionException e) {
             e.printStackTrace();
             throw new IOException(e);
         } finally {
@@ -95,16 +98,11 @@ public class TikaPipesReporter extends PipesReporter implements Initializable {
 
     @Override
     public void initialize(Map<String, Param> map) throws TikaConfigException {
-        try {
-            connection = DriverManager.getConnection(connectionString);
-            connection.setAutoCommit(false);
-        } catch (SQLException e) {
-            throw new TikaConfigException("can't connect: " + connectionString, e);
-        }
+
         executorService = Executors.newFixedThreadPool(1);
         executorCompletionService = new ExecutorCompletionService<>(executorService);
         try {
-            executorCompletionService.submit(new Reporter(queue, connection));
+            executorCompletionService.submit(new Reporter(queue, connectionString));
         } catch (SQLException e) {
             throw new TikaConfigException("can't create reporter", e);
         }
@@ -119,44 +117,49 @@ public class TikaPipesReporter extends PipesReporter implements Initializable {
     private static class Reporter implements Callable<Integer> {
         private final ArrayBlockingQueue<ReportData> queue;
         private final PreparedStatement insert;
-        private final Connection connection;
+        private final String connectionString;
+        private Connection connection;
         private int reportsSent = 0;
 
-        public Reporter(ArrayBlockingQueue<ReportData> queue, Connection connection) throws
-                SQLException {
+        public Reporter(ArrayBlockingQueue<ReportData> queue, String connectionString)
+                throws SQLException {
             this.queue = queue;
+            this.connectionString = connectionString;
+            this.connection = getNewConnection(connectionString);
             createTable(connection);
-            String sql = "insert into "+TABLE_NAME+" values (?,?,?,?,?,?,?);";
+            String sql = "insert into " + TABLE_NAME + " values (?,?,?,?,?,?,?);";
             insert = connection.prepareStatement(sql);
-            this.connection = connection;
+        }
+
+        private static Connection getNewConnection(String connectionString) throws SQLException {
+            Connection connection = DriverManager.getConnection(connectionString);
+            connection.setAutoCommit(false);
+            return connection;
         }
 
         private static void createTable(Connection connection) throws SQLException {
             String sql;
-            if (! IS_DELTA) {
+            if (!IS_DELTA) {
                 sql = "drop table if exists " + TABLE_NAME;
                 connection.createStatement().execute(sql);
             }
-            if (! tableExists(connection, TABLE_NAME)) {
+            if (!tableExists(connection, TABLE_NAME)) {
 
-                sql = "create table " + TABLE_NAME + " (" +
-                        "path varchar(" + MAX_PATH_LENGTH + ") primary key," +
-                        "exit_value integer," +
-                        "timeout boolean," +
-                        "process_time_ms BIGINT," +
-                        "stderr varchar(" + MAX_STDERR + ")," +
-                        "stderr_length bigint," +
-                        "stderr_truncated boolean)";
+                sql = "create table " + TABLE_NAME + " (" + "path varchar(" + MAX_PATH_LENGTH +
+                        ") primary key," + "exit_value integer," + "timeout boolean," +
+                        "process_time_ms BIGINT," + "stderr varchar(" + MAX_STDERR + ")," +
+                        "stderr_length bigint," + "stderr_truncated boolean)";
                 connection.createStatement().execute(sql);
                 connection.commit();
             }
         }
 
-        private static boolean tableExists(Connection connection, String table) throws SQLException {
+        private static boolean tableExists(Connection connection, String table)
+                throws SQLException {
             Savepoint savepoint = connection.setSavepoint();
             try {
                 try (Statement st = connection.createStatement();
-                     ResultSet rs = st.executeQuery("select * from "+table+" limit 1")) {
+                     ResultSet rs = st.executeQuery("select * from " + table + " limit 1")) {
                     while (rs.next()) {
 
                     }
@@ -168,23 +171,88 @@ public class TikaPipesReporter extends PipesReporter implements Initializable {
             }
         }
 
+        private static String clean(String s, int maxLength) {
+            if (s == null) {
+                return "";
+            }
+            if (IS_POSTGRES) {
+                s = s.replaceAll("\u0000", " ");
+            }
+            if (s.length() > maxLength) {
+                s = s.substring(0, maxLength);
+            }
+            return s;
+        }
+
         @Override
         public Integer call() throws Exception {
+            List<ReportData> reports = new ArrayList<>();
+
             while (true) {
                 ReportData reportData = queue.poll(1, TimeUnit.SECONDS);
                 if (reportData == null) {
                     continue;
                 } else if (reportData == STOP_SEMAPHORE) {
-                    insert.executeBatch();
-                    connection.commit();
+                    sendReports(reports);
                     return 1;
                 } else {
-                    sendReport(reportData);
+                    reports.add(reportData);
+                    if (reports.size() > 1000) {
+                        sendReports(reports);
+                        reports.clear();
+                    }
                 }
             }
         }
 
-        private void sendReport(ReportData reportData) throws SQLException {
+        private void sendReports(List<ReportData> reportData) {
+            int tries = 0;
+            while (tries++ < 10) {
+                try {
+                    trySendReports(reportData);
+                    return;
+                } catch (SQLException e) {
+                    LOGGER.warn("failed to send reports; trying to start new connection after a " +
+                            "sleep", e);
+                    tryReconnect();
+                }
+            }
+            LOGGER.error("Couldn't write to db. Shutting down");
+            throw new RuntimeException("Couldn't write to db. Shutting down now.");
+        }
+
+        private void tryReconnect() {
+            try {
+                Thread.sleep(10000);
+            } catch (InterruptedException ex) {
+                LOGGER.warn("interrupted");
+                return;
+            }
+            try {
+                connection.close();
+            } catch (SQLException e2) {
+                //whatevs this should not be surprising
+                LOGGER.warn("failed to close connection", e2);
+            }
+            try {
+                connection = getNewConnection(connectionString);
+                LOGGER.info("successfully got new connection");
+            } catch (SQLException e2) {
+                LOGGER.warn("failed to get new connection", e2);
+            }
+
+        }
+
+        private void trySendReports(List<ReportData> reportData) throws SQLException {
+            for (ReportData d : reportData) {
+                addReport(d);
+            }
+            insert.executeBatch();
+            connection.commit();
+            reportsSent = 0;
+        }
+
+        private void addReport(ReportData reportData) throws SQLException {
 
             int mockExitCode = getPseudoExitCode(reportData);
             boolean stderrTruncated = false;
@@ -198,8 +266,9 @@ public class TikaPipesReporter extends PipesReporter implements Initializable {
                 stderr = stderr.substring(0, MAX_STDERR);
                 stderrTruncated = true;
             }
-            boolean timeout = (reportData.pipesResult.getStatus() == PipesResult.STATUS.TIMEOUT) ?
-                    true : false;
+            boolean timeout =
+                    (reportData.pipesResult.getStatus() == PipesResult.STATUS.TIMEOUT) ? true :
+                            false;
 
             int col = 0;
             insert.clearParameters();
@@ -211,11 +280,6 @@ public class TikaPipesReporter extends PipesReporter implements Initializable {
             insert.setInt(++col, stderrLength);
             insert.setBoolean(++col, stderrTruncated);
             insert.addBatch();
-            if (reportsSent++ > 100) {
-                insert.executeBatch();
-                connection.commit();
-                reportsSent = 0;
-            }
         }
 
         private int getPseudoExitCode(ReportData reportData) {
@@ -255,19 +319,6 @@ public class TikaPipesReporter extends PipesReporter implements Initializable {
                 default:
                     return 14;
             }
-        }
-
-        private static String clean(String s, int maxLength) {
-            if (s == null) {
-                return "";
-            }
-            if (IS_POSTGRES) {
-                s = s.replaceAll("\u0000", " ");
-            }
-            if (s.length() > maxLength) {
-                s = s.substring(0, maxLength);
-            }
-            return s;
         }
 
     }
