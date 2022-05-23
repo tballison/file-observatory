@@ -44,7 +44,6 @@ public class TikaPipesReporter extends PipesReporter implements Initializable {
     private static boolean IS_POSTGRES = true;
     private static int BATCH_SIZE = 1000;
     private String connectionString;
-    private Connection connection;
     private ExecutorService executorService;
     private ExecutorCompletionService<Integer> executorCompletionService;
     private ArrayBlockingQueue<ReportData> queue = new ArrayBlockingQueue<>(1000);
@@ -117,7 +116,7 @@ public class TikaPipesReporter extends PipesReporter implements Initializable {
 
     private static class Reporter implements Callable<Integer> {
         private final ArrayBlockingQueue<ReportData> queue;
-        private final PreparedStatement insert;
+        private PreparedStatement insert;
         private final String connectionString;
         private Connection connection;
         private int reportsSent = 0;
@@ -128,8 +127,7 @@ public class TikaPipesReporter extends PipesReporter implements Initializable {
             this.connectionString = connectionString;
             this.connection = getNewConnection(connectionString);
             createTable(connection);
-            String sql = "insert into " + TABLE_NAME + " values (?,?,?,?,?,?,?);";
-            insert = connection.prepareStatement(sql);
+            insert = getNewInsert(connection);
         }
 
         private static Connection getNewConnection(String connectionString) throws SQLException {
@@ -138,14 +136,20 @@ public class TikaPipesReporter extends PipesReporter implements Initializable {
             return connection;
         }
 
+        private static PreparedStatement getNewInsert(Connection connection) throws SQLException {
+            String sql = "insert into " + TABLE_NAME + " values (?,?,?,?,?,?,?);";
+            return connection.prepareStatement(sql);
+        }
+
         private static void createTable(Connection connection) throws SQLException {
             String sql;
             if (!IS_DELTA) {
+                LOGGER.info("not delta; dropping table " + TABLE_NAME);
                 sql = "drop table if exists " + TABLE_NAME;
                 connection.createStatement().execute(sql);
             }
             if (!tableExists(connection, TABLE_NAME)) {
-
+                LOGGER.info("table does not exist. creating a new one");
                 sql = "create table " + TABLE_NAME + " (" + "path varchar(" + MAX_PATH_LENGTH +
                         ") primary key," + "exit_value integer," + "timeout boolean," +
                         "process_time_ms BIGINT," + "stderr varchar(" + MAX_STDERR + ")," +
@@ -226,13 +230,22 @@ public class TikaPipesReporter extends PipesReporter implements Initializable {
         private void tryReconnect() throws InterruptedException {
             Thread.sleep(10000);
             try {
+                insert.clearBatch();
+                insert.close();
+            } catch (SQLException e2) {
+                LOGGER.info("problem closing insert", e2);
+            }
+
+            try {
                 connection.close();
             } catch (SQLException e2) {
                 //whatevs this should not be surprising
                 LOGGER.warn("failed to close connection", e2);
             }
+
             try {
                 connection = getNewConnection(connectionString);
+                insert = getNewInsert(connection);
                 LOGGER.info("successfully got new connection");
             } catch (SQLException e2) {
                 LOGGER.warn("failed to get new connection", e2);
