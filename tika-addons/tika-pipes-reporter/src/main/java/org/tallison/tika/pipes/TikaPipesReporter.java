@@ -23,6 +23,7 @@ import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.tika.config.Field;
 import org.apache.tika.config.Initializable;
 import org.apache.tika.config.InitializableProblemHandler;
 import org.apache.tika.config.Param;
@@ -329,5 +330,10 @@ public class TikaPipesReporter extends PipesReporter implements Initializable {
             this.pipesResult = pipesResult;
             this.elapsed = elapsed;
         }
+    }
+
+    @Field
+    public void setIsDelta(boolean isDelta) {
+        IS_DELTA = isDelta;
     }
 }
