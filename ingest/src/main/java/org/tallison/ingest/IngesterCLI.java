@@ -15,8 +15,10 @@ import org.tallison.quaerite.core.SearchResultSet;
 import org.tallison.quaerite.core.StoredDocument;
 import org.tallison.quaerite.core.queries.TermQuery;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -53,11 +55,16 @@ public class IngesterCLI {
     private static final int REPORTER_CODE = 2;
 
     public static void main(String[] args) throws Exception {
-
-        Connection pg = DriverManager.getConnection(args[0]);
+        String pgConnectionString = null;
+        String esConnectionStringTmp = null;
+        try (BufferedReader reader = Files.newBufferedReader(Paths.get(args[0]))) {
+            pgConnectionString = reader.readLine();
+            esConnectionStringTmp = reader.readLine();
+        }
+        final String esConnectionString = esConnectionStringTmp;
+        Connection pg = DriverManager.getConnection(pgConnectionString);
         pg.setAutoCommit(false);//necessary for select pagination
-        String esConnectionString = args[1];
-        Fetcher fetcher = FetcherManager.load(Paths.get(args[2])).getFetcher("file-obs-fetcher");
+        Fetcher fetcher = FetcherManager.load(Paths.get(args[1])).getFetcher("file-obs-fetcher");
         CompositeFeatureMapper compositeFeatureMapper = new CompositeFeatureMapper();
         String sql = getSelectStar("selectStar-minimal.sql");
         int numWorkers = 50;
