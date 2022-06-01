@@ -1,6 +1,7 @@
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import org.junit.Ignore;
 import org.junit.Test;
 import org.tallison.ingest.qpdf.QPDFJsonExtractor;
 import org.tallison.ingest.qpdf.QPDFResults;
@@ -58,6 +59,7 @@ public class QPDFJsonExtractorTest {
     }
 
     @Test
+    @Ignore
     public void testFontIdentifier() throws Exception {
         try (Reader reader = getReader("tmp.json")) {
             QPDFJsonExtractor ex = new QPDFJsonExtractor();

@@ -30,7 +30,12 @@ case
 	when q.exit_value <> 0 then 'crash'
 	when length(q.stderr) > 5 then 'warn'
 	else 'success'
-end as q_status,
+end as q_status
 from profiles p
+join cc_fetch f on p.path = f.path
+join cc_fetch_status s on f.status_id=s.id
+join cc_urls u on f.id=u.id
+join cc_hosts h on u.host=h.id
 join pdfinfo pinfo on pinfo.path=p.path
 join qpdf q on q.path = p.path
+limit 10
