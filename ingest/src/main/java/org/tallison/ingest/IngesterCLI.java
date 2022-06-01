@@ -59,7 +59,7 @@ public class IngesterCLI {
         String esConnectionString = args[1];
         Fetcher fetcher = FetcherManager.load(Paths.get(args[2])).getFetcher("file-obs-fetcher");
         CompositeFeatureMapper compositeFeatureMapper = new CompositeFeatureMapper();
-        String sql = getSelectStar("selectStar-dev.sql");
+        String sql = getSelectStar("selectStar-minimal.sql");
         int numWorkers = 50;
         int numEmitters = 10;
         ArrayBlockingQueue<Map<String, String>> rows = new ArrayBlockingQueue<>(1000);
