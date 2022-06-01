@@ -57,7 +57,7 @@ public class IngesterCLI {
     public static void main(String[] args) throws Exception {
         String pgConnectionString = null;
         String esConnectionStringTmp = null;
-        try (BufferedReader reader = Files.newBufferedReader(Paths.get(args[0]))) {
+        try (BufferedReader reader = Files.newBufferedReader(Paths.get(args[0]), StandardCharsets.UTF_8)) {
             pgConnectionString = reader.readLine();
             esConnectionStringTmp = reader.readLine();
         }
