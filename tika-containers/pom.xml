@@ -16,6 +16,7 @@
         <module>tika-pdfchecker</module>
         <module>tika-pdfspelunker</module>
         <module>tika-pdfjs</module>
+      <module>tika-arlington</module>
     </modules>
 
 
