@@ -33,6 +33,7 @@ import org.apache.tika.exception.TikaException;
 import org.apache.tika.io.TemporaryResources;
 import org.apache.tika.io.TikaInputStream;
 import org.apache.tika.metadata.Metadata;
+import org.apache.tika.metadata.PagedText;
 import org.apache.tika.mime.MediaType;
 import org.apache.tika.parser.AbstractParser;
 import org.apache.tika.parser.ParseContext;
@@ -75,9 +76,11 @@ public class ITextParser extends AbstractParser {
         XHTMLContentHandler xhtml = new XHTMLContentHandler(contentHandler, metadata);
         xhtml.startDocument();
         try (PdfReader reader = new PdfReader(tis.getFile())) {
-
             reader.setStrictnessLevel(PdfReader.StrictnessLevel.LENIENT);
+            addReaderMetadata(reader, metadata);
             try (PdfDocument pdfDocument = new PdfDocument(reader)) {
+                metadata.set(PagedText.N_PAGES, pdfDocument.getNumberOfPages());
+                getDocMetadata(pdfDocument, metadata);
                 for (int i = 1; i <= pdfDocument.getNumberOfPages(); i++) {
                     String txt = PdfTextExtractor.getTextFromPage(pdfDocument.getPage(i),
                             new SimpleTextExtractionStrategy());
@@ -90,5 +93,18 @@ public class ITextParser extends AbstractParser {
             tmp.close();
             xhtml.endDocument();
         }
+    }
+
+    private void addReaderMetadata(PdfReader reader, Metadata metadata) {
+        metadata.set("itext:crypto-mode", Integer.toString(reader.getCryptoMode()));
+        metadata.set("itext:fixed-xref", Boolean.toString(reader.hasFixedXref()));
+        metadata.set("itext:rebuilt-xref", Boolean.toString(reader.hasRebuiltXref()));
+        metadata.set("itext:hybrid-xref", Boolean.toString(reader.hasHybridXref()));
+        metadata.set("itext:xref-stm", Boolean.toString(reader.hasXrefStm()));
+        metadata.set("itext:encrypted", Boolean.toString(reader.isEncrypted()));
+    }
+
+    private void getDocMetadata(PdfDocument pdfDocument, Metadata metadata) {
+        //stub for now
     }
 }
