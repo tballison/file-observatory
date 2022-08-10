@@ -41,6 +41,7 @@
         <module>pdfchecker</module>
         <module>xpdffonts</module>
       <module>tika-client</module>
+      <module>itext</module>
     </modules>
 
     <dependencies>
