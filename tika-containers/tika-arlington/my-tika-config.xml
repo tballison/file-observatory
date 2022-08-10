@@ -25,7 +25,7 @@
         </param>
         <param name="commandLine" type="list">
           <string>/arlington-pdf-model/bin/TestGrammar_d</string>
-          <string>-b</string>
+          <string>--brief</string>
           <string>--clobber</string>
           <string>-t</string>
           <string>/arlington-pdf-model/tsv/latest</string>

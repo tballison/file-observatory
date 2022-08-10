@@ -6,7 +6,7 @@ RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-8 800 --slave /u
 
 #TODO: need to tag specific version
 RUN git clone  https://github.com/pdf-association/arlington-pdf-model /arlington-pdf-model && \
-    cd /arlington-pdf-model && git checkout e9b4264
+    cd /arlington-pdf-model && git checkout 35b7e14
 
 RUN cd /arlington-pdf-model/TestGrammar && \
     cmake -B cmake-linux/debug -DPDFSDK_PDFIUM=ON -DCMAKE_BUILD_TYPE=Debug . && \
