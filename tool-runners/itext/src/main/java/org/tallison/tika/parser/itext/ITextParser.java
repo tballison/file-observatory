@@ -71,13 +71,11 @@ public class ITextParser extends AbstractParser {
         TemporaryResources tmp = new TemporaryResources();
         if (tis == null) {
             tis = TikaInputStream.get(inputStream, tmp);
-            tis.getPath();
         }
         XHTMLContentHandler xhtml = new XHTMLContentHandler(contentHandler, metadata);
         xhtml.startDocument();
         try (PdfReader reader = new PdfReader(tis.getFile())) {
             reader.setStrictnessLevel(PdfReader.StrictnessLevel.LENIENT);
-            addReaderMetadata(reader, metadata);
             try (PdfDocument pdfDocument = new PdfDocument(reader)) {
                 metadata.set(PagedText.N_PAGES, pdfDocument.getNumberOfPages());
                 getDocMetadata(pdfDocument, metadata);
@@ -89,6 +87,7 @@ public class ITextParser extends AbstractParser {
                     xhtml.endElement("div");
                 }
             }
+            addReaderMetadata(reader, metadata);
         } finally {
             tmp.close();
             xhtml.endDocument();
