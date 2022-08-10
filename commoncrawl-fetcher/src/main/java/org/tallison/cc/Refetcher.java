@@ -25,8 +25,8 @@ import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.http.impl.conn.ConnectionShutdownException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.tallison.cc.index.PGIndexer;
-import org.tallison.util.PGUtil;
+import org.tallison.cc.index.DBIndexer;
+import org.tallison.util.DBUtil;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -103,7 +103,7 @@ public class Refetcher {
 
         options.addRequiredOption("j", "jdbc", true, "jdbc connection string");
         options.addRequiredOption("c", "tikaConfig", true,
-                "tika-config.xml file for the pipes iterator, fetcher and emtters");
+                "tika-config.xml file for the fetcher and emitter");
         options.addOption("f", "freshStart", false, "whether or not to delete the cc_refetch and " +
                 "cc_refetch_status tables (default = false)");
         options.addOption("r", "retry", false, "whether or not to try previously failed refetches");
@@ -147,9 +147,8 @@ public class Refetcher {
 
         executorCompletionService.submit(
                 new Enqueuer(connection, queue, retryRefetches));
-        Fetcher fetcher = FetcherManager.load(tikaConfigFile).getFetcher("fetcher");
-        StreamEmitter emitter = (StreamEmitter) EmitterManager.load(tikaConfigFile).getEmitter(
-                "emitter");
+        Fetcher fetcher = FetcherManager.load(tikaConfigFile).getFetcher();;
+        StreamEmitter emitter = (StreamEmitter) EmitterManager.load(tikaConfigFile).getEmitter();
         for (int i = 0; i < numThreads; i++) {
             executorCompletionService.submit(new FetchWorker(queue, connection, fetcher, emitter));
         }
@@ -203,7 +202,7 @@ public class Refetcher {
             st.execute(sql);
 
             sql = "create table cc_refetch (" + "id integer primary key, " + "target_url varchar(" +
-                    PGIndexer.MAX_URL_LENGTH + ")," + "num_redirects integer," +
+                    DBIndexer.MAX_URL_LENGTH + ")," + "num_redirects integer," +
                     "http_status integer," +
                     "refetched_timestamp timestamp with time zone);";
 
@@ -233,10 +232,13 @@ public class Refetcher {
                     "fetched_length=?, http_length=?, warc_ip_address=?";
             insertFetchTable = connection.prepareStatement(sql);
 
+
             sql = "insert into cc_refetch(id, target_url, num_redirects, http_status, " +
-                    "refetched_timestamp) values (?,?,?,?,current_timestamp(0))" +
+                    "refetched_timestamp) values (?,?,?,?," + DBUtil.getCurrentTimestampString(connection)+")" +
                     " on conflict (id) do update set target_url=?, num_redirects=?," +
-                    " http_status=?, refetched_timestamp=current_timestamp(0)";
+                    " http_status=?, refetched_timestamp=" + DBUtil.getCurrentTimestampString(connection);
+
+            System.out.println(">"+sql);
             insertRefetchTable = connection.prepareStatement(sql);
             /*sql = "select u.id, u.url " +
                     "from cc_urls u " +
@@ -447,12 +449,12 @@ public class Refetcher {
             insertRefetchTable.clearParameters();
             int i = 0;
             insertRefetchTable.setInt(++i, urlId);
-            PGUtil.safelySetString(insertRefetchTable, ++i, targetUrl, PGIndexer.MAX_URL_LENGTH );
-            PGUtil.safelySetInteger(insertRefetchTable, ++i, numRedirects);
-            PGUtil.safelySetInteger(insertRefetchTable, ++i, status);
-            PGUtil.safelySetString(insertRefetchTable, ++i, targetUrl, PGIndexer.MAX_URL_LENGTH );
-            PGUtil.safelySetInteger(insertRefetchTable, ++i, numRedirects);
-            PGUtil.safelySetInteger(insertRefetchTable, ++i, status);
+            DBUtil.safelySetString(insertRefetchTable, ++i, targetUrl, DBIndexer.MAX_URL_LENGTH );
+            DBUtil.safelySetInteger(insertRefetchTable, ++i, numRedirects);
+            DBUtil.safelySetInteger(insertRefetchTable, ++i, status);
+            DBUtil.safelySetString(insertRefetchTable, ++i, targetUrl, DBIndexer.MAX_URL_LENGTH );
+            DBUtil.safelySetInteger(insertRefetchTable, ++i, numRedirects);
+            DBUtil.safelySetInteger(insertRefetchTable, ++i, status);
             insertRefetchTable.execute();
         }
 

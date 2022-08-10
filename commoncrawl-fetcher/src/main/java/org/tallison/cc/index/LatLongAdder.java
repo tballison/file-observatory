@@ -22,7 +22,7 @@ import com.maxmind.geoip2.exception.AddressNotFoundException;
 import com.maxmind.geoip2.model.CityResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.tallison.util.PGUtil;
+import org.tallison.util.DBUtil;
 
 public class LatLongAdder {
 
@@ -150,11 +150,11 @@ public class LatLongAdder {
                     }
                     update.clearParameters();
 
-                    PGUtil.safelySetString(update, 1, ipAddress.getHostAddress(), 20);
+                    DBUtil.safelySetString(update, 1, ipAddress.getHostAddress(), 20);
                     if (cityResponse.getCountry() == null) {
                         update.setNull(2, Types.VARCHAR);
                     } else {
-                        PGUtil.safelySetString(update, 2, cityResponse.getCountry().getIsoCode(),
+                        DBUtil.safelySetString(update, 2, cityResponse.getCountry().getIsoCode(),
                                 20);
                     }
 

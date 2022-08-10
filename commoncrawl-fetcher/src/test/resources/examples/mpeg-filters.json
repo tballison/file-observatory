@@ -1,0 +1,10 @@
+{
+  "status": [200,300,400],
+  "exact" : {
+    "detected_mimes": [
+      "video/mp4",
+      "video/quicktime"
+    ],
+    "case_sensitive" : false
+  }
+}

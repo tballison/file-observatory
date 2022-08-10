@@ -1,0 +1,49 @@
+<properties>
+  <pipesIterator class="org.apache.tika.pipes.pipesiterator.jdbc.JDBCPipesIterator">
+    <params>
+      <idColumn>id</idColumn>
+      <fetchKeyColumn>warc_file_name</fetchKeyColumn>
+      <fetchKeyRangeStartColumn>warc_offset</fetchKeyRangeStartColumn>
+      <fetchKeyRangeEndColumn>warc_end_offset</fetchKeyRangeEndColumn>
+      <fetcherName>hf</fetcherName>
+      <emitterName>fse</emitterName>
+      <connection>jdbc:sqlite:/Users/allison/Desktop/demo-backup.db</connection>
+      <!--limited query used to pull enough info back to
+      extract the right files from common crawl's warc files -->
+      <!-- we include the -1 to calculate the length, but the
+          warc reader appears to do the right thing at the moment if
+          the -1 is not included -->
+      <select>
+        select u.id as id,
+        digest as cc_index_digest,
+        'https://data.commoncrawl.org/'||w.name as warc_file_name,
+        warc_offset,
+        warc_offset + warc_length - 1 as warc_end_offset
+        from cc_urls u
+        join cc_warc_file_name w on u.warc_file_name = w.id
+        join cc_truncated t on u.truncated = t.id
+        left join cc_fetch f on f.id = u.id
+        where f.id is null and u.status = 200 and length(t.name) = 0
+ --       where f.id is null and u.status = 200 and t.name = 'length'
+        order by w.name, warc_offset
+--        limit 100
+      </select>
+    </params>
+  </pipesIterator>
+  <fetchers>
+    <fetcher class="org.apache.tika.pipes.fetcher.http.HttpFetcher">
+      <params>
+        <name>hf</name>
+      </params>
+    </fetcher>
+  </fetchers>
+  <emitters>
+    <emitter class="org.apache.tika.pipes.emitter.fs.FileSystemEmitter">
+      <params>
+        <name>fse</name>
+        <basePath>/Users/allison/data/cc/docs</basePath>
+        <onExists>skip</onExists>
+      </params>
+    </emitter>
+  </emitters>
+</properties>

@@ -3,6 +3,7 @@ package org.tallison.util;
 import static org.apache.commons.lang3.StringUtils.truncate;
 
 import java.sql.Connection;
+import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -28,7 +29,8 @@ public class HostUpsert {
                 "insert into " + this.tableName + " (" + columnName + ", tld) values (?,?)" +
                         " on CONFLICT (" + columnName + ") DO NOTHING");
         this.select = connection.prepareStatement(
-                "select id from " + this.tableName + " where " + columnName + "=?");        }
+                "select id from " + this.tableName + " where " + columnName + "=?");
+    }
 
 
     public int upsert(String key) throws SQLException {
@@ -37,7 +39,7 @@ public class HostUpsert {
         insert.setString(1, truncate(key, maxLength));
         insert.setString(2, tld);
         insert.execute();
-        insert.getConnection().commit();
+        //insert.getConnection().commit();
         select.clearParameters();
         select.setString(1, key);
         try (ResultSet rs = select.executeQuery()) {

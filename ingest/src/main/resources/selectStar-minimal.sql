@@ -38,4 +38,4 @@ join cc_urls u on f.id=u.id
 join cc_hosts h on u.host=h.id
 join pdfinfo pinfo on pinfo.path=p.path
 join qpdf q on q.path = p.path
-limit 10
+order by u.id

@@ -6,20 +6,18 @@ import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.Options;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.tallison.util.DBUtil;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.sql.Connection;
 import java.sql.DriverManager;
-import java.sql.SQLException;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
@@ -29,7 +27,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.zip.GZIPInputStream;
 
@@ -44,7 +41,7 @@ public class IndexerCLI {
 
     static Logger LOGGER = LoggerFactory.getLogger(IndexerCLI.class);
 
-    private static int DEFAULT_NUM_THREADS = 10;
+    private static int DEFAULT_NUM_THREADS = 1;
     private static Path POISON = Paths.get("");
     private static Options getOptions() {
 
@@ -86,7 +83,9 @@ public class IndexerCLI {
             filterFile = Paths.get(line.getOptionValue("f"));
         }
         IndexerCLI indexer = new IndexerCLI();
+        DBUtil.driverHint(jdbc);
         Connection connection = DriverManager.getConnection(jdbc);
+        //connection.setAutoCommit(false);
         String schema = "";
         if (line.hasOption("schema")) {
             schema = line.getOptionValue("s");
@@ -94,7 +93,6 @@ public class IndexerCLI {
         try {
             indexer.execute(tikaConfigPath, connection, schema, filterFile, numThreads, max);
         } finally {
-            connection.commit();
             connection.close();
         }
     }
@@ -103,51 +101,46 @@ public class IndexerCLI {
                          String schema,
                          Path filterFile, int numThreads, int max)
             throws Exception {
-        PGIndexer.init(connection, schema);
+        DBIndexer.init(connection, schema);
 
         RecordFilter filter = CompositeRecordFilter.load(filterFile);
 
         long start = System.currentTimeMillis();
         AtomicLong totalProcessed = new AtomicLong(0);
         PipesIterator pipesIterator = PipesIterator.build(tikaConfigPath);
-        Fetcher fetcher = FetcherManager.load(tikaConfigPath).getFetcher("fetcher");
+
+        Fetcher fetcher = FetcherManager.load(tikaConfigPath).getFetcher(pipesIterator.getFetcherName());
+
+        ExecutorService executorService = Executors.newFixedThreadPool(numThreads + 1);
+        ExecutorCompletionService completionService = new ExecutorCompletionService(executorService);
 
         try {
-            ExecutorService executorService = Executors.newFixedThreadPool(numThreads);
-            ExecutorCompletionService completionService = new ExecutorCompletionService(executorService);
             ArrayBlockingQueue<FetchEmitTuple> paths = new ArrayBlockingQueue<>(300+numThreads);
-            for (FetchEmitTuple fetchEmitTuple : pipesIterator) {
-                if (fetchEmitTuple.getFetchKey().getFetchKey().endsWith(".gz")) {
-                    paths.offer(fetchEmitTuple);
-                }
-            }
-            for (int i = 0; i < numThreads; i++) {
-                paths.offer(PipesIterator.COMPLETED_SEMAPHORE);
-            }
-            LOGGER.info("added index paths");
+            completionService.submit(new Enqueuer(pipesIterator, paths, numThreads));
+
             for (int i = 0; i < numThreads; i++) {
                 completionService.submit(new CallableIndexer(paths, fetcher,
-                                new PGIndexer(connection, schema, filter),
+                                new DBIndexer(connection, schema, filter),
                         max, totalProcessed));
             }
 
             int finished = 0;
-            while (finished < numThreads) {
+            while (finished < numThreads + 1) {
                 Future<Integer> future = completionService.poll(3, TimeUnit.MINUTES);
                 if (future != null) {
                     finished++;
                     future.get();
                 }
             }
-            executorService.shutdownNow();
         } catch (InterruptedException|ExecutionException e) {
             throw new RuntimeException(e);
         } finally {
-            PGIndexer.shutDown();
+            DBIndexer.shutDown();
+            executorService.shutdownNow();
         }
         long elapsed = System.currentTimeMillis()-start;
         LOGGER.info("processed " + totalProcessed.get() + " records"+
-                " and indexed " + PGIndexer.getAdded() + " in " +elapsed+" ms");
+                " and indexed " + DBIndexer.getAdded() + " in " +elapsed+" ms");
     }
 
     private static class CallableIndexer implements Callable<Integer> {
@@ -186,11 +179,11 @@ public class IndexerCLI {
         }
 
         private void processFile(FetchEmitTuple fetchEmitTuple, AbstractRecordProcessor recordProcessor) {
-            long processed = totalProcessed.incrementAndGet();
-            LOGGER.info("processing " + fetchEmitTuple.getFetchKey().getFetchKey());
-            if (max > 0 && processed >= max) {
+            if (max > 0 && totalProcessed.get() >= max) {
                 return;
             }
+            LOGGER.info("processing " + fetchEmitTuple.getFetchKey().getFetchKey());
+
             try (InputStream is =
                          new BufferedInputStream(new GZIPInputStream(
                                  fetcher.fetch(fetchEmitTuple.getFetchKey().getFetchKey(), new Metadata())))) {
@@ -208,7 +201,7 @@ public class IndexerCLI {
                         } catch (IOException e) {
                             LOGGER.warn("bad json: "+line);
                         }
-                        processed = totalProcessed.incrementAndGet();
+                        long processed = totalProcessed.incrementAndGet();
                         if (max > 0 && processed >= max) {
                             return;
                         }
@@ -217,11 +210,42 @@ public class IndexerCLI {
                         }
                         line = reader.readLine();
                     }
-
                 }
             } catch (IOException | TikaException e) {
+                //TODO revisit this.
                 throw new RuntimeException(e);
             }
+
+        }
+    }
+
+    private class Enqueuer implements Callable {
+
+        private final PipesIterator pipesIterator;
+        private final ArrayBlockingQueue<FetchEmitTuple> tuples;
+        private final int numThreads;
+        public Enqueuer(PipesIterator pipesIterator, ArrayBlockingQueue<FetchEmitTuple> paths,
+                        int numThreads) {
+            this.pipesIterator = pipesIterator;
+            this.tuples = paths;
+            this.numThreads = numThreads;
+        }
+
+        @Override
+        public Integer call() throws Exception {
+            for (FetchEmitTuple fetchEmitTuple : pipesIterator) {
+                if (fetchEmitTuple.getFetchKey().getFetchKey().endsWith(".gz")) {
+                    //blocking
+                    tuples.put(fetchEmitTuple);
+                    LOGGER.debug("added " + fetchEmitTuple);
+                }
+            }
+            for (int i = 0; i < numThreads; i++) {
+                //blocking
+                tuples.put(PipesIterator.COMPLETED_SEMAPHORE);
+            }
+            LOGGER.info("added index paths");
+            return 1;
         }
     }
 }

@@ -1,0 +1,32 @@
+<properties>
+  <pipesIterator class="org.tallison.cc.pipes.CCIndexPipesIterator">
+    <params>
+      <fetcherName>fs1</fetcherName>
+      <indexPathsUrls>
+        <url>https://data.commoncrawl.org/crawl-data/CC-MAIN-2022-27/cc-index.paths.gz</url>
+        <url>https://data.commoncrawl.org/crawl-data/CC-MAIN-2022-21/cc-index.paths.gz</url>
+        <url>https://data.commoncrawl.org/crawl-data/CC-MAIN-2022-05/cc-index.paths.gz</url>
+        <url>https://data.commoncrawl.org/crawl-data/CC-MAIN-2021-49/cc-index.paths.gz</url>
+        <url>https://data.commoncrawl.org/crawl-data/CC-MAIN-2021-43/cc-index.paths.gz</url>
+        <url>https://data.commoncrawl.org/crawl-data/CC-MAIN-2021-39/cc-index.paths.gz</url>
+        <url>https://data.commoncrawl.org/crawl-data/CC-MAIN-2021-31/cc-index.paths.gz</url>
+        <url>https://data.commoncrawl.org/crawl-data/CC-MAIN-2021-25/cc-index.paths.gz</url>
+        <url>https://data.commoncrawl.org/crawl-data/CC-MAIN-2021-21/cc-index.paths.gz</url>
+        <url>https://data.commoncrawl.org/crawl-data/CC-MAIN-2021-17/cc-index.paths.gz</url>
+        <url>https://data.commoncrawl.org/crawl-data/CC-MAIN-2021-10/cc-index.paths.gz</url>
+        <url>https://data.commoncrawl.org/crawl-data/CC-MAIN-2021-04/cc-index.paths.gz</url>
+      </indexPathsUrls>
+    </params>
+  </pipesIterator>
+  <fetchers>
+    <fetcher class="org.apache.tika.pipes.fetcher.s3.S3Fetcher">
+      <params>
+        <name>fs1</name>
+        <bucket>commoncrawl</bucket>
+        <credentialsProvider>profile</credentialsProvider>
+        <profile>saml-pub</profile>
+        <region>us-east-1</region>
+      </params>
+    </fetcher>
+  </fetchers>
+</properties>

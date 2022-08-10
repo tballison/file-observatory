@@ -20,8 +20,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -121,7 +119,7 @@ public class MimeCounter {
         }
         long elapsed = System.currentTimeMillis()-start;
         LOGGER.info("processed " + totalProcessed.get() + " records "+
-                " and indexed " + PGIndexer.getAdded() + " in " +elapsed+" ms");
+                " and indexed " + DBIndexer.getAdded() + " in " +elapsed+" ms");
         report(mimeCounts, outputDir);
     }
 

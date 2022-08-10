@@ -21,6 +21,9 @@ import com.google.gson.FieldNamingPolicy;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonSyntaxException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.tallison.cc.CCIndexWGetter;
 
 import java.net.MalformedURLException;
 import java.net.URI;
@@ -39,6 +42,7 @@ public class CCIndexRecord {
     private static Gson GSON = new GsonBuilder()
             .setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_DASHES)
             .create();
+    private static Logger LOGGER = LoggerFactory.getLogger(CCIndexRecord.class);
 
 
     private String url;
@@ -52,7 +56,59 @@ public class CCIndexRecord {
     private String charset;
     private String languages;
     private String truncated;
+    private int hostId;
+    private int mimeId;
+    private int detectedMimeId;
+    private int primaryLanguageId;
+    private int truncatedId;
+    private int warcId;
 
+    public int getMimeId() {
+        return mimeId;
+    }
+
+    public void setMimeId(int mimeId) {
+        this.mimeId = mimeId;
+    }
+
+    public int getDetectedMimeId() {
+        return detectedMimeId;
+    }
+
+    public void setDetectedMimeId(int detectedMimeId) {
+        this.detectedMimeId = detectedMimeId;
+    }
+
+    public int getPrimaryLanguageId() {
+        return primaryLanguageId;
+    }
+
+    public void setPrimaryLanguageId(int primaryLanguageId) {
+        this.primaryLanguageId = primaryLanguageId;
+    }
+
+    public int getTruncatedId() {
+        return truncatedId;
+    }
+
+    public void setTruncatedId(int truncatedId) {
+        this.truncatedId = truncatedId;
+    }
+
+    public int getWarcId() {
+        return warcId;
+    }
+
+    public void setWarcId(int warcId) {
+        this.warcId = warcId;
+    }
+
+    public void setHostId(int id) {
+        this.hostId = id;
+    }
+    public int getHostId() {
+        return hostId;
+    }
     public String getUrl() {
         return url;
     }
@@ -192,12 +248,12 @@ public class CCIndexRecord {
             try {
                 return GSON.fromJson(row, CCIndexRecord.class);
             } catch (JsonSyntaxException e) {
-                System.out.println(">>>"+row+"<<<");
-                e.printStackTrace();
+                LOGGER.warn(row, e);
                 return null;
             }
         } else {
             if (dateI < 0) {
+                LOGGER.warn("bad record dateI < 0: {}", row);
                 return null;
             }
             List<Integer> ends = new ArrayList<>();
@@ -208,10 +264,10 @@ public class CCIndexRecord {
                 end = row.indexOf('}', end + 1);
             }
             if (ends.size() == 0) {
-                //barf
+                LOGGER.warn("bad record: {}", row);
                 return null;
             }
-            JsonSyntaxException ex = null;
+
             for (int thisEnd : ends) {
                 String json = row.substring(dateI, thisEnd+1);
                 try {
@@ -219,11 +275,10 @@ public class CCIndexRecord {
                     i.set(thisEnd + 1);
                     return record;
                 } catch (JsonSyntaxException e) {
+                    LOGGER.warn("bad record: {}", row);
                 }
             }
-
-            System.out.println(">>>"+row+"<<<");
-            ex.printStackTrace();
+            LOGGER.warn("bad record, giving up: {}", row);
             return null;
         }
     }

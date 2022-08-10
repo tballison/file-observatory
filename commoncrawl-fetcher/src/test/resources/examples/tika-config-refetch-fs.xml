@@ -1,0 +1,22 @@
+<properties>
+  <fetchers>
+    <fetcher class="org.apache.tika.pipes.fetcher.http.HttpFetcher">
+      <params>
+        <name>hf</name>
+        <maxRedirects>10</maxRedirects>
+        <!-- 10gb roughly :D -->
+        <maxSpoolSize>10000000000</maxSpoolSize>
+        <overallTimeout>300000</overallTimeout>
+      </params>
+    </fetcher>
+  </fetchers>
+  <emitters>
+    <emitter class="org.apache.tika.pipes.emitter.fs.FileSystemEmitter">
+      <params>
+        <name>fse</name>
+        <basePath>/Users/allison/data/cc/docs/CC-MAIN-2022-27</basePath>
+        <onExists>skip</onExists>
+      </params>
+    </emitter>
+  </emitters>
+</properties>

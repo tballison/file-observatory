@@ -23,7 +23,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetAddress;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -65,8 +64,7 @@ import org.netpreserve.jwarc.WarcRecord;
 import org.netpreserve.jwarc.WarcResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.tallison.cc.index.CCIndexRecord;
-import org.tallison.util.PGUtil;
+import org.tallison.util.DBUtil;
 
 import org.apache.tika.exception.TikaException;
 import org.apache.tika.io.TikaInputStream;
@@ -76,7 +74,6 @@ import org.apache.tika.pipes.emitter.EmitterManager;
 import org.apache.tika.pipes.emitter.StreamEmitter;
 import org.apache.tika.pipes.emitter.TikaEmitterException;
 import org.apache.tika.pipes.fetcher.FetchKey;
-import org.apache.tika.pipes.fetcher.Fetcher;
 import org.apache.tika.pipes.fetcher.FetcherManager;
 import org.apache.tika.pipes.fetcher.RangeFetcher;
 import org.apache.tika.pipes.pipesiterator.PipesIterator;
@@ -84,15 +81,16 @@ import org.apache.tika.utils.StringUtils;
 
 /**
  * Class to read in an index file or a subset of an index file
- * and to "get" those files from cc to a local directory
+ * and to fetch those files out of Common Crawl warc files via http
+ * to a local directory.
  * <p>
  * This relies heavily on centic9's CommonCrawlDocumenDownload.
  * Thank you, Dominik!!!
  */
 public class CCFileFetcher {
 
-    private final static String AWS_BASE = "https://commoncrawl.s3.amazonaws.com/";
     static Logger LOGGER = LoggerFactory.getLogger(CCFileFetcher.class);
+    private static final int DEFAULT_NUM_THREADS = 5;
     private int batchTupleListSize = 500;
 
     public enum FETCH_STATUS {
@@ -153,7 +151,8 @@ public class CCFileFetcher {
             freshStart = true;
         }
         Path tikaConfigPath = Paths.get(line.getOptionValue("c"));
-        int numThreads = (line.hasOption("n")) ? Integer.parseInt(line.getOptionValue("n")) : 5;
+        int numThreads = (line.hasOption("n")) ? Integer.parseInt(line.getOptionValue("n")) :
+                DEFAULT_NUM_THREADS;
         String schema = line.hasOption("s") ? line.getOptionValue("s") : "";
         ccFileFetcher.execute(connection, schema, tikaConfigPath, numThreads, freshStart, max);
     }
@@ -162,6 +161,7 @@ public class CCFileFetcher {
                          boolean cleanStart, int max) throws Exception {
         connection.setAutoCommit(false);
         createFetchTable(connection, schema, cleanStart);
+
         PipesIterator pipesIterator = PipesIterator.build(tikaConfigPath);
 
         ExecutorService es = Executors.newFixedThreadPool(numThreads + 1);
@@ -196,7 +196,7 @@ public class CCFileFetcher {
 
     private void createFetchTable(Connection connection, String schema, boolean cleanStart) throws SQLException {
 
-        String sql = "select * from " + PGUtil.getTable(schema, "cc_fetch") + " limit 1";
+        String sql = "select * from " + DBUtil.getTable(schema, "cc_fetch") + " limit 1";
         if (!cleanStart) {
             //test to see if the table already exists
             boolean createTable = false;
@@ -216,20 +216,20 @@ public class CCFileFetcher {
             }
         }
         try (Statement st = connection.createStatement()) {
-            sql = "drop table if exists " + PGUtil.getTable(schema, "cc_fetch");
+            sql = "drop table if exists " + DBUtil.getTable(schema, "cc_fetch");
             st.execute(sql);
 
-            sql = "create table " + PGUtil.getTable(schema, "cc_fetch") +
+            sql = "create table " + DBUtil.getTable(schema, "cc_fetch") +
                     " (" + "id integer primary key, " + "status_id int, " +
                     "fetched_digest varchar(64), " + "fetched_length bigint," +
                     "http_length bigint,"+
                     "warc_ip_address varchar(64));";
             st.execute(sql);
 
-            sql = "drop table if exists " + PGUtil.getTable(schema, "cc_fetch_status");
+            sql = "drop table if exists " + DBUtil.getTable(schema, "cc_fetch_status");
             st.execute(sql);
 
-            sql = "create table " + PGUtil.getTable(schema, "cc_fetch_status")
+            sql = "create table " + DBUtil.getTable(schema, "cc_fetch_status")
                     + " (id integer " +
                     "primary key, status varchar(64));";
             st.execute(sql);
@@ -237,7 +237,7 @@ public class CCFileFetcher {
 
             for (FETCH_STATUS status : FETCH_STATUS.values()) {
 
-                sql = "insert into " +PGUtil.getTable(schema, "cc_fetch_status")
+                sql = "insert into " + DBUtil.getTable(schema, "cc_fetch_status")
                                 +" values (" + status.ordinal() + ",'" +
                         status.name() + "');";
                 st.execute(sql);
@@ -320,7 +320,7 @@ public class CCFileFetcher {
 
 
         private PreparedStatement prepareInsert(Connection connection, String schema) throws SQLException {
-            String sql = "insert into " + PGUtil.getTable(schema, "cc_fetch")
+            String sql = "insert into " + DBUtil.getTable(schema, "cc_fetch")
                     + " values (?, ?, ?, ?, ?, ?)";
             return connection.prepareStatement(sql);
         }
