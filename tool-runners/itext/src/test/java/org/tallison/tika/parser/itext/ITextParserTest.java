@@ -17,6 +17,7 @@
 package org.tallison.tika.parser.itext;
 
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Disabled;
@@ -36,15 +37,17 @@ public class ITextParserTest {
     @Disabled("needs to set license path as a property")
     public void testBasic() throws Exception {
         ContentHandler handler = new ToXMLContentHandler();
+        Metadata metadata = new Metadata();
         try (TikaInputStream tis = TikaInputStream.get(
                 this.getClass().getResourceAsStream(
                         "/test-documents/testPDF.pdf"))) {
             Parser p = new AutoDetectParser();
-            Metadata metadata = new Metadata();
             ParseContext parseContext = new ParseContext();
             p.parse(tis, handler, metadata, parseContext);
         }
         assertTrue(handler.toString().contains("Apache Tika is a toolkit"));
+        assertEquals("true", metadata.get("itext:rebuilt-xref"));
+        assertEquals("1", metadata.get("xmpTPg:NPages"));
     }
 
 }
