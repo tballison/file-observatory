@@ -57,6 +57,13 @@ public class JDBCMetadataWriter extends MetadataWriter {
         this.table = name;
         this.connectionString = connectionString;
         isPostgres = connectionString.startsWith("jdbc:postgresql");
+        if (isPostgres) {
+            try {
+                Class.forName("org.postgresql.Driver");
+            } catch (ClassNotFoundException e) {
+                throw new RuntimeException(e);
+            }
+        }
         try {
             this.connection = tryConnect(connectionString);
             createTable(connection, table, isDelta, maxStdout, maxStderr);
