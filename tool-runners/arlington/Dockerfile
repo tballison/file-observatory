@@ -4,9 +4,8 @@ RUN apt-get update && apt-get install g++-8 gcc-8 cmake git -y
 
 RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-8 800 --slave /usr/bin/g++ g++ /usr/bin/g++-8
 
-#TODO: need to tag specific version
 RUN git clone  https://github.com/pdf-association/arlington-pdf-model /arlington-pdf-model && \
-    cd /arlington-pdf-model && git checkout 35b7e14
+    cd /arlington-pdf-model && git checkout 4c3116b8ad7ddf713c87033cf63a534bbf770f0f
 
 RUN cd /arlington-pdf-model/TestGrammar && \
     cmake -B cmake-linux/debug -DPDFSDK_PDFIUM=ON -DCMAKE_BUILD_TYPE=Debug . && \

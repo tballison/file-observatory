@@ -38,7 +38,7 @@
         <param name="outputParser" type="class" class="org.tallison.observatory.RegexCaptureParser">
           <params>
             <param name="captureMap" type="map">
-              <match key="latest_version" value="Latest Arlington feature was version PDF (\d\.\d)"/>
+              <match key="latest_version" value="Latest Arlington feature was PDF (\d\.\d)"/>
               <match key="header_version" value="Header is version PDF (\d\.\d)"/>
               <match key="warnings" value="Warning: ([^:\r\n\u001b]{0,256})"/>
               <match key="errors" value="Error: ([^:\r\n\u001b]{0,256})"/>
