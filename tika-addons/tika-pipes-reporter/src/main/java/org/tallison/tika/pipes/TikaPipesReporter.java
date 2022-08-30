@@ -36,7 +36,7 @@ public class TikaPipesReporter extends PipesReporter implements Initializable {
 
     private static Logger LOGGER = LoggerFactory.getLogger(TikaPipesReporter.class);
 
-    private static String TABLE_NAME = "tika";
+    private static String DEFAULT_TABLE_NAME = "tika";
     private static ReportData STOP_SEMAPHORE = new ReportData(null, null, -1);
     private static boolean IS_DELTA = false;
     private static int MAX_PATH_LENGTH = 1024;
@@ -47,6 +47,7 @@ public class TikaPipesReporter extends PipesReporter implements Initializable {
     private ExecutorService executorService;
     private ExecutorCompletionService<Integer> executorCompletionService;
     private ArrayBlockingQueue<ReportData> queue = new ArrayBlockingQueue<>(1000);
+    private String tableName = DEFAULT_TABLE_NAME;
 
     @Override
     public void report(FetchEmitTuple fetchEmitTuple, PipesResult pipesResult, long elapsed) {
@@ -102,7 +103,7 @@ public class TikaPipesReporter extends PipesReporter implements Initializable {
         executorService = Executors.newFixedThreadPool(1);
         executorCompletionService = new ExecutorCompletionService<>(executorService);
         try {
-            executorCompletionService.submit(new Reporter(queue, connectionString));
+            executorCompletionService.submit(new Reporter(queue, connectionString, tableName));
         } catch (SQLException e) {
             throw new TikaConfigException("can't create reporter", e);
         }
@@ -119,15 +120,18 @@ public class TikaPipesReporter extends PipesReporter implements Initializable {
         private PreparedStatement insert;
         private final String connectionString;
         private Connection connection;
+        private String tableName;
         private int reportsSent = 0;
 
-        public Reporter(ArrayBlockingQueue<ReportData> queue, String connectionString)
+        public Reporter(ArrayBlockingQueue<ReportData> queue, String connectionString,
+                        String tableName)
                 throws SQLException {
+            this.tableName = tableName;
             this.queue = queue;
             this.connectionString = connectionString;
             this.connection = getNewConnection(connectionString);
-            createTable(connection);
-            insert = getNewInsert(connection);
+            createTable(connection, tableName);
+            insert = getNewInsert(connection, tableName);
         }
 
         private static Connection getNewConnection(String connectionString) throws SQLException {
@@ -136,21 +140,21 @@ public class TikaPipesReporter extends PipesReporter implements Initializable {
             return connection;
         }
 
-        private static PreparedStatement getNewInsert(Connection connection) throws SQLException {
-            String sql = "insert into " + TABLE_NAME + " values (?,?,?,?,?,?,?);";
+        private static PreparedStatement getNewInsert(Connection connection, String tableName) throws SQLException {
+            String sql = "insert into " + tableName + " values (?,?,?,?,?,?,?);";
             return connection.prepareStatement(sql);
         }
 
-        private static void createTable(Connection connection) throws SQLException {
+        private static void createTable(Connection connection, String tableName) throws SQLException {
             String sql;
             if (!IS_DELTA) {
-                LOGGER.info("not delta; dropping table " + TABLE_NAME);
-                sql = "drop table if exists " + TABLE_NAME;
+                LOGGER.info("not delta; dropping table " + tableName);
+                sql = "drop table if exists " + tableName;
                 connection.createStatement().execute(sql);
             }
-            if (!tableExists(connection, TABLE_NAME)) {
+            if (!tableExists(connection, tableName)) {
                 LOGGER.info("table does not exist. creating a new one");
-                sql = "create table " + TABLE_NAME + " (" + "path varchar(" + MAX_PATH_LENGTH +
+                sql = "create table " + tableName + " (" + "path varchar(" + MAX_PATH_LENGTH +
                         ") primary key," + "exit_value integer," + "timeout boolean," +
                         "process_time_ms BIGINT," + "stderr varchar(" + MAX_STDERR + ")," +
                         "stderr_length bigint," + "stderr_truncated boolean)";
@@ -245,7 +249,7 @@ public class TikaPipesReporter extends PipesReporter implements Initializable {
 
             try {
                 connection = getNewConnection(connectionString);
-                insert = getNewInsert(connection);
+                insert = getNewInsert(connection, tableName);
                 LOGGER.info("successfully got new connection");
             } catch (SQLException e2) {
                 LOGGER.warn("failed to get new connection", e2);
@@ -348,5 +352,10 @@ public class TikaPipesReporter extends PipesReporter implements Initializable {
     @Field
     public void setIsDelta(boolean isDelta) {
         IS_DELTA = isDelta;
+    }
+
+    @Field
+    public void setTableName(String tableName) {
+        this.tableName = tableName;
     }
 }
