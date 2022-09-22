@@ -200,10 +200,6 @@ public class IndexerCLI {
                     String line = reader.readLine();
                     int lines = 0;
                     while (line != null) {
-                        if (lines++ > 10) {
-                            LOGGER.info("finishing up after 10 lines: " + fetchEmitTuple.getFetchKey().getFetchKey());
-                            return;
-                        }
                         LOGGER.trace("about to add a line");
                         if (line.equals(POISON)) {
                             line = reader.readLine();
