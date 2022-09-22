@@ -12,6 +12,10 @@ import java.util.List;
 import java.util.concurrent.TimeoutException;
 import java.util.zip.GZIPInputStream;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.tallison.cc.index.IndexerCLI;
+
 import org.apache.tika.config.Field;
 import org.apache.tika.config.Initializable;
 import org.apache.tika.config.InitializableProblemHandler;
@@ -22,6 +26,7 @@ import org.apache.tika.pipes.fetcher.FetchKey;
 import org.apache.tika.pipes.pipesiterator.PipesIterator;
 
 public class CCIndexPipesIterator extends PipesIterator implements Initializable {
+    static Logger LOGGER = LoggerFactory.getLogger(CCIndexPipesIterator.class);
 
     Path indexPathsFile = null;
     List<String> indexPathsUrls = null;
@@ -29,7 +34,10 @@ public class CCIndexPipesIterator extends PipesIterator implements Initializable
     @Override
     protected void enqueue() throws IOException, TimeoutException, InterruptedException {
         if (indexPathsUrls != null) {
+            LOGGER.info("indexPathsUrls size: {}", indexPathsUrls.size());
+            int i = 0;
             for (String indexPathUrl : indexPathsUrls) {
+                LOGGER.info("Opening {}: {} ", i++, indexPathUrl);
                 try (BufferedReader reader = getUrlReader(indexPathUrl)) {
                     String line = reader.readLine();
                     while (line != null) {

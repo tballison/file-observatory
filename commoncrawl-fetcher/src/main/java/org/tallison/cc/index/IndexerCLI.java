@@ -74,9 +74,9 @@ public class IndexerCLI {
         if (line.hasOption("n")) {
             numThreads = Integer.parseInt(line.getOptionValue("n"));
         }
-        int max = -1;
+        long max = -1l;
         if (line.hasOption("m")) {
-            max = Integer.parseInt(line.getOptionValue("m"));
+            max = Long.parseLong(line.getOptionValue("m"));
         }
         Path filterFile = null;
         if (line.hasOption("f")) {
@@ -99,7 +99,7 @@ public class IndexerCLI {
 
     private void execute(Path tikaConfigPath, Connection connection,
                          String schema,
-                         Path filterFile, int numThreads, int max)
+                         Path filterFile, int numThreads, long max)
             throws Exception {
         DBIndexer.init(connection, schema);
 
@@ -143,16 +143,17 @@ public class IndexerCLI {
                 " and indexed " + DBIndexer.getAdded() + " in " +elapsed+" ms");
     }
 
+    //this is called on each index file
     private static class CallableIndexer implements Callable<Integer> {
 
         private final ArrayBlockingQueue<FetchEmitTuple> paths;
         private final AbstractRecordProcessor recordProcessor;
-        private final int max;
+        private final long max;
         private final AtomicLong totalProcessed;
         private final Fetcher fetcher;
 
         CallableIndexer(ArrayBlockingQueue<FetchEmitTuple> paths, Fetcher fetcher,
-                        AbstractRecordProcessor recordProcessor, int max,
+                        AbstractRecordProcessor recordProcessor, long max,
                         AtomicLong processed) {
             this.paths = paths;
             this.fetcher = fetcher;
@@ -180,6 +181,7 @@ public class IndexerCLI {
 
         private void processFile(FetchEmitTuple fetchEmitTuple, AbstractRecordProcessor recordProcessor) {
             if (max > 0 && totalProcessed.get() >= max) {
+                LOGGER.info("hit max stopping now");
                 return;
             }
             LOGGER.info("processing " + fetchEmitTuple.getFetchKey().getFetchKey());
@@ -237,7 +239,7 @@ public class IndexerCLI {
                 if (fetchEmitTuple.getFetchKey().getFetchKey().endsWith(".gz")) {
                     //blocking
                     tuples.put(fetchEmitTuple);
-                    LOGGER.debug("added " + fetchEmitTuple);
+                    LOGGER.info("added path " + fetchEmitTuple);
                 }
             }
             for (int i = 0; i < numThreads; i++) {
