@@ -35,6 +35,7 @@ import org.apache.tika.metadata.Metadata;
 import org.apache.tika.pipes.FetchEmitTuple;
 import org.apache.tika.pipes.fetcher.Fetcher;
 import org.apache.tika.pipes.fetcher.FetcherManager;
+import org.apache.tika.pipes.pipesiterator.CallablePipesIterator;
 import org.apache.tika.pipes.pipesiterator.PipesIterator;
 
 public class IndexerCLI {
@@ -92,6 +93,8 @@ public class IndexerCLI {
         }
         try {
             indexer.execute(tikaConfigPath, connection, schema, filterFile, numThreads, max);
+        } catch (Exception e) {
+            LOGGER.error("catastrophe", e);
         } finally {
             connection.close();
         }
@@ -116,7 +119,7 @@ public class IndexerCLI {
 
         try {
             ArrayBlockingQueue<FetchEmitTuple> paths = new ArrayBlockingQueue<>(300+numThreads);
-            completionService.submit(new Enqueuer(pipesIterator, paths, numThreads));
+            completionService.submit(new CallablePipesIterator(pipesIterator, paths));
 
             for (int i = 0; i < numThreads; i++) {
                 completionService.submit(new CallableIndexer(paths, fetcher,
@@ -129,10 +132,12 @@ public class IndexerCLI {
                 Future<Integer> future = completionService.poll(3, TimeUnit.MINUTES);
                 if (future != null) {
                     finished++;
+                    LOGGER.info("finished workers {}", finished);
                     future.get();
                 }
             }
         } catch (InterruptedException|ExecutionException e) {
+            LOGGER.error("fatal problem", e);
             throw new RuntimeException(e);
         } finally {
             DBIndexer.shutDown();
@@ -172,6 +177,8 @@ public class IndexerCLI {
 
                 if (fetchEmitTuple == PipesIterator.COMPLETED_SEMAPHORE) {
                     recordProcessor.close();
+                    //hang forever
+                    paths.put(PipesIterator.COMPLETED_SEMAPHORE);
                     return 1;
                 }
                 LOGGER.trace(fetchEmitTuple.getFetchKey().getFetchKey());
@@ -193,6 +200,9 @@ public class IndexerCLI {
                     String line = reader.readLine();
                     int lines = 0;
                     while (line != null) {
+                        if (lines++ > 10) {
+                            LOGGER.info("finishing up after 10 lines: " + fetchEmitTuple.getFetchKey().getFetchKey());
+                        }
                         LOGGER.trace("about to add a line");
                         if (line.equals(POISON)) {
                             line = reader.readLine();
@@ -205,11 +215,13 @@ public class IndexerCLI {
                         }
                         long processed = totalProcessed.incrementAndGet();
                         if (max > 0 && processed >= max) {
+                            LOGGER.info("hit max stopping now");
                             return;
                         }
                         if (processed % 100000 == 0) {
                             LOGGER.info("Processed " + processed);
                         }
+                        lines++;
                         line = reader.readLine();
                     }
                 }
@@ -221,33 +233,4 @@ public class IndexerCLI {
         }
     }
 
-    private class Enqueuer implements Callable {
-
-        private final PipesIterator pipesIterator;
-        private final ArrayBlockingQueue<FetchEmitTuple> tuples;
-        private final int numThreads;
-        public Enqueuer(PipesIterator pipesIterator, ArrayBlockingQueue<FetchEmitTuple> paths,
-                        int numThreads) {
-            this.pipesIterator = pipesIterator;
-            this.tuples = paths;
-            this.numThreads = numThreads;
-        }
-
-        @Override
-        public Integer call() throws Exception {
-            for (FetchEmitTuple fetchEmitTuple : pipesIterator) {
-                if (fetchEmitTuple.getFetchKey().getFetchKey().endsWith(".gz")) {
-                    //blocking
-                    tuples.put(fetchEmitTuple);
-                    LOGGER.info("added path " + fetchEmitTuple);
-                }
-            }
-            for (int i = 0; i < numThreads; i++) {
-                //blocking
-                tuples.put(PipesIterator.COMPLETED_SEMAPHORE);
-            }
-            LOGGER.info("added index paths");
-            return 1;
-        }
-    }
 }
