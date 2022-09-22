@@ -12,7 +12,7 @@
     <artifactId>commoncrawl-fetcher</artifactId>
 
     <properties>
-        <tika.version>2.4.2-SNAPSHOT</tika.version>
+        <tika.version>2.5.0-SNAPSHOT</tika.version>
         <httpclient.version>4.5.13</httpclient.version>
         <httpcomponents.version>4.4.14</httpcomponents.version>
         <jackson.version>2.13.3</jackson.version>
