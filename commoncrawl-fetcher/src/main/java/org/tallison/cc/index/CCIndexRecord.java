@@ -275,7 +275,7 @@ public class CCIndexRecord {
                     i.set(thisEnd + 1);
                     return record;
                 } catch (JsonSyntaxException e) {
-                    LOGGER.warn("bad record: {}", row);
+                    LOGGER.debug("bad record ({}): {}", thisEnd, row);
                 }
             }
             LOGGER.warn("bad record, giving up: {}", row);
