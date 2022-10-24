@@ -1,3 +1,5 @@
+package org.tallison.ingest.mappers;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -14,7 +16,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
-public class QPDFJsonExtractorTest {
+public class QPDF10JsonExtractorTest {
 
     @Test
     public void testBasic() throws Exception {

@@ -12,9 +12,9 @@
 #alpine version dictates which qpdf version is available.
 #see e.g. https://pkgs.alpinelinux.org/packages?name=qpdf&branch=v3.13
 #to search for a match
-FROM alpine:3.14
+FROM alpine:edge
 RUN apk add --no-cache \
-    qpdf=10.3.2-r0 \
+    qpdf=11.1.1-r0 \
     openjdk11-jre
 
 

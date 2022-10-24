@@ -20,6 +20,9 @@ package org.tallison.tika.parser.itext;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.nio.file.Path;
+import java.nio.file.Paths;
+
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.xml.sax.ContentHandler;
@@ -50,4 +53,17 @@ public class ITextParserTest {
         assertEquals("1", metadata.get("xmpTPg:NPages"));
     }
 
+    @Test
+    public void oneOff() throws Exception {
+        Path path = Paths.get("/Users/allison/Desktop/tmp");
+        path = path.resolve("d61c39d4468dcfc83a8d6c69c26c5f78d9596e83e2cf31af63c30be7cb8b8873");
+        ContentHandler handler = new ToXMLContentHandler();
+        Metadata metadata = new Metadata();
+        try (TikaInputStream tis = TikaInputStream.get(path)) {
+            Parser p = new AutoDetectParser();
+            ParseContext parseContext = new ParseContext();
+            p.parse(tis, handler, metadata, parseContext);
+        }
+        System.out.println(handler.toString());
+    }
 }

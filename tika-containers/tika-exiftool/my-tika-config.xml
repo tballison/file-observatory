@@ -52,8 +52,6 @@
               <match key="producer" value="^Producer\\s+: ([^\r\n]+)"/>
               <match key="creator_tool" value="^Creator Tool\\s+: ([^\r\n]+)"/>
               <match key="tagged" value="^Tagged PDF\\s+: ([^\r\n]+)"/>
-              <!--              <match key="dc:created" value="^Create Date\\s+: ([^\r\n]+)"/>
-                            <match key="dc:modify" value="^Modify Date\\s+: ([^\r\n]+)"/> -->
             </param>
           </params>
         </param>

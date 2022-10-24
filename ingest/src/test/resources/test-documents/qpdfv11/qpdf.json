@@ -1,0 +1,469 @@
+{
+  "version": 2,
+  "parameters": {
+    "decodelevel": "generalized"
+  },
+  "pages": [
+    {
+      "contents": [
+        "10 0 R"
+      ],
+      "images": [],
+      "label": null,
+      "object": "6 0 R",
+      "outlines": [],
+      "pageposfrom1": 1
+    }
+  ],
+  "pagelabels": [],
+  "acroform": {
+    "fields": [],
+    "hasacroform": false,
+    "needappearances": false
+  },
+  "attachments": {},
+  "encrypt": {
+    "capabilities": {
+      "accessibility": true,
+      "extract": true,
+      "modify": true,
+      "modifyannotations": true,
+      "modifyassembly": true,
+      "modifyforms": true,
+      "modifyother": true,
+      "printhigh": true,
+      "printlow": true
+    },
+    "encrypted": false,
+    "ownerpasswordmatched": false,
+    "parameters": {
+      "P": 0,
+      "R": 0,
+      "V": 0,
+      "bits": 0,
+      "filemethod": "none",
+      "key": null,
+      "method": "none",
+      "streammethod": "none",
+      "stringmethod": "none"
+    },
+    "recovereduserpassword": null,
+    "userpasswordmatched": false
+  },
+  "outlines": [],
+  "qpdf": [
+    {
+      "jsonversion": 2,
+      "pdfversion": "1.5",
+      "pushedinheritedpageresources": false,
+      "calledgetallpages": true,
+      "maxobjectid": 35
+    },
+    {
+      "obj:1 0 R": {
+        "value": {
+          "/Lang": "u:en-US",
+          "/MarkInfo": "4 0 R",
+          "/Pages": "2 0 R",
+          "/StructTreeRoot": "3 0 R",
+          "/Type": "/Catalog"
+        }
+      },
+      "obj:2 0 R": {
+        "value": {
+          "/Count": 1,
+          "/Kids": [
+            "6 0 R"
+          ],
+          "/Type": "/Pages"
+        }
+      },
+      "obj:3 0 R": {
+        "value": {
+          "/K": [
+            "8 0 R"
+          ],
+          "/ParentTree": "7 0 R",
+          "/ParentTreeNextKey": 1,
+          "/Type": "/StructTreeRoot"
+        }
+      },
+      "obj:4 0 R": {
+        "value": {
+          "/Marked": true
+        }
+      },
+      "obj:5 0 R": {
+        "value": {
+          "/Author": "u:Mr Wang",
+          "/CreationDate": "u:D:20110405222318",
+          "/Creator": "u:Microsoft® Office Word 2007",
+          "/ModDate": "u:D:20110405222318",
+          "/Producer": "u:Microsoft® Office Word 2007"
+        }
+      },
+      "obj:6 0 R": {
+        "value": {
+          "/Contents": "10 0 R",
+          "/Group": "11 0 R",
+          "/MediaBox": [
+            0,
+            0,
+            612,
+            792
+          ],
+          "/Parent": "2 0 R",
+          "/Resources": "9 0 R",
+          "/StructParents": 0,
+          "/Tabs": "/S",
+          "/Type": "/Page"
+        }
+      },
+      "obj:7 0 R": {
+        "value": {
+          "/Nums": [
+            0,
+            [
+              "12 0 R",
+              "13 0 R",
+              "14 0 R",
+              "15 0 R",
+              "16 0 R",
+              "17 0 R",
+              "18 0 R",
+              "19 0 R",
+              "20 0 R"
+            ]
+          ]
+        }
+      },
+      "obj:8 0 R": {
+        "value": {
+          "/K": [
+            "21 0 R",
+            "20 0 R"
+          ],
+          "/P": "3 0 R",
+          "/S": "/Sect"
+        }
+      },
+      "obj:9 0 R": {
+        "value": {
+          "/Font": "22 0 R",
+          "/ProcSet": [
+            "/PDF",
+            "/Text",
+            "/ImageB",
+            "/ImageC",
+            "/ImageI"
+          ]
+        }
+      },
+      "obj:10 0 R": {
+        "stream": {
+          "dict": {
+            "/Length": "23 0 R"
+          }
+        }
+      },
+      "obj:11 0 R": {
+        "value": {
+          "/CS": "/DeviceRGB",
+          "/S": "/Transparency",
+          "/Type": "/Group"
+        }
+      },
+      "obj:12 0 R": {
+        "value": {
+          "/K": [
+            0
+          ],
+          "/P": "24 0 R",
+          "/Pg": "6 0 R",
+          "/S": "/P"
+        }
+      },
+      "obj:13 0 R": {
+        "value": {
+          "/K": [
+            1
+          ],
+          "/P": "25 0 R",
+          "/Pg": "6 0 R",
+          "/S": "/P"
+        }
+      },
+      "obj:14 0 R": {
+        "value": {
+          "/K": [
+            2
+          ],
+          "/P": "26 0 R",
+          "/Pg": "6 0 R",
+          "/S": "/P"
+        }
+      },
+      "obj:15 0 R": {
+        "value": {
+          "/K": 3,
+          "/P": "27 0 R",
+          "/Pg": "6 0 R",
+          "/S": "/Span"
+        }
+      },
+      "obj:16 0 R": {
+        "value": {
+          "/K": [
+            4
+          ],
+          "/P": "28 0 R",
+          "/Pg": "6 0 R",
+          "/S": "/P"
+        }
+      },
+      "obj:17 0 R": {
+        "value": {
+          "/K": [
+            5
+          ],
+          "/P": "29 0 R",
+          "/Pg": "6 0 R",
+          "/S": "/P"
+        }
+      },
+      "obj:18 0 R": {
+        "value": {
+          "/K": [
+            6
+          ],
+          "/P": "30 0 R",
+          "/Pg": "6 0 R",
+          "/S": "/P"
+        }
+      },
+      "obj:19 0 R": {
+        "value": {
+          "/K": 7,
+          "/P": "31 0 R",
+          "/Pg": "6 0 R",
+          "/S": "/Span"
+        }
+      },
+      "obj:20 0 R": {
+        "value": {
+          "/K": [
+            8
+          ],
+          "/P": "8 0 R",
+          "/Pg": "6 0 R",
+          "/S": "/P"
+        }
+      },
+      "obj:21 0 R": {
+        "value": {
+          "/K": [
+            "27 0 R",
+            "31 0 R"
+          ],
+          "/P": "8 0 R",
+          "/Pg": "6 0 R",
+          "/S": "/Table"
+        }
+      },
+      "obj:22 0 R": {
+        "value": {
+          "/F1": "32 0 R"
+        }
+      },
+      "obj:23 0 R": {
+        "value": 5011
+      },
+      "obj:24 0 R": {
+        "value": {
+          "/K": [
+            "12 0 R"
+          ],
+          "/P": "27 0 R",
+          "/Pg": "6 0 R",
+          "/S": "/TD"
+        }
+      },
+      "obj:25 0 R": {
+        "value": {
+          "/K": [
+            "13 0 R"
+          ],
+          "/P": "27 0 R",
+          "/Pg": "6 0 R",
+          "/S": "/TD"
+        }
+      },
+      "obj:26 0 R": {
+        "value": {
+          "/K": [
+            "14 0 R"
+          ],
+          "/P": "27 0 R",
+          "/Pg": "6 0 R",
+          "/S": "/TD"
+        }
+      },
+      "obj:27 0 R": {
+        "value": {
+          "/K": [
+            "24 0 R",
+            "25 0 R",
+            "26 0 R",
+            "15 0 R"
+          ],
+          "/P": "21 0 R",
+          "/Pg": "6 0 R",
+          "/S": "/TR"
+        }
+      },
+      "obj:28 0 R": {
+        "value": {
+          "/K": [
+            "16 0 R"
+          ],
+          "/P": "31 0 R",
+          "/Pg": "6 0 R",
+          "/S": "/TD"
+        }
+      },
+      "obj:29 0 R": {
+        "value": {
+          "/K": [
+            "17 0 R"
+          ],
+          "/P": "31 0 R",
+          "/Pg": "6 0 R",
+          "/S": "/TD"
+        }
+      },
+      "obj:30 0 R": {
+        "value": {
+          "/K": [
+            "18 0 R"
+          ],
+          "/P": "31 0 R",
+          "/Pg": "6 0 R",
+          "/S": "/TD"
+        }
+      },
+      "obj:31 0 R": {
+        "value": {
+          "/K": [
+            "28 0 R",
+            "29 0 R",
+            "30 0 R",
+            "19 0 R"
+          ],
+          "/P": "21 0 R",
+          "/Pg": "6 0 R",
+          "/S": "/TR"
+        }
+      },
+      "obj:32 0 R": {
+        "value": {
+          "/BaseFont": "/ABCDEE+Calibri",
+          "/Encoding": "/WinAnsiEncoding",
+          "/FirstChar": 32,
+          "/FontDescriptor": "33 0 R",
+          "/LastChar": 70,
+          "/Name": "/F1",
+          "/Subtype": "/TrueType",
+          "/Type": "/Font",
+          "/Widths": [
+            226,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            579,
+            544,
+            533,
+            615,
+            488,
+            459
+          ]
+        }
+      },
+      "obj:33 0 R": {
+        "value": {
+          "/Ascent": 750,
+          "/AvgWidth": 503,
+          "/CapHeight": 750,
+          "/Descent": -250,
+          "/Flags": 32,
+          "/FontBBox": [
+            -476,
+            -250,
+            1214,
+            750
+          ],
+          "/FontFile2": "34 0 R",
+          "/FontName": "/ABCDEE+Calibri",
+          "/FontWeight": 400,
+          "/ItalicAngle": 0,
+          "/MaxWidth": 1690,
+          "/StemV": 50,
+          "/Type": "/FontDescriptor",
+          "/XHeight": 250
+        }
+      },
+      "obj:34 0 R": {
+        "stream": {
+          "dict": {
+            "/Filter": "/FlateDecode",
+            "/Length": "35 0 R",
+            "/Length1": 85964
+          }
+        }
+      },
+      "obj:35 0 R": {
+        "value": 44288
+      },
+      "trailer": {
+        "value": {
+          "/ID": [
+            "b:5cd60d13a95c904e8c66f0a93df98d7c",
+            "b:5cd60d13a95c904e8c66f0a93df98d7c"
+          ],
+          "/Info": "5 0 R",
+          "/Root": "1 0 R",
+          "/Size": 36,
+          "/XRefStm": 46613
+        }
+      }
+    }
+  ]
+}

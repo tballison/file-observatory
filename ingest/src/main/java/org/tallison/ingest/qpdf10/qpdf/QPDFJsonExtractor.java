@@ -1,4 +1,15 @@
-package org.tallison.ingest.qpdf;
+package org.tallison.ingest.qpdf10.qpdf;
+
+import java.io.IOException;
+import java.io.Reader;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -10,19 +21,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tallison.ingest.mappers.QPDFFeatureMapper;
 
-import java.io.IOException;
-import java.io.Reader;
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Set;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
 public class QPDFJsonExtractor {
 
     private static Logger LOGGER = LoggerFactory.getLogger(QPDFJsonExtractor.class);
@@ -31,12 +29,11 @@ public class QPDFJsonExtractor {
     private static final String TYPE = "/Type";
     private final Set<String> ignoreValues = new HashSet<>();
 
-    private Matcher qpdfRefMatcher = Pattern.compile("obj:(\\d+ \\d+ R)\\Z").matcher("");
     private Matcher refMatcher = Pattern.compile("^\\d+ \\d+ R$").matcher("");
     private Matcher dateMatcher = Pattern.compile("^D:\\d{14,}").matcher("");
 
     Set<String> imptIntKeys = new HashSet<>();
-    private Map<String, JsonElement> objects;
+    private JsonObject objects;
     private String fileId;
 
     public QPDFJsonExtractor() {
@@ -65,49 +62,13 @@ public class QPDFJsonExtractor {
     public QPDFResults extract(String fileId, Reader reader) {
         JsonElement root = JsonParser.parseReader(reader);
         QPDFResults results = new QPDFResults();
-        this.objects = loadObjects(root.getAsJsonObject().get("qpdf").getAsJsonArray());
+        this.objects = root.getAsJsonObject().get("objects").getAsJsonObject();
         this.fileId = fileId;
-        parseMainObjectRoot(results);
+        parseObjects(root.getAsJsonObject().get("objects").getAsJsonObject(), results);
         return results;
     }
 
-    private Map<String, JsonElement> loadObjects(JsonArray qpdfArray) {
-        for (JsonElement el : qpdfArray) {
-            JsonObject object = el.getAsJsonObject();
-            boolean isObjectMap = false;
-            for (String k : object.keySet()) {
-                if (k.startsWith("obj:")) {
-                    return loadObjectMap(object);
-                }
-            }
-        }
-        return null;
-    }
-
-    private Map<String, JsonElement> loadObjectMap(JsonObject object) {
-        Map<String, JsonElement> objects = new HashMap<>();
-        for (String k : object.keySet()) {
-            if (qpdfRefMatcher.reset(k).find()) {
-                String refKey = qpdfRefMatcher.group(1);
-                JsonElement element = object.get(k);
-                if (element.isJsonObject()) {
-                    if (element.getAsJsonObject().has("value")) {
-                        objects.put(refKey, element.getAsJsonObject().get("value"));
-                    } else if (element.getAsJsonObject().has("stream")) {
-                        objects.put(refKey,
-                                element.getAsJsonObject().get("stream").getAsJsonObject().get(
-                                        "dict"));
-                    } else {
-                        throw new IllegalArgumentException(refKey + " " + element);
-                    }
-
-                }
-            }
-        }
-        return objects;
-    }
-
-    private void parseMainObjectRoot(QPDFResults results) {
+    private void parseObjects(JsonObject objects, QPDFResults results) {
         for (String k : objects.keySet()) {
             JsonElement obj = objects.get(k);
             if (obj.isJsonObject()) {
@@ -219,15 +180,6 @@ public class QPDFJsonExtractor {
     private String getNormalizedValue(String key, String rawValue) {
         if (rawValue == null || rawValue.trim().length() == 0) {
             return null;
-        }
-        //need to remove these before running the matchers
-        //for example: u:D:20110405222318
-        if (rawValue.startsWith("u:")) {
-            //utf8-encoded-string
-            rawValue = rawValue.substring(2);
-        } else if (rawValue.startsWith("b:")) {
-            //"b:hex-string"
-            rawValue = rawValue.substring(2);
         }
 
         if (refMatcher.reset(rawValue).find()) {
