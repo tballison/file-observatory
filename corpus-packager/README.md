@@ -46,17 +46,17 @@ offer a richer view of the data via extracted metadata.
 The table `cc-provenance-table.csv.gz` contains all provenance information.
 
 * `url_id` -- project-internal id for a specific target url extracted from Common Crawl's index file.
-* `corpus_file_name` -- name of the file inside the zip
+* `file_name` -- name of the file as our project named it inside the zip
 * `url` -- target url extracted from Common Crawl's index files
 * `cc_digest` -- digest calculated by Common Crawl and extracted from the index files
 * `cc_http_mime` -- mime as extracted from Common Crawl's index files -- this derives from the http header
 * `cc_detected_mime` -- the detected mime as extracted from Common Crawl's index files.
-* `cc_warc_file` -- the Common Crawl warc file where the file's individual warc file is stored
-* `cc_warc_offset` -- the offset within the `cc_warc_file` where the indivicual warc file is stored
-* `cc_warc_length` -- this is the length in bytes of the gzipped individual file's warc file inside the `cc_warc_file`, starting at `cc_warc_offset`
+* `cc_warc_file_name` -- the Common Crawl warc file where the file's individual warc file is stored
+* `cc_warc_start` -- the offset within the `cc_warc_file` where the individual warc file is stored
+* `cc_warc_end` -- this is the end of the individual warc file within the larger `cc_warc_file`
 * `host_id` -- this is a project-internal foreign key for the url's host
 * `cc_truncated` -- this is Common Crawl's code for why the file was truncated if the file was truncated.  This information was extracted from Common Crawl's indices. Values include:
-  * `''` (6,383,873) -- empty string -- Common Crawls records this as not truncated
+  * `''` (6,383,873) -- (empty string) -- Common Crawls records this as not truncated
   * `length` (2,020,913) -- the file was truncated because of length
   * `disconnect` (5,861) -- there was a network disconnection during Common Crawl's fetch
   * `time` (56) -- there was a timeout during Common Crawl's fetch
@@ -85,11 +85,11 @@ The table `cc-provenance-table.csv.gz` contains all provenance information.
 TBD
 
 ## How to extract an individual WARC from Common Crawl
-First, users need the `cc_warc_file`, the `cc_warc_offset` and the `cc_warc_length`.
+First, users need the `cc_warc_file`, the `cc_warc_start` and the `cc_warc_end`.
 We'll use `curl` and `gunzip`. Let's say we want to pull `0000000.pdf` which comes from `crawl-data/CC-MAIN-2021-31/segments/1627046154042.23/warc/CC-MAIN-20210731011529-20210731041529-00143.warc.gz`
-starting at offset `3,724,499` with a length `17,843`.
+starting at offset `3,724,499` and ends at offset `3,742,341` (inclusive).
 1. Prepend `https://data.commoncrawl.org/` to the `cc_warc_file` to get the URL.
-2. The http range will be the `offset - (offset + length - 1)` -> `3724499-3742341`
+2. The http range will be: `3724499-3742341`
 3. Fetch the gzipped WARC file: `curl -r 3724499-3742341 https://data.commoncrawl.org/crawl-data/CC-MAIN-2021-31/segments/1627046154042.23/warc/CC-MAIN-20210731011529-20210731041529-00143.warc.gz -o 0000000.warc.gz`
 4. `gunzip 0000000.warc.gz`
 
