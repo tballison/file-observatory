@@ -71,7 +71,6 @@
     <module>tika-addons</module>
     <module>simple-ingester</module>
     <module>ingest-jdbc</module>
-    <module>corpus-packager</module>
   </modules>
 
   <dependencyManagement>
