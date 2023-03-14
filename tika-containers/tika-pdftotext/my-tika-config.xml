@@ -45,6 +45,7 @@
           <string>${OUTPUT_FILE}</string>
         </param>
         <param name="returnStdout" type="bool">true</param>
+        <param name="timeoutMs" type="long">120000</param>
       </params>
     </parser>
   </parsers>

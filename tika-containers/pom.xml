@@ -17,6 +17,7 @@
         <module>tika-pdfspelunker</module>
         <module>tika-pdfjs</module>
       <module>tika-arlington</module>
+        <module>tika-pipes-pdfinfo</module>
     </modules>
 
 

@@ -31,7 +31,7 @@ import java.util.concurrent.TimeUnit;
 
 public class CCIndexWGetter {
     private static final int POISON = -1;
-    private static String AWS_URL_BASE = "https://commoncrawl.s3.amazonaws.com/cc-index/collections/";
+    private static String AWS_URL_BASE = "https://data.commoncrawl.org/cc-index/collections/";
     private static String AWS_URL_INDICES = "/indexes/cdx-";
 
     private static final int DEFAULT_NUM_THREADS = 3;

@@ -6,7 +6,8 @@ FROM debian:bullseye-20230227-slim as POPPLER_BUILDER
 # migrate to 22.x
 ENV POPPLER_VERSION=23.03.0
 ENV POPPLER_DATA_VERSION=0.4.12
-RUN apt-get update && apt-get install bash wget build-essential cmake libfreetype6-dev pkg-config  \
+
+RUN apt-get update && apt-get install locales bash wget build-essential cmake libfreetype6-dev pkg-config  \
     libfontconfig-dev libjpeg-dev libopenjp2-7-dev  \
     #these are for temurin
     apt-transport-https gnupg -y
@@ -29,9 +30,20 @@ RUN wget -O - https://packages.adoptium.net/artifactory/api/gpg/key/public | apt
     && echo "deb https://packages.adoptium.net/artifactory/deb $(awk -F= '/^VERSION_CODENAME/{print$2}' /etc/os-release) main" | tee /etc/apt/sources.list.d/adoptium.list \
     && apt-get update && apt-get install temurin-11-jre -y
 
-COPY target/pdfinfo-1.0.0-SNAPSHOT.jar /pdfinfo-1.0.0-SNAPSHOT.jar
+RUN mkdir /tika-bin
+COPY target/tika-pipes-pdfinfo-1.0.0-SNAPSHOT.jar /tika-bin
+COPY log4j2.xml /tika-bin
+COPY pipes-log4j2.xml /tika-bin
 
 
-ENTRYPOINT ["java","-jar","/pdfinfo-1.0.0-SNAPSHOT.jar"]
+ENV LANG en_US.UTF-8
+ENV LANGUAGE en_US:en
+ENV LC_ALL en_US.UTF-8
+
+ENTRYPOINT ["java","-Dlog4j.configurationFile=/tika-bin/log4j2.xml", "-jar","/tika-bin/tika-pipes-pdfinfo-1.0.0-SNAPSHOT.jar"]
+#need to specify tika-config.xml on commandline, e.g.:
+#docker run -v /Users/blah/Desktop:/data -v /Users/blah/Desktop/config:/tika-config -p 2345:2345
+#--name tika-pipes-container tika-pipes-pdfinfo /tika-config/my-tika-config.xml
+
 #WORKDIR /work
 

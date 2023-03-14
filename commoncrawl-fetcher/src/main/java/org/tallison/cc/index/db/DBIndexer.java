@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.tallison.cc.index;
+package org.tallison.cc.index.db;
 
 import static org.apache.commons.lang3.StringUtils.truncate;
 
@@ -33,6 +33,9 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.tallison.cc.index.AbstractRecordProcessor;
+import org.tallison.cc.index.CCIndexRecord;
+import org.tallison.cc.index.RecordFilter;
 import org.tallison.util.HostUpsert;
 import org.tallison.util.DBUtil;
 

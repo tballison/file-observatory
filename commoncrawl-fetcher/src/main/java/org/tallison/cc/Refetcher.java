@@ -25,7 +25,7 @@ import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.http.impl.conn.ConnectionShutdownException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.tallison.cc.index.DBIndexer;
+import org.tallison.cc.index.db.DBIndexer;
 import org.tallison.util.DBUtil;
 
 import java.io.IOException;

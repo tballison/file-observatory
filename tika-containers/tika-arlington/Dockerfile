@@ -29,7 +29,3 @@ COPY my-tika-config.xml /tika-bin/my-tika-config.xml
 COPY target/tika-arlington-1.0.0-SNAPSHOT.jar /tika-bin/tika-arlington.jar
 
 ENTRYPOINT ["java","-cp","/tika-bin/*", "org.apache.tika.server.core.TikaServerCli", "-h", "0.0.0.0", "-c", "/tika-bin/my-tika-config.xml"]
-#WORKDIR /work
-# for debugging
-# docker run -it --entrypoint /bin/bash --name a2 -v /Users/.../Desktop/tool-runner-work:/data 806db3cdfa81
-

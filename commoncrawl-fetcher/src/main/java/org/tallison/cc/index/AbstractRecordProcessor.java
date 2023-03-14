@@ -8,7 +8,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 
-abstract class AbstractRecordProcessor implements IndexRecordProcessor {
+public abstract class AbstractRecordProcessor implements IndexRecordProcessor {
 
     protected static AtomicInteger threadCounter = new AtomicInteger(0);
 
@@ -29,7 +29,7 @@ abstract class AbstractRecordProcessor implements IndexRecordProcessor {
 
     }
 
-    abstract void usage();
+    public abstract void usage();
 
     protected int getThreadNumber() {
         return threadNumber;

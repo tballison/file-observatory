@@ -1,4 +1,4 @@
-package org.tallison.cc.index;
+package org.tallison.cc.index.db;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -6,6 +6,9 @@ import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.Options;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.tallison.cc.index.AbstractRecordProcessor;
+import org.tallison.cc.index.CompositeRecordFilter;
+import org.tallison.cc.index.RecordFilter;
 import org.tallison.util.DBUtil;
 
 import java.io.BufferedInputStream;
@@ -38,9 +41,9 @@ import org.apache.tika.pipes.fetcher.FetcherManager;
 import org.apache.tika.pipes.pipesiterator.CallablePipesIterator;
 import org.apache.tika.pipes.pipesiterator.PipesIterator;
 
-public class IndexerCLI {
+public class DBIndexerCLI {
 
-    static Logger LOGGER = LoggerFactory.getLogger(IndexerCLI.class);
+    static Logger LOGGER = LoggerFactory.getLogger(DBIndexerCLI.class);
 
     private static int DEFAULT_NUM_THREADS = 1;
     private static Path POISON = Paths.get("");
@@ -83,7 +86,7 @@ public class IndexerCLI {
         if (line.hasOption("f")) {
             filterFile = Paths.get(line.getOptionValue("f"));
         }
-        IndexerCLI indexer = new IndexerCLI();
+        DBIndexerCLI indexer = new DBIndexerCLI();
         DBUtil.driverHint(jdbc);
         Connection connection = DriverManager.getConnection(jdbc);
         //connection.setAutoCommit(false);

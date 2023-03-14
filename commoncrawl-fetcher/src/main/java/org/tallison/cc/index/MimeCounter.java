@@ -7,6 +7,7 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.lang3.mutable.MutableLong;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.tallison.cc.index.db.DBIndexer;
 import org.tallison.util.MapUtil;
 
 import java.io.BufferedInputStream;
@@ -248,7 +249,7 @@ public class MimeCounter {
 
         private final MimeCounts mimeCounts = new MimeCounts();
         @Override
-        void usage() {
+        public void usage() {
 
         }
 

@@ -1,0 +1,186 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Licensed to the Apache Software Foundation (ASF) under one or more
+  contributor license agreements.  See the NOTICE file distributed with
+  this work for additional information regarding copyright ownership.
+  The ASF licenses this file to You under the Apache License, Version 2.0
+  (the "License"); you may not use this file except in compliance with
+  the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+<properties>
+  <parsers>
+    <parser class="org.apache.tika.parser.external2.ExternalParser">
+      <params>
+        <param name="supportedTypes" type="list">
+          <string>application/octet-stream</string>
+        </param>
+        <param name="commandLine" type="list">
+          <string>pdfinfo</string>
+          <string>-isodates</string>
+          <string>${INPUT_FILE}</string>
+        </param>
+        <param name="returnStdout" type="bool">false</param>
+        <param name="outputParser" type="class" class="org.apache.tika.parser.RegexCaptureParser">
+          <params>
+            <param name="regexMap" type="map">
+              <creator>^Creator:\s+([^\r\n]+)</creator>
+              <producer>^Producer:\s+([^\r\n]+)</producer>
+              <created>^CreationDate:\s+([^\r\n]+)</created>
+              <modified>^ModDate:\s+([^\r\n]+)</modified>
+              <custom_metadata>^Custom Metadata:\s+([^\r\n]+)</custom_metadata>
+              <metadata_stream>^Metadata Stream:\s+([^\r\n]+)</metadata_stream>
+              <tagged>^Tagged:\s+([^\r\n]+)</tagged>
+              <user_properties>^UserProperties:\s+([^\r\n]+)</user_properties>
+              <form>^Form:\s+([^\r\n]+)</form>
+              <javascript>^JavaScript:\s+([^\r\n]+)</javascript>
+              <pages>^Pages:\s+([^\r\n]+)</pages>
+              <encrypted>^Encrypted:\s+([^\r\n]+)</encrypted>
+              <page_size>^Page size:\s+([^\r\n]+)</page_size>
+              <page_rotation>^Page rot:\s+([^\r\n]+)</page_rotation>
+              <optimized>^Optimized:\s+([^\r\n]+)</optimized>
+              <pdf_version>^PDF version:\s+([^\r\n]+)</pdf_version>
+            </param>
+          </params>
+        </param>
+      </params>
+    </parser>
+  </parsers>
+  <async>
+    <maxForEmitBatchBytes>100000</maxForEmitBatchBytes>
+    <emitMaxEstimatedBytes>1000000</emitMaxEstimatedBytes>
+    <emitWithinMillis>60000</emitWithinMillis>
+    <numEmitters>1</numEmitters>
+    <numClients>6</numClients>
+    <!--<tikaConfig>{TIKA_CONFIG}</tikaConfig>-->
+    <forkedJvmArgs>
+      <arg>-Xmx512m</arg>
+      <arg>-XX:ParallelGCThreads=2</arg>
+      <arg>-Dlog4j.configurationFile=/tika-bin/pipes-log4j2.xml</arg>
+    </forkedJvmArgs>
+    <timeoutMillis>120000</timeoutMillis>
+    <!--<pipesReporter class="org.apache.tika.pipes.reporters.jdbc.JDBCPipesReporter">
+        <connection>CONNECTION_STRING</connection>
+        <excludes>
+            <exclude>PARSE_SUCCESS</exclude>
+            <exclude>PARSE_SUCCESS_WITH_EXCEPTION</exclude>
+        </excludes>
+    </pipesReporter>-->
+  </async>
+  <fetchers>
+    <!--<fetcher class="org.apache.tika.pipes.fetcher.s3.S3Fetcher">
+      <name>s3</name>
+      <region>us-east-1</region>
+      <profile></profile>
+    </fetcher>-->
+
+    <fetcher class="org.apache.tika.pipes.fetcher.fs.FileSystemFetcher">
+      <params>
+        <name>fsf</name>
+        <basePath>/data/tika-input</basePath>
+      </params>
+    </fetcher>
+  </fetchers>
+  <emitters>
+    <emitter class="org.apache.tika.pipes.emitter.jdbc.JDBCEmitter">
+      <name>jdbc</name>
+      <connection>{CONNECTION}</connection>
+      <!--   <createTable>create table pdfinfo2
+             (path varchar(512) primary key,
+             parse_time_millis BIGINT,
+             exit_value integer,
+             timeout boolean,
+             creator varchar(512),
+           producer varchar(512),
+           created varchar(512),
+           modified varchar(512),
+           custom_metadata varchar(512),
+           metadata_stream varchar(12),
+           tagged varchar(12),
+           user_properties varchar(12),
+           form varchar(12),
+           javascript varchar(12),
+           pages INTEGER,
+           encrypted varchar(12),
+           page_size varchar(512),
+           page_rotation INTEGER,
+           optimized varchar(12),
+           pdf_version varchar(512)
+
+           );
+         </createTable> -->
+      <!-- the jdbc emitter always puts ths emitKey value as the first
+           item  -->
+      <insert>insert into pdfinfo2 (
+        path, parse_time_millis, exit_value, timeout, creator,
+        producer, created, modified, custom_metadata, metadata_stream,
+        tagged, user_properties, form, javascript, pages,
+        encrypted, page_size, page_rotation, optimized, pdf_version)
+        values (
+        ?,?,?,?,?,
+        ?,?,?,?,?,
+        ?,?,?,?,?,
+        ?,?,?,?,?);
+      </insert>
+      <!-- these are the keys in the metadata object.
+          The emitKey is added as the first element in the insert statement.
+          Then the these values are added in order.
+          They must be in the order of the insert statement.
+          -->
+      <keys>
+        <key k="parse_time_millis" v="bigint"/>
+        <key k="exit_value" v="integer"/>
+        <key k="timeout" v="boolean"/>
+        <key k="creator" v="varchar(512)"/>
+        <key k="producer" v="varchar(512)"/>
+        <key k="created" v="varchar(512)"/>
+        <key k="modified" v="varchar(512)"/>
+        <key k="custom_metadata" v="varchar(512)"/>
+        <key k="metadata_stream" v="varchar(512)"/>
+        <key k="tagged" v="varchar(12)"/>
+        <key k="user_properties" v="varchar(12)"/>
+        <key k="form" v="varchar(12)"/>
+        <key k="javascript" v="varchar(12)"/>
+        <key k="pages" v="integer"/>
+        <key k="encrypted" v="varchar(12)"/>
+        <key k="page_size" v="varchar(512)"/>
+        <key k="page_rotation" v="INTEGER"/>
+        <key k="optimized" v="varchar(12)"/>
+        <key k="pdf_version" v="varchar(512)"/>
+      </keys>
+      <attachmentStrategy>first_only</attachmentStrategy>
+    </emitter>
+    <emitter class="org.apache.tika.pipes.emitter.fs.FileSystemEmitter">
+      <name>fse</name>
+      <basePath>/data/tika-output</basePath>
+    </emitter>
+
+  </emitters>
+  <metadataFilters>
+    <metadataFilter class="org.apache.tika.metadata.filter.DateNormalizingMetadataFilter"/>
+    <metadataFilter class="org.apache.tika.metadata.filter.FieldNameMappingFilter">
+      <excludeUnmapped>false</excludeUnmapped>
+      <mappings>
+        <mapping from="X-TIKA:parse_time_millis" to="parse_time_millis"/>
+        <mapping from="external-process:exit-value" to="exit_value"/>
+        <mapping from="external-process:timeout" to="timeout"/>
+        <!--          <mapping from="Content-Type" to="tika_mime"/> -->
+      </mappings>
+    </metadataFilter>
+    -->
+  </metadataFilters>
+
+  <pipesIterator class="org.apache.tika.pipes.pipesiterator.fs.FileSystemPipesIterator">
+    <fetcherName>fsf</fetcherName>
+    <emitterName>jdbc</emitterName>
+    <basePath>/data/tika-input</basePath>
+  </pipesIterator>
+
+</properties>
