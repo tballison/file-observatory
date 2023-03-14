@@ -22,8 +22,8 @@ public class PGToCSV {
                 "from profiles p\n" + "join pdfinfo_fields f on p.path = f.path\n" +
                 "join pdfinfo i on p.path = i.path\n" + "where exit_value = 0";
 
-        String connectionString = "jdbc:postgresql://localhost:2345/safedocs-cc?user=datasafe" +
-                "&password=EzFu.y!9gCTjs*6pWjR*";
+        String connectionString = "{CONNECTION}";
+
         Path out = Paths.get("/Users/allison/Desktop/tmp.csv");
         Connection cn = DriverManager.getConnection(connectionString);
         cn.setAutoCommit(false);
