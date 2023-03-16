@@ -24,7 +24,7 @@ public interface IndexRecordProcessor {
 
     public void init(String[] args) throws Exception;
 
-    public void process(String json) throws IOException;
+    public boolean process(String json) throws IOException;
 
     public void close() throws IOException;
 }

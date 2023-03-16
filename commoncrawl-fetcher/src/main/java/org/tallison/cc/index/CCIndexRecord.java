@@ -30,6 +30,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -62,6 +63,8 @@ public class CCIndexRecord {
     private int primaryLanguageId;
     private int truncatedId;
     private int warcId;
+
+    private String redirect;
 
     public int getMimeId() {
         return mimeId;
@@ -170,6 +173,14 @@ public class CCIndexRecord {
         return truncated;
     }
 
+    public String getRedirect() {
+        return redirect;
+    }
+
+    public void setRedirect(String redirect) {
+        this.redirect = redirect;
+    }
+
     public void setTruncated(String truncated) {
         this.truncated = truncated;
     }
@@ -267,7 +278,9 @@ public class CCIndexRecord {
                 LOGGER.warn("bad record: {}", row);
                 return null;
             }
-
+            Collections.reverse(ends);
+            //now try to parse the string ending it at each end
+            //start with the max
             for (int thisEnd : ends) {
                 String json = row.substring(dateI, thisEnd+1);
                 try {
@@ -275,7 +288,7 @@ public class CCIndexRecord {
                     i.set(thisEnd + 1);
                     return record;
                 } catch (JsonSyntaxException e) {
-                    LOGGER.debug("bad record ({}): {}", thisEnd, row);
+                    LOGGER.debug("can't parse ({}): {} -> {}", thisEnd, row, json);
                 }
             }
             LOGGER.warn("bad record, giving up: {}", row);

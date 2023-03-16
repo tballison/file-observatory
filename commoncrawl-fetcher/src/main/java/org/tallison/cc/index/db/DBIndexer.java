@@ -165,12 +165,12 @@ public class DBIndexer extends AbstractRecordProcessor {
     }
 
     @Override
-    void usage() {
+    public void usage() {
 
     }
 
     @Override
-    public void process(String json) throws IOException {
+    public boolean process(String json) throws IOException {
         List<CCIndexRecord> toProcess = CCIndexRecord.parseRecords(json);
         for (CCIndexRecord r : toProcess) {
             CONSIDERED.incrementAndGet();
@@ -199,6 +199,8 @@ public class DBIndexer extends AbstractRecordProcessor {
             }
         }
         //}
+        //this is a stub -- need to check total records processed, etc...
+        return true;
     }
 
     private void writeRecords() throws SQLException {
