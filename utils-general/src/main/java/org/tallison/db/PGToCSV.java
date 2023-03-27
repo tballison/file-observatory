@@ -18,13 +18,12 @@ import org.apache.commons.csv.CSVPrinter;
 public class PGToCSV {
 
     public static void main(String[] args) throws Exception {
-        String sql = "select shasum256, p.size, pages, optimized, tagged, form, javascript, custom_metadata,user_properties,encrypted, pdf_version\n" +
-                "from profiles p\n" + "join pdfinfo_fields f on p.path = f.path\n" +
-                "join pdfinfo i on p.path = i.path\n" + "where exit_value = 0";
+        String sql = "";
+        String outputPath = "";
 
-        String connectionString = "{CONNECTION}";
+        String connectionString = args[0];
 
-        Path out = Paths.get("/Users/allison/Desktop/tmp.csv");
+        Path out = Paths.get(outputPath);
         Connection cn = DriverManager.getConnection(connectionString);
         cn.setAutoCommit(false);
 
