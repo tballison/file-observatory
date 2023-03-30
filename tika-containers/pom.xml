@@ -18,6 +18,7 @@
         <module>tika-pdfjs</module>
       <module>tika-arlington</module>
         <module>tika-pipes-pdfinfo</module>
+      <module>tika-pipes-siegfried</module>
     </modules>
 
 
